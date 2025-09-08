@@ -5,6 +5,29 @@ const logger = require('../utils/logger');
 const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
 
+// Import admin models
+const Admin = require('./Admin')(sequelize, Sequelize.DataTypes);
+const { UserAnalytics, AppUsageAnalytics, GeographicAnalytics, SystemMetrics, AuditLog } = require('./Analytics');
+
+// Initialize analytics models
+const UserAnalyticsModel = UserAnalytics(sequelize, Sequelize.DataTypes);
+const AppUsageAnalyticsModel = AppUsageAnalytics(sequelize, Sequelize.DataTypes);
+const GeographicAnalyticsModel = GeographicAnalytics(sequelize, Sequelize.DataTypes);
+const SystemMetricsModel = SystemMetrics(sequelize, Sequelize.DataTypes);
+const AuditLogModel = AuditLog(sequelize, Sequelize.DataTypes);
+
+// Add to db object
+db.Admin = Admin;
+db.UserAnalytics = UserAnalyticsModel;
+db.AppUsageAnalytics = AppUsageAnalyticsModel;
+db.GeographicAnalytics = GeographicAnalyticsModel;
+db.SystemMetrics = SystemMetricsModel;
+db.AuditLog = AuditLogModel;
+
+// Admin associations
+Admin.hasMany(AuditLogModel, { foreignKey: 'adminId', as: 'auditLogs' });
+AuditLogModel.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' });
+
 // Initialize Sequelize
 const sequelize = new Sequelize(
   dbConfig.database,
