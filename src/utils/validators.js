@@ -28,8 +28,8 @@ const schemas = {
   language: Joi.string().valid('English', 'Hausa', 'Igbo', 'Yoruba', 'Pidgin').default('English'),
   
   // Vehicle types
-  vehicleType: Joi.string().valid('bus', 'taxi', 'keke', 'okada', 'train', 'walking').required(),
-  vehicleTypes: Joi.array().items(Joi.string().valid('bus', 'taxi', 'keke', 'okada', 'train')).min(1).required(),
+  vehicleType: Joi.string().valid('bus', 'taxi', 'keke', 'okada').required(),
+  vehicleTypes: Joi.array().items(Joi.string().valid('bus', 'taxi', 'keke', 'okada')).min(1).required(),
   
   // Route difficulty
   difficulty: Joi.string().valid('Easy', 'Medium', 'Hard').default('Medium'),
