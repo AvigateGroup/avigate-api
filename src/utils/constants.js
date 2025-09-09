@@ -1,20 +1,29 @@
-// Application-wide constants
+// Application constants for Avigate Backend API
 
 // Vehicle types supported in Nigeria
 const VEHICLE_TYPES = {
   BUS: 'bus',
   TAXI: 'taxi',
-  KEKE: 'keke',
-  OKADA: 'okada',
+  KEKE: 'keke', // Tricycle (Keke NAPEP)
+  OKADA: 'okada', // Motorcycle taxi
   TRAIN: 'train',
   WALKING: 'walking'
 };
 
 // Route difficulty levels
-const DIFFICULTY_LEVELS = {
+const ROUTE_DIFFICULTY = {
   EASY: 'Easy',
   MEDIUM: 'Medium',
   HARD: 'Hard'
+};
+
+// User languages supported
+const SUPPORTED_LANGUAGES = {
+  ENGLISH: 'English',
+  HAUSA: 'Hausa',
+  IGBO: 'Igbo',
+  YORUBA: 'Yoruba',
+  PIDGIN: 'Pidgin'
 };
 
 // Nigerian states
@@ -26,45 +35,23 @@ const NIGERIAN_STATES = [
   'Yobe', 'Zamfara'
 ];
 
-// Major Nigerian cities by state
+// Major Nigerian cities
 const MAJOR_CITIES = {
-  'Lagos': ['Lagos', 'Ikeja', 'Ikorodu', 'Epe', 'Badagry'],
-  'FCT': ['Abuja', 'Gwagwalada', 'Kuje', 'Bwari'],
-  'Kano': ['Kano', 'Wudil', 'Gwarzo'],
-  'Rivers': ['Port Harcourt', 'Obio-Akpor', 'Okrika'],
-  'Oyo': ['Ibadan', 'Ogbomoso', 'Oyo', 'Iseyin'],
-  'Kaduna': ['Kaduna', 'Zaria', 'Kafanchan'],
-  'Anambra': ['Awka', 'Onitsha', 'Nnewi'],
-  'Plateau': ['Jos', 'Bukuru', 'Shendam'],
-  'Delta': ['Asaba', 'Warri', 'Sapele', 'Ughelli'],
-  'Edo': ['Benin City', 'Auchi', 'Ekpoma'],
-  'Enugu': ['Enugu', 'Nsukka', 'Oji River'],
-  'Imo': ['Owerri', 'Orlu', 'Okigwe'],
-  'Abia': ['Umuahia', 'Aba', 'Arochukwu'],
-  'Cross River': ['Calabar', 'Ogoja', 'Ikom'],
-  'Akwa Ibom': ['Uyo', 'Ikot Ekpene', 'Eket'],
-  'Bayelsa': ['Yenagoa', 'Sagbama', 'Brass'],
-  'Benue': ['Makurdi', 'Gboko', 'Otukpo'],
-  'Borno': ['Maiduguri', 'Biu', 'Dikwa'],
-  'Ebonyi': ['Abakaliki', 'Afikpo', 'Onueke'],
-  'Gombe': ['Gombe', 'Billiri', 'Kaltungo'],
-  'Taraba': ['Jalingo', 'Wukari', 'Bali'],
-  'Adamawa': ['Yola', 'Mubi', 'Numan'],
-  'Bauchi': ['Bauchi', 'Azare', 'Misau'],
-  'Jigawa': ['Dutse', 'Hadejia', 'Gumel'],
-  'Katsina': ['Katsina', 'Daura', 'Funtua'],
-  'Kebbi': ['Birnin Kebbi', 'Argungu', 'Yauri'],
-  'Kogi': ['Lokoja', 'Okene', 'Idah'],
-  'Kwara': ['Ilorin', 'Offa', 'Omu-Aran'],
-  'Nasarawa': ['Lafia', 'Keffi', 'Akwanga'],
-  'Niger': ['Minna', 'Bida', 'Kontagora'],
-  'Ogun': ['Abeokuta', 'Sagamu', 'Ijebu Ode'],
-  'Ondo': ['Akure', 'Ondo', 'Owo'],
-  'Osun': ['Osogbo', 'Ile-Ife', 'Ilesa'],
-  'Ekiti': ['Ado-Ekiti', 'Ikere', 'Emure'],
-  'Sokoto': ['Sokoto', 'Tambuwal', 'Gwadabawa'],
-  'Yobe': ['Damaturu', 'Gashua', 'Nguru'],
-  'Zamfara': ['Gusau', 'Kaura Namoda', 'Anka']
+  LAGOS: 'Lagos',
+  ABUJA: 'Abuja',
+  KANO: 'Kano',
+  IBADAN: 'Ibadan',
+  PORT_HARCOURT: 'Port Harcourt',
+  BENIN_CITY: 'Benin City',
+  KADUNA: 'Kaduna',
+  ENUGU: 'Enugu',
+  CALABAR: 'Calabar',
+  WARRI: 'Warri',
+  OWERRI: 'Owerri',
+  ILORIN: 'Ilorin',
+  ABEOKUTA: 'Abeokuta',
+  SOKOTO: 'Sokoto',
+  MINNA: 'Minna'
 };
 
 // Location types
@@ -92,140 +79,43 @@ const LANDMARK_CATEGORIES = {
   TRANSPORT: 'Transport',
   COMMERCIAL: 'Commercial',
   RESIDENTIAL: 'Residential',
-  ENTERTAINMENT: 'Entertainment'
+  ENTERTAINMENT: 'Entertainment',
+  BANK: 'Bank',
+  FUEL_STATION: 'Fuel Station'
+};
+
+// Visibility levels for landmarks
+const VISIBILITY_LEVELS = {
+  HIGH: 'High',
+  MEDIUM: 'Medium',
+  LOW: 'Low'
 };
 
 // Notification types
 const NOTIFICATION_TYPES = {
   WELCOME: 'welcome',
-  EMAIL_VERIFICATION: 'email_verification',
-  PASSWORD_RESET: 'password_reset',
-  ROUTE_SHARE: 'route_share',
-  CONTRIBUTION: 'contribution',
-  REPUTATION_MILESTONE: 'reputation_milestone',
-  ROUTE_VERIFICATION: 'route_verification'
+  ROUTE_UPDATE: 'route_update',
+  ROUTE_DISRUPTION: 'route_disruption',
+  ROUTE_FEEDBACK: 'route_feedback',
+  CONTRIBUTION_REWARD: 'contribution_reward',
+  EMERGENCY_ALERT: 'emergency_alert',
+  WEEKLY_DIGEST: 'weekly_digest',
+  MONTHLY_REPORT: 'monthly_report'
 };
 
-// User reputation milestones
-const REPUTATION_MILESTONES = [
-  50,   // Basic contributor
-  100,  // Regular contributor
-  200,  // Trusted contributor
-  500,  // Community moderator
-  1000, // Expert contributor
-  2000, // Super contributor
-  5000  // Community leader
-];
-
-// Reputation actions and points
-const REPUTATION_ACTIONS = {
-  ROUTE_CREATED: 5,
-  ROUTE_VERIFIED: 10,
-  FEEDBACK_SUBMITTED: 2,
-  LOCATION_CREATED: 3,
-  LOCATION_VERIFIED: 8,
-  HELPFUL_CONTRIBUTION: 1,
-  ROUTE_SHARED: 1,
-  PROFILE_COMPLETED: 5
-};
-
-// Rate limiting configurations
-const RATE_LIMITS = {
-  GENERAL: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100
-  },
-  AUTH: {
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5
-  },
-  SEARCH: {
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 20
-  },
-  CREATE: {
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 10
-  },
-  CROWDSOURCE: {
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 5
-  }
-};
-
-// Search and pagination defaults
-const PAGINATION_DEFAULTS = {
-  LIMIT: 20,
-  MAX_LIMIT: 100,
-  OFFSET: 0
-};
-
-// Coordinate validation bounds for Nigeria
-const NIGERIA_COORDINATES = {
-  LATITUDE: {
-    MIN: 4.0,
-    MAX: 14.0
-  },
-  LONGITUDE: {
-    MIN: 2.5,
-    MAX: 15.0
-  }
-};
-
-// Distance calculations
-const DISTANCE_CONSTANTS = {
-  EARTH_RADIUS_KM: 6371,
-  DEFAULT_SEARCH_RADIUS: 10, // km
-  MAX_SEARCH_RADIUS: 100 // km
-};
-
-// Fare estimation constants (in Naira)
-const FARE_CONSTANTS = {
-  MIN_FARE: 50,
-  MAX_FARE: 10000,
-  AVERAGE_FARE_PER_KM: {
-    [VEHICLE_TYPES.BUS]: 30,
-    [VEHICLE_TYPES.TAXI]: 100,
-    [VEHICLE_TYPES.KEKE]: 50,
-    [VEHICLE_TYPES.OKADA]: 40,
-    [VEHICLE_TYPES.TRAIN]: 80,
-    [VEHICLE_TYPES.WALKING]: 0
-  }
-};
-
-// Time and duration constants
-const TIME_CONSTANTS = {
-  DEFAULT_TRANSFER_TIME: 15, // minutes
-  MAX_ROUTE_DURATION: 1440, // 24 hours in minutes
-  AVERAGE_SPEED_KMH: {
-    [VEHICLE_TYPES.BUS]: 25,
-    [VEHICLE_TYPES.TAXI]: 35,
-    [VEHICLE_TYPES.KEKE]: 20,
-    [VEHICLE_TYPES.OKADA]: 30,
-    [VEHICLE_TYPES.TRAIN]: 45,
-    [VEHICLE_TYPES.WALKING]: 5
-  }
-};
-
-// Share code configuration
-const SHARE_CODE_CONFIG = {
-  LENGTH: 8,
-  CHARACTERS: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-  EXPIRY_DAYS: 30
-};
-
-// File upload constants
-const FILE_UPLOAD = {
-  MAX_SIZE: 5 * 1024 * 1024, // 5MB
-  ALLOWED_TYPES: ['image/jpeg', 'image/png', 'image/gif'],
-  UPLOAD_PATH: 'uploads/',
-  TEMP_PATH: 'temp/'
+// Notification priorities
+const NOTIFICATION_PRIORITIES = {
+  LOW: 'low',
+  NORMAL: 'normal',
+  HIGH: 'high',
+  URGENT: 'urgent'
 };
 
 // API response status codes
 const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,
+  NO_CONTENT: 204,
   BAD_REQUEST: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
@@ -237,143 +127,273 @@ const HTTP_STATUS = {
   SERVICE_UNAVAILABLE: 503
 };
 
-// Log levels
-const LOG_LEVELS = {
-  ERROR: 'error',
-  WARN: 'warn',
-  INFO: 'info',
-  HTTP: 'http',
-  DEBUG: 'debug'
+// User reputation system
+const REPUTATION_POINTS = {
+  REGISTER: 10,
+  EMAIL_VERIFY: 5,
+  CREATE_ROUTE: 5,
+  UPDATE_ROUTE: 2,
+  PROVIDE_FEEDBACK: 1,
+  HELPFUL_FEEDBACK: 3,
+  REPORT_ISSUE: 2,
+  VERIFY_LOCATION: 3
 };
 
-// Cache TTL (Time To Live) in seconds
-const CACHE_TTL = {
-  SHORT: 300,      // 5 minutes
-  MEDIUM: 1800,    // 30 minutes
-  LONG: 3600,      // 1 hour
-  VERY_LONG: 86400 // 24 hours
+const REPUTATION_LEVELS = {
+  NEWCOMER: { min: 0, max: 49, name: 'Newcomer' },
+  CONTRIBUTOR: { min: 50, max: 199, name: 'Contributor' },
+  TRUSTED: { min: 200, max: 499, name: 'Trusted Navigator' },
+  EXPERT: { min: 500, max: 999, name: 'Expert Navigator' },
+  MASTER: { min: 1000, max: Infinity, name: 'Master Navigator' }
 };
 
-// Regular expressions for validation
-const REGEX_PATTERNS = {
-  NIGERIAN_PHONE: /^(\+234|234|0)(70|80|81|90|91)[0-9]{8}$/,
-  EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  SHARE_CODE: /^[A-Z0-9]{8}$/,
-  PASSWORD: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/
-};
-
-// Error messages
-const ERROR_MESSAGES = {
-  VALIDATION: {
-    REQUIRED_FIELD: 'This field is required',
-    INVALID_EMAIL: 'Please provide a valid email address',
-    INVALID_PHONE: 'Please provide a valid Nigerian phone number',
-    INVALID_COORDINATES: 'Coordinates must be within Nigeria boundaries',
-    PASSWORD_TOO_WEAK: 'Password must be at least 8 characters with uppercase, lowercase, and number',
-    INVALID_VEHICLE_TYPE: 'Invalid vehicle type selected',
-    INVALID_STATE: 'Invalid Nigerian state',
-    FARE_RANGE_INVALID: 'Maximum fare must be greater than minimum fare'
+// Rate limiting configurations
+const RATE_LIMITS = {
+  GENERAL: {
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // requests per window
   },
   AUTH: {
-    INVALID_CREDENTIALS: 'Invalid email or password',
-    TOKEN_EXPIRED: 'Access token has expired',
-    TOKEN_INVALID: 'Invalid access token',
-    INSUFFICIENT_PERMISSIONS: 'Insufficient permissions for this action',
-    ACCOUNT_DEACTIVATED: 'Account has been deactivated'
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5 // authentication attempts per window
   },
-  NOT_FOUND: {
-    USER: 'User not found',
-    LOCATION: 'Location not found',
-    ROUTE: 'Route not found',
-    DIRECTION: 'Direction not found'
+  SEARCH: {
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 20 // search requests per minute
   },
-  CONFLICT: {
-    EMAIL_EXISTS: 'Email already exists',
-    PHONE_EXISTS: 'Phone number already exists',
-    LOCATION_EXISTS: 'Location already exists at these coordinates'
+  CREATE: {
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10 // content creation per hour
   },
-  RATE_LIMIT: {
-    GENERAL: 'Too many requests. Please try again later',
-    AUTH: 'Too many authentication attempts. Please try again later',
-    SEARCH: 'Search rate limit exceeded. Please try again later',
-    CREATE: 'Content creation limit exceeded. Please try again later'
+  UPLOAD: {
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 5 // file uploads per hour
   }
 };
 
-// Success messages
-const SUCCESS_MESSAGES = {
-  AUTH: {
-    REGISTRATION_SUCCESS: 'User registered successfully',
-    LOGIN_SUCCESS: 'Login successful',
-    LOGOUT_SUCCESS: 'Logout successful',
-    PROFILE_UPDATED: 'Profile updated successfully',
-    PASSWORD_CHANGED: 'Password changed successfully'
-  },
-  LOCATION: {
-    CREATED: 'Location created successfully',
-    UPDATED: 'Location updated successfully',
-    VERIFIED: 'Location verified successfully'
-  },
-  ROUTE: {
-    CREATED: 'Route created successfully',
-    UPDATED: 'Route updated successfully',
-    FEEDBACK_SUBMITTED: 'Feedback submitted successfully'
-  },
-  DIRECTION: {
-    CREATED: 'Direction created successfully',
-    SHARED: 'Direction shared successfully'
-  }
+// File upload constraints
+const UPLOAD_LIMITS = {
+  MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
+  MAX_FILES: 5,
+  ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif'],
+  ALLOWED_DOCUMENT_TYPES: ['application/pdf', 'text/plain']
+};
+
+// Geographic constraints for Nigeria
+const NIGERIA_BOUNDS = {
+  LATITUDE: { MIN: 4.0, MAX: 14.0 },
+  LONGITUDE: { MIN: 2.5, MAX: 15.0 }
 };
 
 // Time zones
 const TIME_ZONES = {
-  NIGERIA: 'Africa/Lagos'
+  NIGERIA: 'Africa/Lagos',
+  UTC: 'UTC'
 };
 
-// Languages supported
-const SUPPORTED_LANGUAGES = {
-  ENGLISH: 'English',
-  HAUSA: 'Hausa',
-  IGBO: 'Igbo',
-  YORUBA: 'Yoruba',
-  PIDGIN: 'Pidgin'
+// Currency
+const CURRENCY = {
+  CODE: 'NGN',
+  SYMBOL: '₦',
+  NAME: 'Nigerian Naira'
 };
 
-// Email templates
-const EMAIL_TEMPLATES = {
-  WELCOME: 'welcome',
-  VERIFICATION: 'verification',
-  PASSWORD_RESET: 'password_reset',
-  ROUTE_SHARE: 'route_share',
-  CONTRIBUTION_THANKS: 'contribution_thanks'
+// Fare constraints (in Naira)
+const FARE_CONSTRAINTS = {
+  MIN: 0,
+  MAX: 100000, // ₦100,000
+  DEFAULT_MIN: 50,
+  DEFAULT_MAX: 1000
 };
 
-// Export all constants
+// Duration constraints (in minutes)
+const DURATION_CONSTRAINTS = {
+  MIN: 1,
+  MAX: 1440, // 24 hours
+  DEFAULT: 30
+};
+
+// Distance constraints (in kilometers)
+const DISTANCE_CONSTRAINTS = {
+  MIN: 0.1,
+  MAX: 1000,
+  NEARBY_RADIUS: 10
+};
+
+// Crowdsourcing confidence levels
+const CONFIDENCE_LEVELS = {
+  VERY_LOW: 1,
+  LOW: 2,
+  MEDIUM: 3,
+  HIGH: 4,
+  VERY_HIGH: 5
+};
+
+// Update types for crowdsourcing
+const UPDATE_TYPES = {
+  FARE: 'fare',
+  DURATION: 'duration',
+  AVAILABILITY: 'availability',
+  CONDITION: 'condition',
+  ROUTE_CHANGE: 'route_change'
+};
+
+// Traffic conditions
+const TRAFFIC_CONDITIONS = {
+  LIGHT: 'light',
+  MODERATE: 'moderate',
+  HEAVY: 'heavy'
+};
+
+// Weather conditions
+const WEATHER_CONDITIONS = {
+  CLEAR: 'clear',
+  RAINY: 'rainy',
+  CLOUDY: 'cloudy',
+  STORMY: 'stormy'
+};
+
+// Time of day categories
+const TIME_OF_DAY = {
+  MORNING: 'morning', // 5 AM - 12 PM
+  AFTERNOON: 'afternoon', // 12 PM - 5 PM
+  EVENING: 'evening', // 5 PM - 9 PM
+  NIGHT: 'night' // 9 PM - 5 AM
+};
+
+// Days of the week
+const DAYS_OF_WEEK = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 
+  'Thursday', 'Friday', 'Saturday'
+];
+
+// API versions
+const API_VERSIONS = {
+  V1: 'v1',
+  CURRENT: 'v1'
+};
+
+// Database table names
+const TABLE_NAMES = {
+  USERS: 'users',
+  LOCATIONS: 'locations',
+  ROUTES: 'routes',
+  ROUTE_STEPS: 'route_steps',
+  USER_DIRECTIONS: 'user_directions',
+  FARE_FEEDBACK: 'fare_feedback',
+  LANDMARKS: 'landmarks'
+};
+
+// JWT token types
+const TOKEN_TYPES = {
+  ACCESS: 'access',
+  REFRESH: 'refresh',
+  RESET: 'reset',
+  VERIFY: 'verify'
+};
+
+// Default pagination
+const PAGINATION = {
+  DEFAULT_LIMIT: 20,
+  MAX_LIMIT: 100,
+  DEFAULT_OFFSET: 0
+};
+
+// Search configuration
+const SEARCH_CONFIG = {
+  MIN_QUERY_LENGTH: 2,
+  MAX_QUERY_LENGTH: 100,
+  FUZZY_THRESHOLD: 0.7
+};
+
+// Cache TTL (Time To Live) in seconds
+const CACHE_TTL = {
+  SHORT: 300, // 5 minutes
+  MEDIUM: 1800, // 30 minutes
+  LONG: 3600, // 1 hour
+  VERY_LONG: 86400 // 24 hours
+};
+
+// Error codes
+const ERROR_CODES = {
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  AUTHENTICATION_ERROR: 'AUTHENTICATION_ERROR',
+  AUTHORIZATION_ERROR: 'AUTHORIZATION_ERROR',
+  NOT_FOUND_ERROR: 'NOT_FOUND_ERROR',
+  CONFLICT_ERROR: 'CONFLICT_ERROR',
+  RATE_LIMIT_ERROR: 'RATE_LIMIT_ERROR',
+  DATABASE_ERROR: 'DATABASE_ERROR',
+  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR'
+};
+
+// Regular expressions
+const REGEX_PATTERNS = {
+  NIGERIAN_PHONE: /^(\+234|234|0)(70|80|81|90|91)[0-9]{8}$/,
+  EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  UUID: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+  SHARE_CODE: /^[A-Z0-9]{8}$/,
+  PASSWORD_STRENGTH: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/
+};
+
+// External service configurations
+const EXTERNAL_SERVICES = {
+  GOOGLE_MAPS: {
+    BASE_URL: 'https://maps.googleapis.com/maps/api',
+    ENDPOINTS: {
+      GEOCODING: '/geocode/json',
+      DIRECTIONS: '/directions/json',
+      PLACES: '/place/nearbysearch/json'
+    }
+  },
+  FIREBASE: {
+    MESSAGING_URL: 'https://fcm.googleapis.com/fcm/send'
+  }
+};
+
+// Environment types
+const ENVIRONMENTS = {
+  DEVELOPMENT: 'development',
+  TEST: 'test',
+  STAGING: 'staging',
+  PRODUCTION: 'production'
+};
+
 module.exports = {
   VEHICLE_TYPES,
-  DIFFICULTY_LEVELS,
+  ROUTE_DIFFICULTY,
+  SUPPORTED_LANGUAGES,
   NIGERIAN_STATES,
   MAJOR_CITIES,
   LOCATION_TYPES,
   LANDMARK_CATEGORIES,
+  VISIBILITY_LEVELS,
   NOTIFICATION_TYPES,
-  REPUTATION_MILESTONES,
-  REPUTATION_ACTIONS,
-  RATE_LIMITS,
-  PAGINATION_DEFAULTS,
-  NIGERIA_COORDINATES,
-  DISTANCE_CONSTANTS,
-  FARE_CONSTANTS,
-  TIME_CONSTANTS,
-  SHARE_CODE_CONFIG,
-  FILE_UPLOAD,
+  NOTIFICATION_PRIORITIES,
   HTTP_STATUS,
-  LOG_LEVELS,
-  CACHE_TTL,
-  REGEX_PATTERNS,
-  ERROR_MESSAGES,
-  SUCCESS_MESSAGES,
+  REPUTATION_POINTS,
+  REPUTATION_LEVELS,
+  RATE_LIMITS,
+  UPLOAD_LIMITS,
+  NIGERIA_BOUNDS,
   TIME_ZONES,
-  SUPPORTED_LANGUAGES,
-  EMAIL_TEMPLATES
+  CURRENCY,
+  FARE_CONSTRAINTS,
+  DURATION_CONSTRAINTS,
+  DISTANCE_CONSTRAINTS,
+  CONFIDENCE_LEVELS,
+  UPDATE_TYPES,
+  TRAFFIC_CONDITIONS,
+  WEATHER_CONDITIONS,
+  TIME_OF_DAY,
+  DAYS_OF_WEEK,
+  API_VERSIONS,
+  TABLE_NAMES,
+  TOKEN_TYPES,
+  PAGINATION,
+  SEARCH_CONFIG,
+  CACHE_TTL,
+  ERROR_CODES,
+  REGEX_PATTERNS,
+  EXTERNAL_SERVICES,
+  ENVIRONMENTS
 };
