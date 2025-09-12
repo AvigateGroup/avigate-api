@@ -1,6 +1,18 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
+const Redis = require('ioredis');
+
+// Redis client for session storage (fallback to memory if not available)
+let redisClient = null;
+try {
+  if (process.env.REDIS_URL) {
+    redisClient = new Redis(process.env.REDIS_URL);
+    logger.info('Redis connected for session storage');
+  }
+} catch (error) {
+  logger.warn('Redis not available, using in-memory session storage');
+}
 
 // Generate JWT access token for admin
 const generateAdminAccessToken = (admin) => {
@@ -9,7 +21,8 @@ const generateAdminAccessToken = (admin) => {
     email: admin.email,
     role: admin.role,
     permissions: admin.permissions,
-    type: 'admin'
+    type: 'admin',
+    tokenId: crypto.randomUUID()
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET, {
@@ -19,27 +32,37 @@ const generateAdminAccessToken = (admin) => {
   });
 };
 
-// Generate JWT refresh token for admin
+// Generate JWT refresh token for admin - Fixed with tokenId
 const generateAdminRefreshToken = (admin) => {
+  const tokenId = crypto.randomUUID();
   const payload = {
     adminId: admin.id,
     email: admin.email,
     type: 'admin_refresh',
-    tokenId: crypto.randomUUID()
+    tokenId
   };
 
-  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+  const token = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
     expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
     issuer: 'avigate-admin',
     audience: 'avigate-admin-panel'
   });
+
+  return { token, tokenId };
 };
 
-// Generate both access and refresh tokens for admin
+// Generate both access and refresh tokens for admin - Fixed
 const generateAdminTokens = (admin) => {
+  const accessToken = generateAdminAccessToken(admin);
+  const refreshTokenData = generateAdminRefreshToken(admin);
+  
+  // Extract tokenId from access token for consistency
+  const accessPayload = jwt.decode(accessToken);
+  
   return {
-    accessToken: generateAdminAccessToken(admin),
-    refreshToken: generateAdminRefreshToken(admin)
+    accessToken,
+    refreshToken: refreshTokenData.token,
+    tokenId: accessPayload.tokenId // Return tokenId for session management
   };
 };
 
@@ -81,6 +104,82 @@ const verifyAdminRefreshToken = (token) => {
   }
 };
 
+// Enhanced Blacklist management with Redis support
+class TokenBlacklistManager {
+  constructor() {
+    this.memoryBlacklist = new Set();
+    this.maxMemoryTokens = 5000;
+  }
+
+  async blacklistToken(tokenId, expiresIn = '15m') {
+    const ttl = this.getExpirySeconds(expiresIn);
+    
+    try {
+      if (redisClient) {
+        await redisClient.setex(`blacklist:${tokenId}`, ttl, '1');
+      } else {
+        this.memoryBlacklist.add(tokenId);
+        this.cleanupMemoryBlacklist();
+      }
+      logger.debug(`Token blacklisted: ${tokenId}`);
+    } catch (error) {
+      logger.error('Failed to blacklist token:', error);
+      // Fallback to memory
+      this.memoryBlacklist.add(tokenId);
+      this.cleanupMemoryBlacklist();
+    }
+  }
+
+  async isTokenBlacklisted(tokenId) {
+    try {
+      if (redisClient) {
+        const result = await redisClient.get(`blacklist:${tokenId}`);
+        return result === '1';
+      } else {
+        return this.memoryBlacklist.has(tokenId);
+      }
+    } catch (error) {
+      logger.error('Failed to check token blacklist:', error);
+      return this.memoryBlacklist.has(tokenId);
+    }
+  }
+
+  cleanupMemoryBlacklist() {
+    if (this.memoryBlacklist.size > this.maxMemoryTokens) {
+      const tokensArray = Array.from(this.memoryBlacklist);
+      this.memoryBlacklist.clear();
+      tokensArray.slice(-2500).forEach(token => this.memoryBlacklist.add(token));
+    }
+  }
+
+  getExpirySeconds(expiresIn) {
+    const match = expiresIn.match(/^(\d+)([smhd])$/);
+    if (!match) return 900; // Default 15 minutes
+    
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    
+    switch (unit) {
+      case 's': return value;
+      case 'm': return value * 60;
+      case 'h': return value * 60 * 60;
+      case 'd': return value * 24 * 60 * 60;
+      default: return 900;
+    }
+  }
+}
+
+const tokenBlacklistManager = new TokenBlacklistManager();
+
+// Wrapper functions for backward compatibility
+const blacklistAdminToken = async (tokenId, expiresIn) => {
+  return tokenBlacklistManager.blacklistToken(tokenId, expiresIn);
+};
+
+const isAdminTokenBlacklisted = async (tokenId) => {
+  return tokenBlacklistManager.isTokenBlacklisted(tokenId);
+};
+
 // Create admin session data
 const createAdminSessionData = (admin, tokenId, req) => {
   return {
@@ -94,25 +193,6 @@ const createAdminSessionData = (admin, tokenId, req) => {
     ip: req?.ip || null,
     permissions: admin.permissions
   };
-};
-
-// Blacklist management for admin tokens
-const adminBlacklistedTokens = new Set();
-
-const blacklistAdminToken = (tokenId) => {
-  adminBlacklistedTokens.add(tokenId);
-  
-  // Clean up old tokens periodically
-  if (adminBlacklistedTokens.size > 5000) {
-    const tokensArray = Array.from(adminBlacklistedTokens);
-    adminBlacklistedTokens.clear();
-    // Keep only the most recent 2500 tokens
-    tokensArray.slice(-2500).forEach(token => adminBlacklistedTokens.add(token));
-  }
-};
-
-const isAdminTokenBlacklisted = (tokenId) => {
-  return adminBlacklistedTokens.has(tokenId);
 };
 
 // Extract admin token information
@@ -282,86 +362,205 @@ const getExpiryMilliseconds = (expiresIn) => {
   }
 };
 
-// Admin session management
+// Enhanced Admin session management with Redis support
 class AdminSessionManager {
   constructor() {
     this.sessions = new Map();
     this.maxSessions = 5; // Maximum concurrent sessions per admin
   }
 
-  createSession(admin, tokenId, req) {
+  async createSession(admin, tokenId, req) {
     const sessionData = createAdminSessionData(admin, tokenId, req);
     const sessionKey = `${admin.id}:${tokenId}`;
     
-    // Get existing sessions for this admin
-    const adminSessions = this.getAdminSessions(admin.id);
-    
-    // If max sessions reached, remove oldest
-    if (adminSessions.length >= this.maxSessions) {
-      const oldestSession = adminSessions.sort((a, b) => 
-        new Date(a.createdAt) - new Date(b.createdAt)
-      )[0];
+    try {
+      // Get existing sessions for this admin
+      const adminSessions = await this.getAdminSessions(admin.id);
       
-      this.removeSession(admin.id, oldestSession.tokenId);
+      // If max sessions reached, remove oldest
+      if (adminSessions.length >= this.maxSessions) {
+        const oldestSession = adminSessions.sort((a, b) => 
+          new Date(a.createdAt) - new Date(b.createdAt)
+        )[0];
+        
+        await this.removeSession(admin.id, oldestSession.tokenId);
+      }
+      
+      // Store session
+      if (redisClient) {
+        await redisClient.setex(
+          `admin_session:${sessionKey}`, 
+          24 * 60 * 60, // 24 hours TTL
+          JSON.stringify(sessionData)
+        );
+      } else {
+        this.sessions.set(sessionKey, sessionData);
+      }
+      
+      return sessionData;
+    } catch (error) {
+      logger.error('Failed to create admin session:', error);
+      // Fallback to memory storage
+      this.sessions.set(sessionKey, sessionData);
+      return sessionData;
     }
-    
-    this.sessions.set(sessionKey, sessionData);
-    return sessionData;
   }
 
-  getSession(adminId, tokenId) {
-    return this.sessions.get(`${adminId}:${tokenId}`);
-  }
-
-  updateSessionActivity(adminId, tokenId) {
+  async getSession(adminId, tokenId) {
     const sessionKey = `${adminId}:${tokenId}`;
-    const session = this.sessions.get(sessionKey);
     
-    if (session) {
-      session.lastActivity = new Date().toISOString();
-      this.sessions.set(sessionKey, session);
+    try {
+      if (redisClient) {
+        const sessionData = await redisClient.get(`admin_session:${sessionKey}`);
+        return sessionData ? JSON.parse(sessionData) : null;
+      } else {
+        return this.sessions.get(sessionKey);
+      }
+    } catch (error) {
+      logger.error('Failed to get admin session:', error);
+      return this.sessions.get(sessionKey);
     }
   }
 
-  removeSession(adminId, tokenId) {
+  async updateSessionActivity(adminId, tokenId) {
     const sessionKey = `${adminId}:${tokenId}`;
-    return this.sessions.delete(sessionKey);
+    
+    try {
+      const session = await this.getSession(adminId, tokenId);
+      if (session) {
+        session.lastActivity = new Date().toISOString();
+        
+        if (redisClient) {
+          await redisClient.setex(
+            `admin_session:${sessionKey}`,
+            24 * 60 * 60,
+            JSON.stringify(session)
+          );
+        } else {
+          this.sessions.set(sessionKey, session);
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to update session activity:', error);
+    }
   }
 
-  getAdminSessions(adminId) {
+  async removeSession(adminId, tokenId) {
+    const sessionKey = `${adminId}:${tokenId}`;
+    
+    try {
+      if (redisClient) {
+        await redisClient.del(`admin_session:${sessionKey}`);
+      }
+      return this.sessions.delete(sessionKey);
+    } catch (error) {
+      logger.error('Failed to remove admin session:', error);
+      return this.sessions.delete(sessionKey);
+    }
+  }
+
+  async getAdminSessions(adminId) {
     const sessions = [];
-    for (const [key, session] of this.sessions) {
-      if (session.adminId === adminId) {
-        sessions.push(session);
-      }
-    }
-    return sessions;
-  }
-
-  removeAllAdminSessions(adminId) {
-    const sessions = this.getAdminSessions(adminId);
-    sessions.forEach(session => {
-      this.removeSession(adminId, session.tokenId);
-    });
-    return sessions.length;
-  }
-
-  cleanupExpiredSessions() {
-    const now = new Date();
-    const expiredSessions = [];
     
-    for (const [key, session] of this.sessions) {
-      const lastActivity = new Date(session.lastActivity);
-      const inactiveHours = (now - lastActivity) / (1000 * 60 * 60);
+    try {
+      if (redisClient) {
+        const keys = await redisClient.keys(`admin_session:${adminId}:*`);
+        for (const key of keys) {
+          const sessionData = await redisClient.get(key);
+          if (sessionData) {
+            sessions.push(JSON.parse(sessionData));
+          }
+        }
+      } else {
+        for (const [key, session] of this.sessions) {
+          if (session.adminId === adminId) {
+            sessions.push(session);
+          }
+        }
+      }
       
-      // Remove sessions inactive for more than 24 hours
-      if (inactiveHours > 24) {
-        expiredSessions.push(key);
+      return sessions;
+    } catch (error) {
+      logger.error('Failed to get admin sessions:', error);
+      // Fallback to memory
+      const memorySessions = [];
+      for (const [key, session] of this.sessions) {
+        if (session.adminId === adminId) {
+          memorySessions.push(session);
+        }
       }
+      return memorySessions;
     }
+  }
+
+  async removeAllAdminSessions(adminId) {
+    try {
+      const sessions = await this.getAdminSessions(adminId);
+      
+      if (redisClient) {
+        const keys = await redisClient.keys(`admin_session:${adminId}:*`);
+        if (keys.length > 0) {
+          await redisClient.del(...keys);
+        }
+      }
+      
+      // Also clean memory sessions
+      for (const [key, session] of this.sessions) {
+        if (session.adminId === adminId) {
+          this.sessions.delete(key);
+        }
+      }
+      
+      return sessions.length;
+    } catch (error) {
+      logger.error('Failed to remove all admin sessions:', error);
+      return 0;
+    }
+  }
+
+  async cleanupExpiredSessions() {
+    const now = new Date();
+    let expiredCount = 0;
     
-    expiredSessions.forEach(key => this.sessions.delete(key));
-    return expiredSessions.length;
+    try {
+      if (redisClient) {
+        // Redis TTL handles expiration automatically
+        // Just clean up memory sessions
+        const expiredSessions = [];
+        
+        for (const [key, session] of this.sessions) {
+          const lastActivity = new Date(session.lastActivity);
+          const inactiveHours = (now - lastActivity) / (1000 * 60 * 60);
+          
+          if (inactiveHours > 24) {
+            expiredSessions.push(key);
+          }
+        }
+        
+        expiredSessions.forEach(key => this.sessions.delete(key));
+        expiredCount = expiredSessions.length;
+      } else {
+        // Memory-only cleanup
+        const expiredSessions = [];
+        
+        for (const [key, session] of this.sessions) {
+          const lastActivity = new Date(session.lastActivity);
+          const inactiveHours = (now - lastActivity) / (1000 * 60 * 60);
+          
+          if (inactiveHours > 24) {
+            expiredSessions.push(key);
+          }
+        }
+        
+        expiredSessions.forEach(key => this.sessions.delete(key));
+        expiredCount = expiredSessions.length;
+      }
+      
+      return expiredCount;
+    } catch (error) {
+      logger.error('Failed to cleanup expired sessions:', error);
+      return 0;
+    }
   }
 }
 
@@ -369,10 +568,14 @@ class AdminSessionManager {
 const adminSessionManager = new AdminSessionManager();
 
 // Cleanup expired sessions every hour
-setInterval(() => {
-  const cleaned = adminSessionManager.cleanupExpiredSessions();
-  if (cleaned > 0) {
-    logger.info(`Cleaned up ${cleaned} expired admin sessions`);
+setInterval(async () => {
+  try {
+    const cleaned = await adminSessionManager.cleanupExpiredSessions();
+    if (cleaned > 0) {
+      logger.info(`Cleaned up ${cleaned} expired admin sessions`);
+    }
+  } catch (error) {
+    logger.error('Session cleanup failed:', error);
   }
 }, 60 * 60 * 1000);
 
@@ -388,12 +591,18 @@ const validateAdminJWTConfig = () => {
   
   if (!process.env.JWT_REFRESH_SECRET) {
     errors.push('JWT_REFRESH_SECRET is required');
+  } else if (process.env.JWT_REFRESH_SECRET.length < 32) {
+    errors.push('JWT_REFRESH_SECRET should be at least 32 characters long');
+  }
+  
+  if (process.env.JWT_SECRET === process.env.JWT_REFRESH_SECRET) {
+    errors.push('JWT_SECRET and JWT_REFRESH_SECRET must be different');
   }
   
   return errors;
 };
 
-// Admin security utilities
+// Enhanced admin security utilities
 const adminSecurityUtils = {
   // Check if password meets admin requirements
   validateAdminPassword: (password) => {
@@ -417,6 +626,17 @@ const adminSecurityUtils = {
     
     if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
       errors.push('Password must contain at least one special character');
+    }
+    
+    // Check for common weak passwords
+    const commonPasswords = [
+      'password123', 'admin123456', 'avigate123', 'qwerty123456'
+    ];
+    
+    if (commonPasswords.some(common => 
+      password.toLowerCase().includes(common.toLowerCase())
+    )) {
+      errors.push('Password contains common patterns that are not secure');
     }
     
     return {
@@ -472,7 +692,56 @@ const adminSecurityUtils = {
       suspicious.push('user_agent_change');
     }
     
+    // Check for non-business hours access (if configured)
+    const hour = new Date().getHours();
+    if (process.env.BUSINESS_HOURS_ONLY === 'true') {
+      if (hour < 6 || hour > 22) { // Outside 6 AM - 10 PM
+        suspicious.push('non_business_hours');
+      }
+    }
+    
     return suspicious;
+  },
+
+  // Rate limiting for sensitive operations
+  createOperationLimiter: () => {
+    const limits = new Map();
+    
+    return {
+      checkLimit: (adminId, operation, maxAttempts = 5, windowMs = 15 * 60 * 1000) => {
+        const key = `${adminId}:${operation}`;
+        const now = Date.now();
+        
+        if (!limits.has(key)) {
+          limits.set(key, { count: 1, firstAttempt: now });
+          return { allowed: true, remaining: maxAttempts - 1 };
+        }
+        
+        const record = limits.get(key);
+        
+        // Reset window if expired
+        if (now - record.firstAttempt > windowMs) {
+          limits.set(key, { count: 1, firstAttempt: now });
+          return { allowed: true, remaining: maxAttempts - 1 };
+        }
+        
+        // Check if limit exceeded
+        if (record.count >= maxAttempts) {
+          return { 
+            allowed: false, 
+            remaining: 0,
+            resetTime: new Date(record.firstAttempt + windowMs)
+          };
+        }
+        
+        // Increment count
+        record.count++;
+        return { 
+          allowed: true, 
+          remaining: maxAttempts - record.count 
+        };
+      }
+    };
   }
 };
 
@@ -494,5 +763,6 @@ module.exports = {
   verifyAdminAPIKey,
   adminSessionManager,
   validateAdminJWTConfig,
-  adminSecurityUtils
+  adminSecurityUtils,
+  tokenBlacklistManager
 };
