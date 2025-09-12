@@ -1,5 +1,3 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 const logger = require('../utils/logger');
 const { generateTokens, verifyRefreshToken } = require('../services/authService');
