@@ -1,59 +1,54 @@
-const jwt = require('jsonwebtoken');
-const { Admin } = require('../models');
+const { 
+  verifyAdminAccessToken, 
+  adminSessionManager, 
+  isAdminTokenBlacklisted,
+  adminSecurityUtils 
+} = require('../services/adminAuthService');
+const { Admin, AuditLog } = require('../models');
 const logger = require('../utils/logger');
 
-// Authenticate admin JWT token
+// Enhanced admin authentication middleware
 const authenticateAdmin = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        message: 'Access token is required'
+        message: 'Access token required'
       });
     }
 
-    const token = authHeader.split(' ')[1]; // Bearer <token>
+    const token = authHeader.substring(7);
     
-    if (!token) {
+    // Verify token structure and signature
+    const decoded = verifyAdminAccessToken(token);
+    if (!decoded) {
       return res.status(401).json({
         success: false,
-        message: 'Access token is required'
+        message: 'Invalid or expired access token'
       });
     }
 
-    // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Ensure it's an admin token
-    if (decoded.type !== 'admin') {
+    // Check if token is blacklisted
+    const isBlacklisted = await isAdminTokenBlacklisted(decoded.tokenId);
+    if (isBlacklisted) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token type'
+        message: 'Token has been revoked'
       });
     }
 
-    // Find admin
-    const admin = await Admin.findByPk(decoded.adminId, {
-      attributes: { exclude: ['passwordHash', 'totpSecret', 'totpBackupCodes'] }
-    });
-    
-    if (!admin) {
+    // Verify admin still exists and is active
+    const admin = await Admin.findByPk(decoded.adminId);
+    if (!admin || !admin.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Admin not found'
+        message: 'Admin account not found or inactive'
       });
     }
 
-    if (!admin.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Admin account is deactivated'
-      });
-    }
-
-    // Check if account is locked
+    // Check if admin account is locked
     if (admin.isLocked()) {
       return res.status(423).json({
         success: false,
@@ -61,288 +56,526 @@ const authenticateAdmin = async (req, res, next) => {
       });
     }
 
-    // Add admin to request object
-    req.admin = admin;
-    next();
-
-  } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
+    // Verify session exists and is valid
+    const session = await adminSessionManager.getSession(decoded.adminId, decoded.tokenId);
+    if (!session) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid access token'
-      });
-    }
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token has expired'
+        message: 'Session expired or invalid'
       });
     }
 
-    logger.error('Admin authentication error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Authentication failed'
-    });
-  }
-};
-
-// Check specific permission
-const requirePermission = (permission) => {
-  return (req, res, next) => {
-    if (!req.admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
+    // Check for suspicious activity
+    const suspiciousActivity = adminSecurityUtils.detectSuspiciousActivity(admin, req);
+    if (suspiciousActivity.length > 0) {
+      logger.warn('Suspicious admin activity detected:', {
+        adminId: admin.id,
+        email: admin.email,
+        suspiciousActivity,
+        ip: req.ip,
+        userAgent: req.get('User-Agent')
       });
-    }
 
-    if (!req.admin.hasPermission(permission)) {
-      logger.warn(`Admin ${req.admin.email} attempted to access ${permission} without permission`);
-      
-      return res.status(403).json({
-        success: false,
-        message: `Permission '${permission}' required`
+      // Log security alert
+      await AuditLog.create({
+        adminId: admin.id,
+        action: 'security_alert',
+        resource: 'admin',
+        metadata: { suspiciousActivity },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        severity: 'high'
       });
-    }
 
-    next();
-  };
-};
+      // For high-risk activities, require re-authentication
+      const highRiskActivities = ['login_from_new_ip', 'user_agent_change'];
+      const hasHighRisk = suspiciousActivity.some(activity => 
+        highRiskActivities.includes(activity)
+      );
 
-// Check multiple permissions (admin must have at least one)
-const requireAnyPermission = (permissions) => {
-  return (req, res, next) => {
-    if (!req.admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    if (!req.admin.hasAnyPermission(permissions)) {
-      logger.warn(`Admin ${req.admin.email} attempted to access without required permissions: ${permissions.join(', ')}`);
-      
-      return res.status(403).json({
-        success: false,
-        message: `One of these permissions required: ${permissions.join(', ')}`
-      });
-    }
-
-    next();
-  };
-};
-
-// Check admin role
-const requireRole = (role) => {
-  return (req, res, next) => {
-    if (!req.admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    if (req.admin.role !== role && req.admin.role !== 'super_admin') {
-      logger.warn(`Admin ${req.admin.email} attempted to access ${role} endpoint with role ${req.admin.role}`);
-      
-      return res.status(403).json({
-        success: false,
-        message: `Role '${role}' required`
-      });
-    }
-
-    next();
-  };
-};
-
-// Check if admin is super admin
-const requireSuperAdmin = (req, res, next) => {
-  if (!req.admin) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required'
-    });
-  }
-
-  if (req.admin.role !== 'super_admin') {
-    logger.warn(`Admin ${req.admin.email} attempted to access super admin endpoint`);
-    
-    return res.status(403).json({
-      success: false,
-      message: 'Super admin privileges required'
-    });
-  }
-
-  next();
-};
-
-// Audit logging middleware for admin actions
-const auditLog = (action, resource) => {
-  return async (req, res, next) => {
-    // Store original res.json
-    const originalJson = res.json;
-    
-    res.json = function(data) {
-      // Log successful admin actions
-      if (data.success && req.admin) {
-        const { AuditLog } = require('../models');
-        
-        AuditLog.create({
-          adminId: req.admin.id,
-          action,
-          resource,
-          resourceId: req.params.id || req.params.userId || null,
-          method: req.method,
-          endpoint: req.originalUrl,
-          ipAddress: req.ip,
-          userAgent: req.get('User-Agent'),
-          metadata: {
-            body: req.body,
-            query: req.query,
-            params: req.params
-          },
-          severity: determineSeverity(action, resource)
-        }).catch(err => {
-          logger.error('Audit log creation failed:', err);
+      if (hasHighRisk) {
+        return res.status(401).json({
+          success: false,
+          message: 'Re-authentication required due to security concerns',
+          requiresReauth: true
         });
       }
-      
-      // Call original json method
-      return originalJson.call(this, data);
-    };
-    
-    next();
-  };
-};
+    }
 
-// Determine severity level for audit logs
-const determineSeverity = (action, resource) => {
-  const highSeverityActions = [
-    'delete', 'disable', 'ban', 'suspend', 'enable_totp', 'disable_totp',
-    'create_admin', 'delete_admin', 'change_permissions'
-  ];
-  
-  const mediumSeverityActions = [
-    'update', 'verify', 'moderate', 'login', 'logout', 'change_password'
-  ];
-  
-  const criticalResources = ['admin', 'system', 'database'];
-  
-  if (criticalResources.includes(resource) && highSeverityActions.some(a => action.includes(a))) {
-    return 'critical';
-  }
-  
-  if (highSeverityActions.some(a => action.includes(a))) {
-    return 'high';
-  }
-  
-  if (mediumSeverityActions.some(a => action.includes(a))) {
-    return 'medium';
-  }
-  
-  return 'low';
-};
+    // Check if password change is required
+    if (admin.requiresPasswordChange()) {
+      // Allow only profile update and logout endpoints
+      const allowedPaths = ['/api/admin/profile', '/api/admin/auth/logout'];
+      if (!allowedPaths.some(path => req.path.startsWith(path))) {
+        return res.status(403).json({
+          success: false,
+          message: 'Password change required',
+          requiresPasswordChange: true
+        });
+      }
+    }
 
-// Rate limiting for admin actions
-const adminRateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
-  const requests = new Map();
-  
-  return (req, res, next) => {
-    if (!req.admin) {
-      return next();
-    }
-    
-    const key = `admin:${req.admin.id}`;
-    const now = Date.now();
-    const windowStart = now - windowMs;
-    
-    // Get or create request log for this admin
-    if (!requests.has(key)) {
-      requests.set(key, []);
-    }
-    
-    const adminRequests = requests.get(key);
-    
-    // Remove old requests outside the window
-    while (adminRequests.length > 0 && adminRequests[0] < windowStart) {
-      adminRequests.shift();
-    }
-    
-    // Check if limit exceeded
-    if (adminRequests.length >= maxRequests) {
-      logger.warn(`Admin rate limit exceeded for ${req.admin.email}`);
-      
-      return res.status(429).json({
+    // Check if password is expired (hard block)
+    if (admin.isPasswordExpired()) {
+      return res.status(403).json({
         success: false,
-        message: 'Admin rate limit exceeded'
+        message: 'Password has expired. Please contact system administrator.',
+        passwordExpired: true
       });
     }
-    
-    // Add current request
-    adminRequests.push(now);
-    
+
+    // Update session activity
+    await adminSessionManager.updateSessionActivity(decoded.adminId, decoded.tokenId);
+
+    // Attach admin and token info to request
+    req.admin = admin;
+    req.tokenId = decoded.tokenId;
+    req.sessionData = session;
+
     next();
+  } catch (error) {
+    logger.error('Admin authentication error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Authentication service error'
+    });
+  }
+};
+
+// Permission-based authorization middleware
+const requirePermission = (requiredPermission) => {
+  return async (req, res, next) => {
+    try {
+      const admin = req.admin;
+      
+      if (!admin) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      if (!admin.hasPermission(requiredPermission)) {
+        // Log unauthorized access attempt
+        await AuditLog.create({
+          adminId: admin.id,
+          action: 'unauthorized_access_attempt',
+          resource: 'admin',
+          metadata: { 
+            requiredPermission,
+            userPermissions: admin.permissions,
+            attemptedPath: req.path,
+            method: req.method
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          severity: 'medium'
+        });
+
+        return res.status(403).json({
+          success: false,
+          message: 'Insufficient permissions',
+          requiredPermission
+        });
+      }
+
+      next();
+    } catch (error) {
+      logger.error('Permission check error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Authorization service error'
+      });
+    }
   };
 };
 
-// Session validation middleware
-const validateSession = async (req, res, next) => {
-  if (!req.admin) {
-    return next();
-  }
-  
-  // Check if admin's refresh token is still valid
-  if (req.admin.refreshTokenExpiresAt && req.admin.refreshTokenExpiresAt < new Date()) {
-    return res.status(401).json({
+// Multiple permission authorization (require ANY of the permissions)
+const requireAnyPermission = (requiredPermissions) => {
+  return async (req, res, next) => {
+    try {
+      const admin = req.admin;
+      
+      if (!admin) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      if (!admin.hasAnyPermission(requiredPermissions)) {
+        await AuditLog.create({
+          adminId: admin.id,
+          action: 'unauthorized_access_attempt',
+          resource: 'admin',
+          metadata: { 
+            requiredPermissions,
+            userPermissions: admin.permissions,
+            attemptedPath: req.path,
+            method: req.method
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          severity: 'medium'
+        });
+
+        return res.status(403).json({
+          success: false,
+          message: 'Insufficient permissions',
+          requiredPermissions
+        });
+      }
+
+      next();
+    } catch (error) {
+      logger.error('Permission check error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Authorization service error'
+      });
+    }
+  };
+};
+
+// Super admin only middleware
+const requireSuperAdmin = async (req, res, next) => {
+  try {
+    const admin = req.admin;
+    
+    if (!admin) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    if (admin.role !== 'super_admin') {
+      // Log super admin access attempt
+      await AuditLog.create({
+        adminId: admin.id,
+        action: 'super_admin_access_attempt',
+        resource: 'admin',
+        metadata: { 
+          userRole: admin.role,
+          attemptedPath: req.path,
+          method: req.method
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        severity: 'high'
+      });
+
+      return res.status(403).json({
+        success: false,
+        message: 'Super administrator access required'
+      });
+    }
+
+    next();
+  } catch (error) {
+    logger.error('Super admin check error:', error);
+    res.status(500).json({
       success: false,
-      message: 'Session expired. Please login again.'
+      message: 'Authorization service error'
     });
   }
+};
+
+// Role-based authorization middleware
+const requireRole = (requiredRoles) => {
+  const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
   
-  // Update last activity (optional - you might want to throttle this)
-  if (Math.random() < 0.1) { // Update 10% of the time to reduce DB load
-    req.admin.update({ 
-      lastLoginAt: new Date() 
-    }).catch(err => {
-      logger.error('Failed to update admin last activity:', err);
+  return async (req, res, next) => {
+    try {
+      const admin = req.admin;
+      
+      if (!admin) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      if (!roles.includes(admin.role)) {
+        await AuditLog.create({
+          adminId: admin.id,
+          action: 'role_access_attempt',
+          resource: 'admin',
+          metadata: { 
+            requiredRoles,
+            userRole: admin.role,
+            attemptedPath: req.path,
+            method: req.method
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          severity: 'medium'
+        });
+
+        return res.status(403).json({
+          success: false,
+          message: 'Insufficient role permissions',
+          requiredRoles
+        });
+      }
+
+      next();
+    } catch (error) {
+      logger.error('Role check error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Authorization service error'
+      });
+    }
+  };
+};
+
+// Middleware to check if admin can manage target admin
+const canManageAdmin = async (req, res, next) => {
+  try {
+    const currentAdmin = req.admin;
+    const { adminId } = req.params;
+
+    if (!currentAdmin) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // Super admins can manage anyone except preventing self-deactivation
+    if (currentAdmin.role === 'super_admin') {
+      // Prevent super admin from deactivating themselves
+      if (currentAdmin.id === adminId && req.body.isActive === false) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot deactivate your own account'
+        });
+      }
+      return next();
+    }
+
+    // Find target admin
+    const targetAdmin = await Admin.findByPk(adminId);
+    if (!targetAdmin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin not found'
+      });
+    }
+
+    // Check role hierarchy
+    if (!Admin.canManageRole(currentAdmin.role, targetAdmin.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot manage admin with equal or higher role'
+      });
+    }
+
+    next();
+  } catch (error) {
+    logger.error('Admin management check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Authorization service error'
+    });
+  }
+};
+
+// Rate limiting middleware for sensitive operations
+const sensitiveOperationLimiter = (operation, maxAttempts = 3, windowMs = 60000) => {
+  const limiter = adminSecurityUtils.createOperationLimiter();
+  
+  return async (req, res, next) => {
+    try {
+      const adminId = req.admin?.id;
+      if (!adminId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required'
+        });
+      }
+
+      const result = limiter.checkLimit(adminId, operation, maxAttempts, windowMs);
+      
+      if (!result.allowed) {
+        // Log rate limit violation
+        await AuditLog.create({
+          adminId,
+          action: 'rate_limit_exceeded',
+          resource: 'admin',
+          metadata: { 
+            operation,
+            maxAttempts,
+            resetTime: result.resetTime
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('User-Agent'),
+          severity: 'medium'
+        });
+
+        return res.status(429).json({
+          success: false,
+          message: `Too many ${operation} attempts. Please try again later.`,
+          resetTime: result.resetTime
+        });
+      }
+
+      // Add remaining attempts to response headers
+      res.set('X-RateLimit-Remaining', result.remaining.toString());
+      
+      next();
+    } catch (error) {
+      logger.error('Rate limiter error:', error);
+      next(); // Continue on limiter error
+    }
+  };
+};
+
+// Middleware to validate domain email in requests
+const validateEmailDomain = (req, res, next) => {
+  const { email } = req.body;
+  
+  if (email && !email.toLowerCase().endsWith('@avigate.co')) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email must be from @avigate.co domain'
     });
   }
   
   next();
 };
 
-// IP whitelist middleware for critical admin operations
-const requireIPWhitelist = (whitelist = []) => {
-  return (req, res, next) => {
-    if (whitelist.length === 0) {
-      return next(); // No whitelist configured
+// Middleware to ensure at least one super admin exists before deactivation
+const ensureSuperAdminExists = async (req, res, next) => {
+  try {
+    const { adminId } = req.params;
+    const { isActive } = req.body;
+    
+    // Only check if deactivating an admin
+    if (isActive !== false) {
+      return next();
     }
+
+    const targetAdmin = await Admin.findByPk(adminId);
+    if (!targetAdmin || targetAdmin.role !== 'super_admin') {
+      return next();
+    }
+
+    // Check if this would leave no active super admins
+    await Admin.ensureSuperAdminExists();
     
-    const clientIP = req.ip || req.connection.remoteAddress;
-    
-    if (!whitelist.includes(clientIP)) {
-      logger.warn(`Admin ${req.admin?.email} attempted access from non-whitelisted IP: ${clientIP}`);
-      
-      return res.status(403).json({
+    next();
+  } catch (error) {
+    if (error.message === 'Cannot remove the last super administrator') {
+      return res.status(400).json({
         success: false,
-        message: 'Access from this IP address is not allowed'
+        message: error.message
       });
     }
     
-    next();
-  };
+    logger.error('Super admin check error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'System validation error'
+    });
+  }
+};
+
+// Security headers middleware for admin panel
+const securityHeaders = (req, res, next) => {
+  // Strict security headers for admin panel
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:",
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
+  });
+  
+  next();
+};
+
+// Request logging middleware for audit trail
+const auditRequest = (req, res, next) => {
+  // Log sensitive operations
+  const sensitiveEndpoints = [
+    '/admins',
+    '/auth',
+    '/totp',
+    '/users/:userId/status'
+  ];
+  
+  const isSensitive = sensitiveEndpoints.some(endpoint => 
+    req.path.includes(endpoint.split(':')[0])
+  );
+  
+  if (isSensitive && req.admin) {
+    // This will be logged after the request completes
+    req.shouldAudit = true;
+    req.auditData = {
+      adminId: req.admin.id,
+      action: `${req.method.toLowerCase()}_${req.path.replace(/^\/api\/admin\//, '').replace(/\//g, '_')}`,
+      resource: 'admin_api',
+      metadata: {
+        path: req.path,
+        method: req.method,
+        query: req.query,
+        // Don't log sensitive body data like passwords
+        bodyKeys: Object.keys(req.body || {}).filter(key => 
+          !['password', 'newPassword', 'currentPassword', 'totpToken'].includes(key)
+        )
+      },
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent'),
+      severity: 'low'
+    };
+  }
+  
+  next();
+};
+
+// Response audit logging
+const auditResponse = (req, res, next) => {
+  if (req.shouldAudit) {
+    // Override res.json to capture response
+    const originalJson = res.json;
+    res.json = function(data) {
+      // Log the request after response
+      setImmediate(async () => {
+        try {
+          await AuditLog.create({
+            ...req.auditData,
+            metadata: {
+              ...req.auditData.metadata,
+              statusCode: res.statusCode,
+              success: data?.success
+            }
+          });
+        } catch (error) {
+          logger.error('Audit log creation failed:', error);
+        }
+      });
+      
+      return originalJson.call(this, data);
+    };
+  }
+  
+  next();
 };
 
 module.exports = {
   authenticateAdmin,
   requirePermission,
   requireAnyPermission,
-  requireRole,
   requireSuperAdmin,
-  auditLog,
-  adminRateLimit,
-  validateSession,
-  requireIPWhitelist
+  requireRole,
+  canManageAdmin,
+  sensitiveOperationLimiter,
+  validateEmailDomain,
+  ensureSuperAdminExists,
+  securityHeaders,
+  auditRequest,
+  auditResponse
 };
