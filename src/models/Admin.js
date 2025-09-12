@@ -1,4 +1,3 @@
-const { DataTypes } = require('sequelize');
 const bcrypt = require('bcryptjs');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');

@@ -1,6 +1,3 @@
-const { DataTypes, Op } = require('sequelize');
-const crypto = require('crypto');
-
 module.exports = (sequelize, DataTypes) => {
   const UserDirection = sequelize.define('UserDirection', {
     id: {

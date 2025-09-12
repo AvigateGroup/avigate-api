@@ -1,4 +1,4 @@
-const { Admin, User, Location, Route, AuditLog, UserAnalytics, AppUsageAnalytics, GeographicAnalytics, SystemMetrics, sequelize } = require('../models');
+const { Admin, User, Location, Route, AuditLog, sequelize } = require('../models');
 const { generateAdminTokens, adminSessionManager } = require('../services/adminAuthService');
 const logger = require('../utils/logger');
 const { Op } = require('sequelize');

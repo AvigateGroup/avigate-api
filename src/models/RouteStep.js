@@ -1,5 +1,3 @@
-const { DataTypes } = require('sequelize');
-
 module.exports = (sequelize, DataTypes) => {
   const RouteStep = sequelize.define('RouteStep', {
     id: {

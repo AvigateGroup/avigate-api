@@ -1,6 +1,3 @@
-const { DataTypes, Op } = require('sequelize');
-
-// User Analytics Model
 const UserAnalytics = (sequelize, DataTypes) => {
   const UserAnalytics = sequelize.define('UserAnalytics', {
     id: {
