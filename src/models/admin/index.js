@@ -1,58 +1,31 @@
-const { adminSecurityMethods, securityFields } = require('./AdminSecurity');
-const { adminTOTPMethods, totpFields } = require('./AdminTOTP');
-const { adminPermissionMethods, adminStaticMethods, adminAssociations } = require('./AdminPermissions');
+const { Sequelize } = require('sequelize');
+const config = require('../config/database');
 
-module.exports = (sequelize) => {
-  // Import base model
-  const AdminModel = require('./Admin')(sequelize);
-  const Admin = AdminModel;
+// Initialize Sequelize instance
+const sequelize = new Sequelize(config.database, config.username, config.password, {
+  host: config.host,
+  dialect: config.dialect,
+  port: config.port,
+  logging: config.logging,
+  pool: config.pool,
+  define: config.define
+});
 
-  // Add additional fields
-  const additionalFields = {
-    ...securityFields,
-    ...totpFields
-  };
+const db = {};
 
-  // Add fields to the model
-  Object.keys(additionalFields).forEach(fieldName => {
-    Admin.rawAttributes[fieldName] = additionalFields[fieldName];
-    Admin.tableAttributes[fieldName] = additionalFields[fieldName];
-  });
+// Import models - AFTER sequelize is initialized
+const Admin = require('./admin/Admin.js')(sequelize);
 
-  // Add additional indexes
-  Admin.options.indexes = [
-    ...Admin.options.indexes,
-    {
-      fields: ['totpEnabled']
-    },
-    {
-      fields: ['lastLoginAt']
-    }
-  ];
+// Add models to db object
+db.Admin = Admin;
+db.sequelize = sequelize;
+db.Sequelize = Sequelize;
 
-  // Add instance methods
-  Object.keys(adminSecurityMethods).forEach(methodName => {
-    Admin.prototype[methodName] = adminSecurityMethods[methodName];
-  });
+// Set up associations
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
+});
 
-  Object.keys(adminTOTPMethods).forEach(methodName => {
-    Admin.prototype[methodName] = adminTOTPMethods[methodName];
-  });
-
-  Object.keys(adminPermissionMethods).forEach(methodName => {
-    Admin.prototype[methodName] = adminPermissionMethods[methodName];
-  });
-
-  // Add static methods
-  Object.keys(adminStaticMethods).forEach(methodName => {
-    Admin[methodName] = adminStaticMethods[methodName];
-  });
-
-  // Define associations
-  Admin.associate = function(models) {
-    const associations = adminAssociations(models);
-    return associations;
-  };
-
-  return Admin;
-};
+module.exports = db;
