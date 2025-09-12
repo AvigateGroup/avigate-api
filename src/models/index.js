@@ -6,7 +6,7 @@ const env = process.env.NODE_ENV || 'development';
 const dbConfig = config[env];
 
 // Import admin models
-const Admin = require('./Admin')(sequelize, Sequelize.DataTypes);
+const Admin = require('./admin/Admin.js')(sequelize, Sequelize.DataTypes);
 const { UserAnalytics, AppUsageAnalytics, GeographicAnalytics, SystemMetrics, AuditLog } = require('./Analytics');
 
 // Initialize analytics models

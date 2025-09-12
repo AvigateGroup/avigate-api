@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const adminController = require('../controllers/adminController');
+const adminController = require('../controllers/admin/authController');
 const { validate } = require('../utils/validators');
 const { authenticateAdmin, requirePermission } = require('../middleware/adminAuth');
 const rateLimiter = require('../middleware/rateLimiter');
