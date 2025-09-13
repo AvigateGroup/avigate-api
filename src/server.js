@@ -8,7 +8,6 @@ require('dotenv').config();
 const { sequelize } = require('./models');
 const logger = require('./utils/logger');
 const errorHandler = require('./middleware/errorHandler');
-const rateLimiter = require('./middleware/rateLimiter');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -17,9 +16,6 @@ const routeRoutes = require('./routes/routes');
 const directionRoutes = require('./routes/directions');
 const crowdsourceRoutes = require('./routes/crowdsource');
 
-// Swagger documentation
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,15 +23,15 @@ const PORT = process.env.PORT || 3000;
 // Security middleware
 app.use(helmet());
 
-// CORS configuration - fixed the undefined origin variable
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
-};
-app.use(cors(corsOptions));
+// 🛠 CORS should be before helmet for correct headers
+app.use(
+    cors({
+        origin: '*', // In production, limit this to your trusted domains
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        credentials: true,
+    })
+)
 
-// Rate limiting
-app.use('/api/', rateLimiter.general);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -43,17 +39,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(compression());
 app.use(morgan('combined', { stream: { write: msg => logger.info(msg.trim()) } }));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Avigate API is running',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// API Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // API routes
 app.use('/api/v1/auth', authRoutes);
@@ -81,9 +66,7 @@ const startServer = async () => {
     logger.info('Database connection established successfully');
     
     app.listen(PORT, () => {
-      logger.info(`🚀 Avigate API server running on port ${PORT}`);
-      logger.info(`🏥 Health Check: http://localhost:${PORT}/health`);
-      logger.info(`📚 API Docs: http://localhost:${PORT}/api-docs`);
+      logger.info(`Avigate API server running on port ${PORT}`);
     });
     
   } catch (error) {
