@@ -1,24 +1,35 @@
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
-const RedisStore = require('rate-limit-redis');
-const redis = require('redis');
 const logger = require('../utils/logger');
 
-// Create Redis client for rate limiting
-let redisClient;
+// Try to import Redis store, but make it optional
+let store;
+
 try {
-  redisClient = redis.createClient({
+  const redis = require('redis');
+  const { RedisStore } = require('rate-limit-redis');
+  
+  const redisClient = redis.createClient({
     url: process.env.REDIS_URL || 'redis://localhost:6379'
   });
-  redisClient.connect();
+  
+  // Connect to Redis
+  redisClient.connect().then(() => {
+    logger.info('Redis connected for rate limiting');
+    
+    // Create Redis store for rate limiter
+    store = new RedisStore({
+      sendCommand: (...args) => redisClient.sendCommand(args),
+    });
+  }).catch((error) => {
+    logger.warn('Redis connection failed, using memory store for rate limiting:', error.message);
+    store = undefined;
+  });
+  
 } catch (error) {
-  logger.warn('Redis not available for rate limiting, using memory store');
+  logger.warn('Redis or rate-limit-redis not available, using memory store for rate limiting:', error.message);
+  store = undefined;
 }
-
-// Create Redis store for rate limiter if Redis is available
-const store = redisClient ? new RedisStore({
-  sendCommand: (...args) => redisClient.sendCommand(args),
-}) : undefined;
 
 // General rate limiter
 const generalLimiter = rateLimit({
@@ -65,7 +76,7 @@ const searchLimiter = rateLimit({
   max: (req) => {
     // Dynamic limit based on user reputation
     if (req.user) {
-      const reputation = req.user.reputationScore;
+      const reputation = req.user.reputationScore || 0;
       if (reputation >= 500) return 100;
       if (reputation >= 200) return 50;
       if (reputation >= 100) return 30;
@@ -89,7 +100,7 @@ const createLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: (req) => {
     if (req.user) {
-      const reputation = req.user.reputationScore;
+      const reputation = req.user.reputationScore || 0;
       if (reputation >= 500) return 50;
       if (reputation >= 200) return 20;
       if (reputation >= 100) return 10;
@@ -111,7 +122,7 @@ const createLimiter = rateLimit({
 const expensiveOpSlowDown = slowDown({
   windowMs: 15 * 60 * 1000, // 15 minutes
   delayAfter: 2, // Allow 2 requests per window at full speed
-  delayMs: 500, // Add 500ms delay after delayAfter requests
+  delayMs: () => 500, // Fixed delay of 500ms (new syntax)
   maxDelayMs: 20000, // Maximum delay of 20 seconds
   skipSuccessfulRequests: false,
   keyGenerator: (req) => {
@@ -125,7 +136,7 @@ const crowdsourceLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
   max: (req) => {
     if (req.user) {
-      const reputation = req.user.reputationScore;
+      const reputation = req.user.reputationScore || 0;
       if (reputation >= 500) return 20;
       if (reputation >= 200) return 10;
       if (reputation >= 100) return 5;
