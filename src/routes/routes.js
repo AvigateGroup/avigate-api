@@ -5,81 +5,65 @@ const { routeValidators, queryValidators, validate } = require('../utils/validat
 const { authenticate, optionalAuth } = require('../middleware/auth');
 const rateLimiter = require('../middleware/rateLimiter');
 
-
+// Search routes
 router.get('/search',
   rateLimiter.search,
   optionalAuth,
   validate(routeValidators.search, 'query'),
-  routeController.searchRoutes
+  routeController.search
 );
 
-
+// Get popular routes
 router.get('/popular',
-  routeController.getPopularRoutes
+  routeController.getPopular
 );
 
+// Get route statistics
+router.get('/stats',
+  routeController.getStats
+);
 
+// Get user's routes
+router.get('/my-routes',
+  authenticate,
+  routeController.getMyRoutes
+);
+
+// Create a new route
 router.post('/',
   authenticate,
   rateLimiter.create,
   validate(routeValidators.create),
-  routeController.createRoute
+  routeController.create
 );
 
-
+// Get route by ID
 router.get('/:id',
   validate(queryValidators.id, 'params'),
-  routeController.getRouteById
+  routeController.getById
 );
 
+// Update route
 router.put('/:id',
   authenticate,
   validate(queryValidators.id, 'params'),
   validate(routeValidators.update),
-  routeController.updateRoute
+  routeController.update
 );
 
+// Delete route
+router.delete('/:id',
+  authenticate,
+  validate(queryValidators.id, 'params'),
+  routeController.delete
+);
 
+// Submit feedback for a route
 router.post('/:id/feedback',
   authenticate,
   validate(queryValidators.id, 'params'),
   validate(routeValidators.feedback),
   routeController.submitFeedback
-);
-
-
-router.post('/:id/rate',
-  authenticate,
-  validate(queryValidators.id, 'params'),
-  validate({
-    rating: require('joi').number().integer().min(1).max(5).required(),
-    review: require('joi').string().max(500).optional()
-  }),
-  routeController.rateRoute
-);
-
-router.post('/:id/use',
-  authenticate,
-  validate(queryValidators.id, 'params'),
-  routeController.recordRouteUsage
-);
-
-
-router.get('/:id/alternatives',
-  validate(queryValidators.id, 'params'),
-  routeController.getAlternativeRoutes
-);
-
-router.get('/my-routes',
-  authenticate,
-  routeController.getUserRoutes
-);
-
-
-router.get('/:id/analytics',
-  authenticate,
-  validate(queryValidators.id, 'params'),
-  routeController.getRouteAnalytics
 );
 
 module.exports = router;
