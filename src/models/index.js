@@ -1,6 +1,6 @@
 const { Sequelize } = require('sequelize');
 const config = require('../config/database.js');
-const { logger }= require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 const dbConfig = config;
 
@@ -11,7 +11,7 @@ const sequelize = new Sequelize(
   dbConfig.password,
   {
     ...dbConfig,
-    logging: dbConfig.logging || ((sql) => logger.debug(sql))
+    logging: (msg) => logger.debug(msg)
   }
 );
 
@@ -65,8 +65,6 @@ Route.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 Route.belongsTo(Location, { foreignKey: 'startLocationId', as: 'startLocation' });
 Route.belongsTo(Location, { foreignKey: 'endLocationId', as: 'endLocation' });
 Route.hasMany(RouteStep, { foreignKey: 'routeId', as: 'steps' });
-// Route can access feedbacks through its steps
-// Route.belongsToMany(FareFeedback, { through: RouteStep, as: 'feedbacks' }); // Only if you need direct access
 
 // RouteStep associations
 RouteStep.belongsTo(Route, { foreignKey: 'routeId', as: 'route' });
@@ -103,7 +101,7 @@ const testConnection = async () => {
     return true;
   } catch (error) {
     logger.error('Unable to connect to the database:', error);
-    return false;
+    throw error;
   }
 };
 
@@ -115,7 +113,7 @@ const syncDatabase = async (options = {}) => {
     return true;
   } catch (error) {
     logger.error('Error synchronizing database:', error);
-    return false;
+    throw error;
   }
 };
 
@@ -126,6 +124,7 @@ const closeConnection = async () => {
     logger.info('Database connection closed');
   } catch (error) {
     logger.error('Error closing database connection:', error);
+    throw error;
   }
 };
 
