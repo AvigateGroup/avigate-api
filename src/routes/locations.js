@@ -47,21 +47,5 @@ router.put('/:id',
   locationController.update  // Changed from updateLocation
 );
 
-router.post('/:id/verify',
-  authenticate,
-  requireMinReputation(500),
-  validate(queryValidators.id, 'params'),
-  locationController.verifyLocation  // This function doesn't exist in your controller
-);
-
-router.post('/:id/report',
-  authenticate,
-  validate(queryValidators.id, 'params'),
-  validate({
-    reason: require('joi').string().valid('incorrect_info', 'duplicate', 'inappropriate', 'doesnt_exist', 'other').required(),
-    description: require('joi').string().min(10).max(500).required()
-  }),
-  locationController.reportLocation  // This function doesn't exist in your controller
-);
 
 module.exports = router;
