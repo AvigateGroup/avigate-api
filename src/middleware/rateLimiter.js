@@ -1,6 +1,6 @@
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
-const logger = require('../utils/logger');
+const {logger} = require('../utils/logger');
 
 // Try to import Redis store, but make it optional
 let store;
