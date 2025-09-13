@@ -80,12 +80,6 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info('Database connection established successfully');
     
-    // Sync database (only in development)
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
-      logger.info('Database synchronized');
-    }
-    
     app.listen(PORT, () => {
       logger.info(`🚀 Avigate API server running on port ${PORT}`);
       logger.info(`🏥 Health Check: http://localhost:${PORT}/health`);

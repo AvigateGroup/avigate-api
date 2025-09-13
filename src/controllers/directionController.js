@@ -113,7 +113,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to create direction',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -182,7 +182,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get direction',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -240,7 +240,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get your directions',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -311,7 +311,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to update direction',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -354,7 +354,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to delete direction',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -404,7 +404,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to record usage',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -465,7 +465,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get popular directions',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -519,7 +519,7 @@ const directionController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get direction statistics',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   }

@@ -60,7 +60,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Failed to register user',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -113,7 +113,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Failed to login',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -182,7 +182,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Google authentication failed',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -239,7 +239,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Failed to refresh token',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -266,7 +266,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Failed to logout',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -313,7 +313,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Failed to update profile',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -335,7 +335,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Failed to get profile',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -371,7 +371,7 @@ const authController = {
       res.status(500).json({
         success: false,
         message: 'Failed to change password',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   }

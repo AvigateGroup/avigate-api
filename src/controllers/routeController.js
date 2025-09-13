@@ -146,8 +146,7 @@ const routeController = {
       logger.error('Route creation error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to create route',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to create route'
       });
     }
   },
@@ -276,8 +275,7 @@ const routeController = {
       logger.error('Route search error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Route search failed',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Route search failed'
       });
     }
   },
@@ -354,8 +352,7 @@ const routeController = {
       logger.error('Get route error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to get route',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to get route'
       });
     }
   },
@@ -435,8 +432,7 @@ const routeController = {
       logger.error('Route update error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to update route',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to update route'
       });
     }
   },
@@ -534,8 +530,7 @@ const routeController = {
       logger.error('Route feedback error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to submit feedback',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to submit feedback'
       });
     }
   },
@@ -590,8 +585,7 @@ const routeController = {
       logger.error('Get popular routes error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to get popular routes',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to get popular routes'
       });
     }
   },
@@ -635,8 +629,7 @@ const routeController = {
       logger.error('Route deletion error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to delete route',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to delete route'
       });
     }
   },
@@ -700,8 +693,7 @@ const routeController = {
       logger.error('Route stats error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to get route statistics',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to get route statistics'
       });
     }
   },
@@ -755,8 +747,7 @@ const routeController = {
       logger.error('Get my routes error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
-        message: error.message || 'Failed to get your routes',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        message: error.message || 'Failed to get your routes'
       });
     }
   }

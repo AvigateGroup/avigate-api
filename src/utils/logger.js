@@ -31,12 +31,6 @@ const format = winston.format.combine(
   ),
 );
 
-// Define which logs to print based on environment
-const level = () => {
-  const env = process.env.NODE_ENV || 'development';
-  const isDevelopment = env === 'development';
-  return isDevelopment ? 'debug' : 'warn';
-};
 
 // Create transports array
 const transports = [
@@ -46,15 +40,6 @@ const transports = [
     format: format,
   }),
 ];
-
-// Add file transports only in production and development (not test)
-if (process.env.NODE_ENV !== 'test') {
-  // Ensure logs directory exists
-  const fs = require('fs');
-  const logDir = path.join(process.cwd(), 'logs');
-  if (!fs.existsSync(logDir)) {
-    fs.mkdirSync(logDir, { recursive: true });
-  }
 
   transports.push(
     // Error log file
@@ -92,7 +77,6 @@ if (process.env.NODE_ENV !== 'test') {
       maxFiles: 5,
     })
   );
-}
 
 // Create the logger
 const logger = winston.createLogger({

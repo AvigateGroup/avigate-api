@@ -80,11 +80,6 @@ const formatErrorResponse = (error, req) => {
     response.field = error.field;
   }
 
-  // Only include stack trace in development
-  if (process.env.NODE_ENV === 'development' && error.stack) {
-    response.stack = error.stack;
-  }
-
   return response;
 };
 

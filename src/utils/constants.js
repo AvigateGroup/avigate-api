@@ -350,13 +350,6 @@ const EXTERNAL_SERVICES = {
   }
 };
 
-// Environment types
-const ENVIRONMENTS = {
-  DEVELOPMENT: 'development',
-  TEST: 'test',
-  STAGING: 'staging',
-  PRODUCTION: 'production'
-};
 
 module.exports = {
   VEHICLE_TYPES,

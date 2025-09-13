@@ -108,7 +108,7 @@ const crowdsourceController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to submit route update',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -201,7 +201,7 @@ const crowdsourceController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to submit fare report',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -329,7 +329,7 @@ const crowdsourceController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to submit route suggestion',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -412,7 +412,7 @@ const crowdsourceController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get contributions',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -472,7 +472,7 @@ const crowdsourceController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get pending suggestions',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -572,7 +572,7 @@ const crowdsourceController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to review suggestion',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -641,7 +641,7 @@ const crowdsourceController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get crowdsourcing statistics',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   }

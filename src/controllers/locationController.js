@@ -73,7 +73,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to create location',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message 
       });
     }
   },
@@ -123,7 +123,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Search failed',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message 
       });
     }
   },
@@ -170,7 +170,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to find nearby locations',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message 
       });
     }
   },
@@ -212,7 +212,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get location',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -295,7 +295,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to update location',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -344,7 +344,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get popular locations',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -385,7 +385,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get locations by state',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -418,7 +418,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get locations by city',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message 
       });
     }
   },
@@ -463,7 +463,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to delete location',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message
       });
     }
   },
@@ -505,7 +505,7 @@ const locationController = {
       res.status(error.statusCode || 500).json({
         success: false,
         message: error.message || 'Failed to get location statistics',
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error: error.message 
       });
     }
   }

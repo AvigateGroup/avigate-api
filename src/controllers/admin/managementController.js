@@ -103,7 +103,6 @@ const managementController = {
         message: 'Admin created successfully. Invitation email sent.',
         data: {
           admin: newAdmin.toJSON(),
-          inviteToken: process.env.NODE_ENV === 'development' ? inviteToken : undefined
         }
       });
 
