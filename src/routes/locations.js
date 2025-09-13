@@ -9,37 +9,34 @@ router.get('/search',
   rateLimiter.search,
   optionalAuth,
   validate(locationValidators.search, 'query'),
-  locationController.searchLocations
+  locationController.search  // Changed from searchLocations
 );
-
 
 router.get('/nearby',
   rateLimiter.search,
   optionalAuth,
   validate(locationValidators.nearby, 'query'),
-  locationController.findNearbyLocations
+  locationController.findNearby  // Changed from findNearbyLocations
 );
 
-
 router.get('/popular',
-  locationController.getPopularLocations
+  locationController.getPopular  // Changed from getPopularLocations
 );
 
 router.get('/states/:state',
-  locationController.getLocationsByState
+  locationController.getByState  // Changed from getLocationsByState
 );
 
 router.post('/',
   authenticate,
   rateLimiter.create,
   validate(locationValidators.create),
-  locationController.createLocation
+  locationController.create  // Changed from createLocation
 );
-
 
 router.get('/:id',
   validate(queryValidators.id, 'params'),
-  locationController.getLocationById
+  locationController.getById  // Changed from getLocationById
 );
 
 router.put('/:id',
@@ -47,14 +44,14 @@ router.put('/:id',
   requireMinReputation(100),
   validate(queryValidators.id, 'params'),
   validate(locationValidators.update),
-  locationController.updateLocation
+  locationController.update  // Changed from updateLocation
 );
 
 router.post('/:id/verify',
   authenticate,
   requireMinReputation(500),
   validate(queryValidators.id, 'params'),
-  locationController.verifyLocation
+  locationController.verifyLocation  // This function doesn't exist in your controller
 );
 
 router.post('/:id/report',
@@ -64,7 +61,7 @@ router.post('/:id/report',
     reason: require('joi').string().valid('incorrect_info', 'duplicate', 'inappropriate', 'doesnt_exist', 'other').required(),
     description: require('joi').string().min(10).max(500).required()
   }),
-  locationController.reportLocation
+  locationController.reportLocation  // This function doesn't exist in your controller
 );
 
 module.exports = router;
