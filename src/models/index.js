@@ -3,7 +3,7 @@ const config = require('../config/database.js');
 const logger = require('../utils/logger');
 
 const env = process.env.NODE_ENV || 'development';
-const dbConfig = config[env];
+const dbConfig = config;
 
 // Initialize Sequelize first
 const sequelize = new Sequelize(
