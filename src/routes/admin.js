@@ -1,8 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const adminController = require('../controllers/admin/authController');
+
+// Import individual controllers
+const authController = require('../controllers/admin/authController');
+const managementController = require('../controllers/admin/managementController');
+const passwordController = require('../controllers/admin/passwordController');
+const totpController = require('../controllers/admin/totpController');
+
 const { validate } = require('../utils/validators');
-const { authenticateAdmin, requirePermission } = require('../middleware/adminAuth');
+const { authenticateAdmin, requirePermission } = require('../middleware/admin');
 const rateLimiter = require('../middleware/rateLimiter');
 const Joi = require('joi');
 
@@ -27,6 +33,7 @@ const adminValidators = {
   }),
 
   generateBackupCodes: Joi.object({
+    currentPassword: Joi.string().required(),
     totpToken: Joi.string().length(6).pattern(/^\d+$/).required()
   }),
 
@@ -61,85 +68,206 @@ const adminValidators = {
   getUserGrowthMetrics: Joi.object({
     period: Joi.number().integer().min(1).max(365).default(30),
     interval: Joi.string().valid('hourly', 'daily', 'weekly', 'monthly').default('daily')
+  }),
+
+  // Password related validations
+  requestPasswordReset: Joi.object({
+    email: Joi.string().email().required()
+  }),
+
+  resetPassword: Joi.object({
+    token: Joi.string().required(),
+    newPassword: Joi.string().required(),
+    confirmPassword: Joi.string().required()
+  }),
+
+  changePassword: Joi.object({
+    currentPassword: Joi.string().required(),
+    newPassword: Joi.string().required(),
+    confirmPassword: Joi.string().required()
+  }),
+
+  // Admin management validations
+  createAdmin: Joi.object({
+    email: Joi.string().email().required(),
+    firstName: Joi.string().required(),
+    lastName: Joi.string().required(),
+    role: Joi.string().valid('admin', 'moderator', 'analyst').default('admin')
+  }),
+
+  acceptInvitation: Joi.object({
+    token: Joi.string().required(),
+    newPassword: Joi.string().required(),
+    confirmPassword: Joi.string().required()
+  }),
+
+  updateAdmin: Joi.object({
+    role: Joi.string().valid('admin', 'moderator', 'analyst').optional(),
+    permissions: Joi.array().items(Joi.string()).optional(),
+    isActive: Joi.boolean().optional()
+  }),
+
+  getAdmins: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(50),
+    role: Joi.string().optional(),
+    status: Joi.string().valid('active', 'inactive').optional(),
+    search: Joi.string().optional()
   })
 };
 
+// ================================
+// AUTH ROUTES
+// ================================
 router.post('/auth/login',
   rateLimiter.auth,
   validate(adminValidators.login),
-  adminController.login
+  authController.login
 );
 
-router.post('/totp/setup',
+router.post('/auth/refresh',
+  authController.refreshToken
+);
+
+router.post('/auth/logout',
   authenticateAdmin,
-  validate(adminValidators.setupTOTP),
-  adminController.setupTOTP
+  authController.logout
+);
+
+// ================================
+// PASSWORD ROUTES
+// ================================
+router.post('/password/request-reset',
+  rateLimiter.auth,
+  validate(adminValidators.requestPasswordReset),
+  passwordController.requestPasswordReset
+);
+
+router.post('/password/reset',
+  rateLimiter.auth,
+  validate(adminValidators.resetPassword),
+  passwordController.resetPassword
+);
+
+router.post('/password/change',
+  authenticateAdmin,
+  validate(adminValidators.changePassword),
+  passwordController.changePassword
+);
+
+// ================================
+// TOTP ROUTES
+// ================================
+router.post('/totp/generate-secret',
+  authenticateAdmin,
+  totpController.generateTOTPSecret
 );
 
 router.post('/totp/enable',
   authenticateAdmin,
   validate(adminValidators.enableTOTP),
-  adminController.enableTOTP
+  totpController.enableTOTP
 );
 
 router.post('/totp/disable',
   authenticateAdmin,
   validate(adminValidators.disableTOTP),
-  adminController.disableTOTP
+  totpController.disableTOTP
 );
 
-router.post('/totp/backup-codes',
+router.get('/totp/status',
+  authenticateAdmin,
+  totpController.getTOTPStatus
+);
+
+router.post('/totp/regenerate-backup-codes',
   authenticateAdmin,
   validate(adminValidators.generateBackupCodes),
-  adminController.generateBackupCodes
+  totpController.regenerateBackupCodes
 );
 
+// ================================
+// ADMIN MANAGEMENT ROUTES
+// ================================
+router.post('/admins',
+  authenticateAdmin,
+  requirePermission('admin.create'),
+  validate(adminValidators.createAdmin),
+  managementController.createAdmin
+);
 
+router.post('/admins/accept-invitation',
+  validate(adminValidators.acceptInvitation),
+  managementController.acceptInvitation
+);
+
+router.get('/admins',
+  authenticateAdmin,
+  requirePermission('admin.view'),
+  validate(adminValidators.getAdmins, 'query'),
+  managementController.getAdmins
+);
+
+router.put('/admins/:adminId',
+  authenticateAdmin,
+  requirePermission('admin.edit'),
+  validate(adminValidators.updateAdmin),
+  managementController.updateAdmin
+);
+
+// ================================
+// DASHBOARD & ANALYTICS ROUTES
+// ================================
 router.get('/dashboard',
   authenticateAdmin,
   requirePermission('analytics.view'),
-  adminController.getDashboardOverview
+  authController.getDashboardOverview
 );
 
 router.get('/analytics/user-growth',
   authenticateAdmin,
   requirePermission('analytics.view'),
   validate(adminValidators.getUserGrowthMetrics, 'query'),
-  adminController.getUserGrowthMetrics
+  authController.getUserGrowthMetrics
 );
 
 router.get('/analytics/geographic',
   authenticateAdmin,
   requirePermission('analytics.view'),
-  adminController.getGeographicAnalytics
+  authController.getGeographicAnalytics
 );
 
-
+// ================================
+// SYSTEM & MONITORING ROUTES
+// ================================
 router.get('/system/health',
   authenticateAdmin,
   requirePermission('system.health'),
-  adminController.getSystemHealth
+  authController.getSystemHealth
 );
 
 router.get('/audit-logs',
   authenticateAdmin,
   requirePermission('system.logs'),
   validate(adminValidators.getAuditLogs, 'query'),
-  adminController.getAuditLogs
+  authController.getAuditLogs
 );
 
+// ================================
+// USER MANAGEMENT ROUTES
+// ================================
 router.get('/users',
   authenticateAdmin,
   requirePermission('users.view'),
   validate(adminValidators.getUserManagement, 'query'),
-  adminController.getUserManagement
+  authController.getUserManagement
 );
 
 router.put('/users/:userId/status',
   authenticateAdmin,
   requirePermission('users.edit'),
   validate(adminValidators.updateUserStatus),
-  adminController.updateUserStatus
+  authController.updateUserStatus
 );
 
 module.exports = router;

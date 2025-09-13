@@ -1,8 +1,7 @@
 const { Sequelize } = require('sequelize');
 const config = require('../config/database.js');
-const logger = require('../utils/logger');
+const { logger }= require('../utils/logger');
 
-const env = process.env.NODE_ENV || 'development';
 const dbConfig = config;
 
 // Initialize Sequelize first
