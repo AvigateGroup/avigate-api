@@ -66,7 +66,8 @@ Route.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' });
 Route.belongsTo(Location, { foreignKey: 'startLocationId', as: 'startLocation' });
 Route.belongsTo(Location, { foreignKey: 'endLocationId', as: 'endLocation' });
 Route.hasMany(RouteStep, { foreignKey: 'routeId', as: 'steps' });
-Route.hasMany(FareFeedback, { through: 'RouteStep', as: 'feedbacks' });
+// Route can access feedbacks through its steps
+// Route.belongsToMany(FareFeedback, { through: RouteStep, as: 'feedbacks' }); // Only if you need direct access
 
 // RouteStep associations
 RouteStep.belongsTo(Route, { foreignKey: 'routeId', as: 'route' });
