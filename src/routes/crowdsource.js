@@ -6,16 +6,17 @@ const { authenticate, requireVerified, requireMinReputation } = require('../midd
 const rateLimiter = require('../middleware/rateLimiter');
 const { asyncHandler } = require('../middleware/errorHandler');
 
+// Submit route update
 router.post('/route-update',
   authenticate,
   requireVerified,
-  requireMinReputation(10), // Minimum reputation to submit route updates
+  requireMinReputation(10),
   rateLimiter.crowdsource,
   validate(crowdsourceValidators.routeUpdate),
   asyncHandler(crowdsourceController.submitRouteUpdate)
 );
 
-
+// Submit fare report
 router.post('/fare-report',
   authenticate,
   requireVerified,
@@ -24,62 +25,46 @@ router.post('/fare-report',
   asyncHandler(crowdsourceController.submitFareReport)
 );
 
-
+// Submit new route suggestion
 router.post('/new-route',
   authenticate,
   requireVerified,
-  requireMinReputation(50), // Higher reputation required for route proposals
+  requireMinReputation(50),
   rateLimiter.crowdsource,
   validate(crowdsourceValidators.newRoute),
-  asyncHandler(crowdsourceController.proposeNewRoute)
+  asyncHandler(crowdsourceController.submitNewRoute)
 );
 
-router.post('/location-update',
-  authenticate,
-  requireVerified,
-  requireMinReputation(25),
-  rateLimiter.crowdsource,
-  validate({
-    locationId: require('joi').string().uuid().required(),
-    updateType: require('joi').string().valid('name', 'address', 'coordinates', 'landmarks', 'status').required(),
-    updateData: require('joi').object().required(),
-    reason: require('joi').string().max(300).optional(),
-    confidence: require('joi').number().integer().min(1).max(5).default(3)
-  }),
-  asyncHandler(crowdsourceController.submitLocationUpdate)
-);
-
-
+// Get user's contributions
 router.get('/contributions',
   authenticate,
   validate(queryValidators.pagination, 'query'),
-  asyncHandler(crowdsourceController.getUserContributions)
+  asyncHandler(crowdsourceController.getMyContributions)
 );
 
-router.get('/leaderboard',
-  validate({
-    period: require('joi').string().valid('week', 'month', 'year', 'all').default('month'),
-    limit: require('joi').number().integer().min(1).max(100).default(20),
-    type: require('joi').string().valid('reputation', 'contributions', 'accuracy').default('reputation')
-  }, 'query'),
-  asyncHandler(crowdsourceController.getLeaderboard)
-);
-
+// Get crowdsourcing statistics
 router.get('/stats',
-  asyncHandler(crowdsourceController.getCrowdsourcingStats)
+  asyncHandler(crowdsourceController.getStats)
 );
 
-router.get('/contributions/:id',
+// Get pending suggestions (admin only)
+router.get('/pending-suggestions',
   authenticate,
-  validate(queryValidators.id, 'params'),
-  asyncHandler(crowdsourceController.getContributionDetails)
+  requireMinReputation(500),
+  validate(queryValidators.pagination, 'query'),
+  asyncHandler(crowdsourceController.getPendingSuggestions)
 );
 
-
-router.delete('/contributions/:id/withdraw',
+// Review suggestion (admin only)
+router.post('/suggestions/:id/review',
   authenticate,
+  requireMinReputation(500),
   validate(queryValidators.id, 'params'),
-  asyncHandler(crowdsourceController.withdrawContribution)
+  validate({
+    action: require('joi').string().valid('approve', 'reject').required(),
+    comments: require('joi').string().max(500).optional()
+  }),
+  asyncHandler(crowdsourceController.reviewSuggestion)
 );
 
 module.exports = router;

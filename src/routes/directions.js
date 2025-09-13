@@ -5,6 +5,30 @@ const { directionValidators, validate, queryValidators } = require('../utils/val
 const { authenticate, optionalAuth, requireVerified } = require('../middleware/auth');
 const rateLimiter = require('../middleware/rateLimiter');
 
+// Get popular directions
+router.get('/popular',
+  optionalAuth,
+  validate({
+    limit: require('joi').number().integer().min(1).max(20).default(10),
+    state: require('joi').string().optional(),
+    city: require('joi').string().optional()
+  }, 'query'),
+  directionController.getPopular
+);
+
+// Get direction statistics
+router.get('/stats',
+  directionController.getStats
+);
+
+// Get user's directions
+router.get('/my-directions',
+  authenticate,
+  validate(queryValidators.pagination, 'query'),
+  directionController.getMyDirections
+);
+
+// Create a new direction
 router.post('/create',
   authenticate,
   requireVerified,
@@ -13,25 +37,14 @@ router.post('/create',
   directionController.create
 );
 
+// Get direction by share code
 router.get('/:shareCode',
   optionalAuth,
   validate(directionValidators.shareCode, 'params'),
   directionController.getByShareCode
 );
 
-router.get('/my-directions',
-  authenticate,
-  validate(queryValidators.pagination, 'query'),
-  directionController.getUserDirections
-);
-
-
-router.get('/:id',
-  authenticate,
-  validate(queryValidators.id, 'params'),
-  directionController.getById
-);
-
+// Update direction
 router.put('/:id',
   authenticate,
   validate(queryValidators.id, 'params'),
@@ -39,41 +52,21 @@ router.put('/:id',
   directionController.update
 );
 
+// Delete direction
 router.delete('/:id',
   authenticate,
   validate(queryValidators.id, 'params'),
   directionController.delete
 );
 
-
+// Record direction usage
 router.post('/:id/use',
   optionalAuth,
   validate(queryValidators.id, 'params'),
-  directionController.trackUsage
-);
-
-
-router.get('/public',
-  optionalAuth,
   validate({
-    ...queryValidators.pagination.describe().keys,
-    fromLocationId: require('joi').string().uuid().optional(),
-    toLocationId: require('joi').string().uuid().optional(),
-    maxFare: require('joi').number().integer().min(0).optional(),
-    maxDuration: require('joi').number().integer().min(0).optional(),
-    sortBy: require('joi').string().valid('createdAt', 'usageCount', 'totalEstimatedFare', 'totalEstimatedDuration').default('usageCount')
-  }, 'query'),
-  directionController.getPublicDirections
-);
-
-
-router.get('/popular',
-  optionalAuth,
-  validate({
-    limit: require('joi').number().integer().min(1).max(20).default(10),
-    timeframe: require('joi').string().valid('week', 'month', 'all').default('month')
-  }, 'query'),
-  directionController.getPopularDirections
+    usageType: require('joi').string().valid('view', 'follow', 'share').default('view')
+  }),
+  directionController.recordUsage
 );
 
 module.exports = router;
