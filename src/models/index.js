@@ -2,7 +2,18 @@ const { Sequelize } = require('sequelize');
 const config = require('../config/database.js');
 const logger = require('../utils/logger');
 
-const env = process.env.NODE_ENV || 'development';
+
+// Initialize Sequelize
+const sequelize = new Sequelize(
+  dbConfig.database,
+  dbConfig.username,
+  dbConfig.password,
+  {
+    ...dbConfig,
+    logging: dbConfig.logging || ((sql) => logger.debug(sql))
+  }
+);
+
 const dbConfig = config[env];
 
 // Import admin models
@@ -28,16 +39,7 @@ db.AuditLog = AuditLogModel;
 Admin.hasMany(AuditLogModel, { foreignKey: 'adminId', as: 'auditLogs' });
 AuditLogModel.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' });
 
-// Initialize Sequelize
-const sequelize = new Sequelize(
-  dbConfig.database,
-  dbConfig.username,
-  dbConfig.password,
-  {
-    ...dbConfig,
-    logging: dbConfig.logging || ((sql) => logger.debug(sql))
-  }
-);
+
 
 // Import models
 const User = require('./User')(sequelize, Sequelize.DataTypes);

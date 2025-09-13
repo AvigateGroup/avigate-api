@@ -22,6 +22,22 @@ const colors = {
 // Add colors to winston
 winston.addColors(colors);
 
+// Function to determine log level based on environment
+const level = () => {
+  const env = process.env.NODE_ENV || 'development';
+  const isDevelopment = env === 'development';
+  return isDevelopment ? 'debug' : 'warn';
+};
+
+// Function to determine log directory
+const logDir = process.env.LOG_DIR || path.join(process.cwd(), 'logs');
+
+// Ensure log directory exists
+const fs = require('fs');
+if (!fs.existsSync(logDir)) {
+  fs.mkdirSync(logDir, { recursive: true });
+}
+
 // Define custom format
 const format = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
@@ -30,7 +46,6 @@ const format = winston.format.combine(
     (info) => `${info.timestamp} ${info.level}: ${info.message}`,
   ),
 );
-
 
 // Create transports array
 const transports = [
@@ -41,6 +56,8 @@ const transports = [
   }),
 ];
 
+// Add file transports only in production or if LOG_DIR is specified
+if (process.env.NODE_ENV === 'production' || process.env.LOG_DIR) {
   transports.push(
     // Error log file
     new winston.transports.File({
@@ -77,6 +94,7 @@ const transports = [
       maxFiles: 5,
     })
   );
+}
 
 // Create the logger
 const logger = winston.createLogger({
