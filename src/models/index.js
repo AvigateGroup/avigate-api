@@ -2,8 +2,10 @@ const { Sequelize } = require('sequelize');
 const config = require('../config/database.js');
 const logger = require('../utils/logger');
 
+const env = process.env.NODE_ENV || 'development';
+const dbConfig = config[env];
 
-// Initialize Sequelize
+// Initialize Sequelize first
 const sequelize = new Sequelize(
   dbConfig.database,
   dbConfig.username,
@@ -14,7 +16,14 @@ const sequelize = new Sequelize(
   }
 );
 
-const dbConfig = config[env];
+// Import models after sequelize is created
+const User = require('./User')(sequelize, Sequelize.DataTypes);
+const Location = require('./Location')(sequelize, Sequelize.DataTypes);
+const Route = require('./Route')(sequelize, Sequelize.DataTypes);
+const RouteStep = require('./RouteStep')(sequelize, Sequelize.DataTypes);
+const UserDirection = require('./UserDirection')(sequelize, Sequelize.DataTypes);
+const FareFeedback = require('./FareFeedback')(sequelize, Sequelize.DataTypes);
+const Landmark = require('./Landmark')(sequelize, Sequelize.DataTypes);
 
 // Import admin models
 const Admin = require('./admin/Admin.js')(sequelize, Sequelize.DataTypes);
@@ -27,29 +36,6 @@ const GeographicAnalyticsModel = GeographicAnalytics(sequelize, Sequelize.DataTy
 const SystemMetricsModel = SystemMetrics(sequelize, Sequelize.DataTypes);
 const AuditLogModel = AuditLog(sequelize, Sequelize.DataTypes);
 
-// Add to db object
-db.Admin = Admin;
-db.UserAnalytics = UserAnalyticsModel;
-db.AppUsageAnalytics = AppUsageAnalyticsModel;
-db.GeographicAnalytics = GeographicAnalyticsModel;
-db.SystemMetrics = SystemMetricsModel;
-db.AuditLog = AuditLogModel;
-
-// Admin associations
-Admin.hasMany(AuditLogModel, { foreignKey: 'adminId', as: 'auditLogs' });
-AuditLogModel.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' });
-
-
-
-// Import models
-const User = require('./User')(sequelize, Sequelize.DataTypes);
-const Location = require('./Location')(sequelize, Sequelize.DataTypes);
-const Route = require('./Route')(sequelize, Sequelize.DataTypes);
-const RouteStep = require('./RouteStep')(sequelize, Sequelize.DataTypes);
-const UserDirection = require('./UserDirection')(sequelize, Sequelize.DataTypes);
-const FareFeedback = require('./FareFeedback')(sequelize, Sequelize.DataTypes);
-const Landmark = require('./Landmark')(sequelize, Sequelize.DataTypes);
-
 // Store models in db object
 const db = {
   sequelize,
@@ -60,7 +46,13 @@ const db = {
   RouteStep,
   UserDirection,
   FareFeedback,
-  Landmark
+  Landmark,
+  Admin,
+  UserAnalytics: UserAnalyticsModel,
+  AppUsageAnalytics: AppUsageAnalyticsModel,
+  GeographicAnalytics: GeographicAnalyticsModel,
+  SystemMetrics: SystemMetricsModel,
+  AuditLog: AuditLogModel
 };
 
 // Define associations
@@ -98,6 +90,10 @@ Location.hasMany(RouteStep, { foreignKey: 'fromLocationId', as: 'stepsAsFrom' })
 Location.hasMany(RouteStep, { foreignKey: 'toLocationId', as: 'stepsAsTo' });
 Location.hasMany(UserDirection, { foreignKey: 'startLocationId', as: 'directionsAsStart' });
 Location.hasMany(UserDirection, { foreignKey: 'endLocationId', as: 'directionsAsEnd' });
+
+// Admin associations
+Admin.hasMany(AuditLogModel, { foreignKey: 'adminId', as: 'auditLogs' });
+AuditLogModel.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' });
 
 // Test database connection
 const testConnection = async () => {
