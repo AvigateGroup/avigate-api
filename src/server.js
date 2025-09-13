@@ -6,8 +6,8 @@ const compression = require('compression');
 require('dotenv').config();
 
 const { sequelize } = require('./models');
-const logger = require('./utils/logger');
-const errorHandler = require('./middleware/errorHandler');
+const { logger } = require('./utils/logger');
+const { errorHandler } = require('./middleware/errorHandler');
 
 // Import routes
 const authRoutes = require('./routes/auth');
