@@ -17,6 +17,7 @@ const locationRoutes = require('./routes/locations');
 const routeRoutes = require('./routes/routes');
 const directionRoutes = require('./routes/directions');
 const crowdsourceRoutes = require('./routes/crowdsource');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -51,6 +52,7 @@ app.use('/api/v1/locations', locationRoutes);
 app.use('/api/v1/routes', routeRoutes);
 app.use('/api/v1/directions', directionRoutes);
 app.use('/api/v1/crowdsource', crowdsourceRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 
 // 404 handler
