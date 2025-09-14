@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 
 // Import individual controllers
-const authController = require('../controllers/admin/authController');
-const managementController = require('../controllers/admin/managementController');
-const passwordController = require('../controllers/admin/passwordController');
-const totpController = require('../controllers/admin/totpController');
+const authController = require('../../controllers/admin/authController');
+const managementController = require('../../controllers/admin/managementController');
+const passwordController = require('../../controllers/admin/passwordController');
+const totpController = require('../../controllers/admin/totpController');
 
-const { validate } = require('../utils/validators');
-const { authenticateAdmin, requirePermission } = require('../middleware/admin');
-const rateLimiter = require('../middleware/rateLimiter');
+const { validate } = require('../../utils/validators');
+const { authenticateAdmin, requirePermission } = require('../../middleware/admin');
+const rateLimiter = require('../../middleware/rateLimiter');
 const Joi = require('joi');
 
 // Admin validation schemas
