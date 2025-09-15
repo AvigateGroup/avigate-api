@@ -1,4 +1,4 @@
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 const Redis = require('ioredis');
 
 // Redis client for session storage (fallback to memory if not available)
