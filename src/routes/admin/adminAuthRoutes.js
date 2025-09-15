@@ -215,59 +215,59 @@ router.put('/admins/:adminId',
   managementController.updateAdmin
 );
 
-// ================================
-// DASHBOARD & ANALYTICS ROUTES
-// ================================
-router.get('/dashboard',
-  authenticateAdmin,
-  requirePermission('analytics.view'),
-  authController.getDashboardOverview
-);
+// // ================================
+// // DASHBOARD & ANALYTICS ROUTES
+// // ================================
+// router.get('/dashboard',
+//   authenticateAdmin,
+//   requirePermission('analytics.view'),
+//   authController.getDashboardOverview
+// );
 
-router.get('/analytics/user-growth',
-  authenticateAdmin,
-  requirePermission('analytics.view'),
-  validate(adminValidators.getUserGrowthMetrics, 'query'),
-  authController.getUserGrowthMetrics
-);
+// router.get('/analytics/user-growth',
+//   authenticateAdmin,
+//   requirePermission('analytics.view'),
+//   validate(adminValidators.getUserGrowthMetrics, 'query'),
+//   authController.getUserGrowthMetrics
+// );
 
-router.get('/analytics/geographic',
-  authenticateAdmin,
-  requirePermission('analytics.view'),
-  authController.getGeographicAnalytics
-);
+// router.get('/analytics/geographic',
+//   authenticateAdmin,
+//   requirePermission('analytics.view'),
+//   authController.getGeographicAnalytics
+// );
 
-// ================================
-// SYSTEM & MONITORING ROUTES
-// ================================
-router.get('/system/health',
-  authenticateAdmin,
-  requirePermission('system.health'),
-  authController.getSystemHealth
-);
+// // ================================
+// // SYSTEM & MONITORING ROUTES
+// // ================================
+// router.get('/system/health',
+//   authenticateAdmin,
+//   requirePermission('system.health'),
+//   authController.getSystemHealth
+// );
 
-router.get('/audit-logs',
-  authenticateAdmin,
-  requirePermission('system.logs'),
-  validate(adminValidators.getAuditLogs, 'query'),
-  authController.getAuditLogs
-);
+// router.get('/audit-logs',
+//   authenticateAdmin,
+//   requirePermission('system.logs'),
+//   validate(adminValidators.getAuditLogs, 'query'),
+//   authController.getAuditLogs
+// );
 
-// ================================
-// USER MANAGEMENT ROUTES
-// ================================
-router.get('/users',
-  authenticateAdmin,
-  requirePermission('users.view'),
-  validate(adminValidators.getUserManagement, 'query'),
-  authController.getUserManagement
-);
+// // ================================
+// // USER MANAGEMENT ROUTES
+// // ================================
+// router.get('/users',
+//   authenticateAdmin,
+//   requirePermission('users.view'),
+//   validate(adminValidators.getUserManagement, 'query'),
+//   authController.getUserManagement
+// );
 
-router.put('/users/:userId/status',
-  authenticateAdmin,
-  requirePermission('users.edit'),
-  validate(adminValidators.updateUserStatus),
-  authController.updateUserStatus
-);
+// router.put('/users/:userId/status',
+//   authenticateAdmin,
+//   requirePermission('users.edit'),
+//   validate(adminValidators.updateUserStatus),
+//   authController.updateUserStatus
+// );
 
 module.exports = router;
