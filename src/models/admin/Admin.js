@@ -286,31 +286,11 @@ module.exports = (sequelize) => {
         return await bcrypt.compare(password, this.passwordHash)
     }
 
-    Admin.prototype.isLocked = function() {
-        // Implement account locking logic here
-        return false // Placeholder
-    }
-
-    Admin.prototype.incrementFailedAttempts = async function() {
-        // Implement failed attempts logic here
-        // This might involve updating a failedAttempts field
-    }
-
     Admin.prototype.updateLastLogin = async function(ipAddress, userAgent) {
         this.lastLoginAt = new Date()
         this.lastLoginIP = ipAddress
         this.lastLoginUserAgent = userAgent
         await this.save()
-    }
-
-    Admin.prototype.verifyTOTP = function(token) {
-        // Implement TOTP verification logic here
-        return false // Placeholder
-    }
-
-    Admin.prototype.useBackupCode = async function(code) {
-        // Implement backup code usage logic here
-        return false // Placeholder
     }
 
     return Admin
