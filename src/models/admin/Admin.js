@@ -250,5 +250,68 @@ module.exports = (sequelize) => {
         }
     )
 
+    // Add static methods
+    Admin.findByEmail = async function(email) {
+        return await this.findOne({
+            where: { 
+                email: email.toLowerCase() 
+            }
+        })
+    }
+
+    Admin.getPermissionsList = function() {
+        return [
+            'user_management',
+            'content_moderation',
+            'analytics_view',
+            'system_settings',
+            'audit_logs',
+            'backup_restore',
+            'security_management'
+        ]
+    }
+
+    Admin.getRolePermissions = function(role) {
+        const permissions = {
+            super_admin: this.getPermissionsList(),
+            admin: ['user_management', 'content_moderation', 'analytics_view', 'audit_logs'],
+            moderator: ['content_moderation', 'analytics_view'],
+            analyst: ['analytics_view']
+        }
+        return permissions[role] || []
+    }
+
+    // Add instance methods
+    Admin.prototype.comparePassword = async function(password) {
+        return await bcrypt.compare(password, this.passwordHash)
+    }
+
+    Admin.prototype.isLocked = function() {
+        // Implement account locking logic here
+        return false // Placeholder
+    }
+
+    Admin.prototype.incrementFailedAttempts = async function() {
+        // Implement failed attempts logic here
+        // This might involve updating a failedAttempts field
+    }
+
+    Admin.prototype.updateLastLogin = async function(ipAddress, userAgent) {
+        this.lastLoginAt = new Date()
+        this.lastLoginIP = ipAddress
+        this.lastLoginUserAgent = userAgent
+        await this.save()
+    }
+
+    Admin.prototype.verifyTOTP = function(token) {
+        // Implement TOTP verification logic here
+        return false // Placeholder
+    }
+
+    Admin.prototype.useBackupCode = async function(code) {
+        // Implement backup code usage logic here
+        return false // Placeholder
+    }
+
     return Admin
 }
