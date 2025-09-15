@@ -1,5 +1,5 @@
 const { authValidators, locationValidators, routeValidators, directionValidators, crowdsourceValidators, landmarkValidators, queryValidators, customValidators } = require('../utils/validators');
-const logger = require('../utils/logger');
+const {logger} = require('../utils/logger');
 
 // Generic validation middleware factory
 const validate = (schema, source = 'body') => {

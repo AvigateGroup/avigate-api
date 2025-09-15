@@ -1,5 +1,5 @@
 const { AuditLog } = require('../../models');
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 
 const totpController = {
   // Generate TOTP Secret (Start Setup)

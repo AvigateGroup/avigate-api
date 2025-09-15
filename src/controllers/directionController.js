@@ -1,6 +1,6 @@
 const { UserDirection, Location, User } = require('../models');
 const { Op } = require('sequelize');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 const { generateSecureRandomString } = require('../services/authService');
 const { 
   AppError, 

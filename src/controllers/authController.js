@@ -1,5 +1,5 @@
 const { User } = require('../models');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 const { generateTokens, verifyRefreshToken } = require('../services/authService');
 
 const authController = {

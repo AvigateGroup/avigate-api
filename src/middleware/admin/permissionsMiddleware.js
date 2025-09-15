@@ -1,5 +1,5 @@
 const { Admin, AuditLog } = require('../../models');
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 
 // Permission-based authorization middleware
 const requirePermission = (requiredPermission) => {

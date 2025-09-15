@@ -5,7 +5,7 @@ const {
   adminSecurityUtils 
 } = require('../services/adminAuthService');
 const { Admin, AuditLog } = require('../models');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 // Enhanced admin authentication middleware
 const authenticateAdmin = async (req, res, next) => {

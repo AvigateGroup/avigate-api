@@ -1,6 +1,6 @@
 const { Route, RouteStep, Location, User, FareFeedback } = require('../models');
 const { Op } = require('sequelize');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 const { calculateDistance, calculateEstimatedTime } = require('../utils/helpers');
 const { VEHICLE_TYPES, ROUTE_DIFFICULTY } = require('../utils/constants');
 

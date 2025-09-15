@@ -1,6 +1,6 @@
 const { Admin, AuditLog } = require('../../models');
 const { adminSecurityUtils } = require('../../services/admin');
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 
 // Rate limiting middleware for sensitive operations
 const sensitiveOperationLimiter = (operation, maxAttempts = 3, windowMs = 60000) => {

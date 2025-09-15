@@ -5,7 +5,7 @@ const {
   adminSessionManager,
   adminSecurityUtils
 } = require('../../services/admin');
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 const { Op } = require('sequelize');
 
 // Email domain validation

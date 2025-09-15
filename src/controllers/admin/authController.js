@@ -5,7 +5,7 @@ const {
   verifyAdminRefreshToken,
   blacklistAdminToken
 } = require('../../services/admin');
-const logger = require('../../utils/logger');
+const { logger } = require('../../utils/logger');
 
 // Email domain validation
 const ALLOWED_EMAIL_DOMAIN = '@avigate.co';

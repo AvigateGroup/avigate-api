@@ -1,5 +1,5 @@
 const { AuditLog } = require('../../models');
-const logger = require('../../utils/logger');
+const {logger} = require('../../utils/logger');
 
 // Request logging middleware for audit trail
 const auditRequest = (req, res, next) => {
