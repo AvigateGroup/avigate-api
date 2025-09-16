@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs')
 const { DataTypes } = require('sequelize')
+const { adminSecurityMethods, securityFields } = require('./AdminSecurity')
 
 module.exports = (sequelize) => {
     const Admin = sequelize.define(
@@ -141,6 +142,8 @@ module.exports = (sequelize) => {
                     key: 'id',
                 },
             },
+            // ADD SECURITY FIELDS HERE
+            ...securityFields,
         },
         {
             tableName: 'admins',
@@ -281,15 +284,16 @@ module.exports = (sequelize) => {
         return permissions[role] || []
     }
 
-    // Add instance methods
-    Admin.prototype.comparePassword = async function(password) {
-        return await bcrypt.compare(password, this.passwordHash)
-    }
+    // APPLY SECURITY METHODS TO PROTOTYPE
+    Object.assign(Admin.prototype, adminSecurityMethods)
 
+    // Keep the existing method for backward compatibility
     Admin.prototype.updateLastLogin = async function(ipAddress, userAgent) {
         this.lastLoginAt = new Date()
         this.lastLoginIP = ipAddress
         this.lastLoginUserAgent = userAgent
+        this.failedLoginAttempts = 0
+        this.lockedUntil = null
         await this.save()
     }
 

@@ -15,111 +15,111 @@ const validateEmailDomain = (email) => {
 
 const authController = {
     // Admin Login
-    login: async (req, res) => {
-        try {
-            const { email, password, totpToken, backupCode } = req.body
+    // Admin Login (Updated section of authController)
+login: async (req, res) => {
+    try {
+        const { email, password, totpToken, backupCode } = req.body
 
-            // Validate email domain
-            if (!validateEmailDomain(email)) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Access restricted to authorized domains',
-                })
-            }
-
-            // Find admin
-            const admin = await Admin.findByEmail(email)
-            if (!admin) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid credentials',
-                })
-            }
-
-            // Check if account is locked
-            if (admin.isLocked()) {
-                return res.status(423).json({
-                    success: false,
-                    message:
-                        'Account is temporarily locked due to multiple failed attempts',
-                })
-            }
-
-            // Verify password
-            const isPasswordValid = await admin.comparePassword(password)
-            if (!isPasswordValid) {
-                await admin.incrementFailedAttempts()
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid credentials',
-                })
-            }
-
-            // Check TOTP if enabled
-            if (admin.totpEnabled) {
-                let totpValid = false
-
-                if (totpToken) {
-                    totpValid = admin.verifyTOTP(totpToken)
-                } else if (backupCode) {
-                    totpValid = await admin.useBackupCode(backupCode)
-                }
-
-                if (!totpValid) {
-                    return res.status(401).json({
-                        success: false,
-                        message: 'Invalid TOTP token or backup code',
-                        requiresTOTP: true,
-                    })
-                }
-            }
-
-            // Generate tokens with tokenId
-            const tokens = generateAdminTokens(admin)
-            const tokenPayload = JSON.parse(
-                Buffer.from(tokens.refreshToken.split('.')[1], 'base64')
-            )
-
-            // Update login info and create session
-            await admin.updateLastLogin(req.ip, req.get('User-Agent'))
-            adminSessionManager.createSession(admin, tokenPayload.tokenId, req)
-
-            // Log successful login
-            await AuditLog.create({
-                adminId: admin.id,
-                action: 'login',
-                resource: 'admin',
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent'),
-                severity: 'medium',
-            })
-
-            logger.info(`Admin logged in: ${email}`)
-
-            // Set refresh token as httpOnly cookie
-            res.cookie('refreshToken', tokens.refreshToken, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            })
-
-            res.json({
-                success: true,
-                message: 'Login successful',
-                data: {
-                    admin: admin.toJSON(),
-                    accessToken: tokens.accessToken,
-                },
-            })
-        } catch (error) {
-            logger.error('Admin login error:', error)
-            res.status(500).json({
+        // Validate email domain
+        if (!validateEmailDomain(email)) {
+            return res.status(403).json({
                 success: false,
-                message: 'Login failed',
+                message: 'Access restricted to authorized domains',
             })
         }
-    },
+
+        // Find admin
+        const admin = await Admin.findByEmail(email)
+        if (!admin) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials',
+            })
+        }
+
+        // Check if account is locked - using the correct method call
+        if (admin.isLocked()) {
+            return res.status(423).json({
+                success: false,
+                message: 'Account is temporarily locked due to multiple failed attempts',
+            })
+        }
+
+        // Verify password - using the security method
+        const isPasswordValid = await admin.comparePassword(password)
+        if (!isPasswordValid) {
+            await admin.incrementFailedAttempts()
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials',
+            })
+        }
+
+        // Check TOTP if enabled
+        if (admin.totpEnabled) {
+            let totpValid = false
+
+            if (totpToken) {
+                totpValid = admin.verifyTOTP(totpToken)
+            } else if (backupCode) {
+                totpValid = await admin.useBackupCode(backupCode)
+            }
+
+            if (!totpValid) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid TOTP token or backup code',
+                    requiresTOTP: true,
+                })
+            }
+        }
+
+        // Generate tokens with tokenId
+        const tokens = generateAdminTokens(admin)
+        const tokenPayload = JSON.parse(
+            Buffer.from(tokens.refreshToken.split('.')[1], 'base64')
+        )
+
+        // Update login info and create session - using the security method
+        await admin.updateLastLogin(req.ip, req.get('User-Agent'))
+        adminSessionManager.createSession(admin, tokenPayload.tokenId, req)
+
+        // Log successful login
+        await AuditLog.create({
+            adminId: admin.id,
+            action: 'login',
+            resource: 'admin',
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            severity: 'medium',
+        })
+
+        logger.info(`Admin logged in: ${email}`)
+
+        // Set refresh token as httpOnly cookie
+        res.cookie('refreshToken', tokens.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        })
+
+        res.json({
+            success: true,
+            message: 'Login successful',
+            data: {
+                admin: admin.toJSON(),
+                accessToken: tokens.accessToken,
+            },
+        })
+    } catch (error) {
+        logger.error('Admin login error:', error)
+        res.status(500).json({
+            success: false,
+            message: 'Login failed',
+        })
+    }
+},
 
     // Refresh Token Endpoint
     refreshToken: async (req, res) => {
