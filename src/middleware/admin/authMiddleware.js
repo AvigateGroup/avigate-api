@@ -30,6 +30,13 @@ const authenticateAdmin = async (req, res, next) => {
             })
         }
 
+        logger.debug('Token decoded successfully:', {
+            adminId: decoded.adminId,
+            tokenId: decoded.tokenId,
+            role: decoded.role,
+            type: decoded.type
+        })
+
         // Check if token is blacklisted
         const isBlacklisted = await isAdminTokenBlacklisted(decoded.tokenId)
         if (isBlacklisted) {
@@ -56,12 +63,34 @@ const authenticateAdmin = async (req, res, next) => {
             })
         }
 
+        logger.debug('Checking session for tokenId:', decoded.tokenId)
+
         // Verify session exists and is valid
-        const session = await adminSessionManager.getSession(
-            decoded.adminId,
-            decoded.tokenId
-        )
+        let session
+        try {
+            session = await adminSessionManager.getSession(
+                decoded.adminId,
+                decoded.tokenId
+            )
+            
+            logger.debug('Session retrieval result:', { 
+                sessionExists: !!session,
+                sessionType: typeof session,
+                sessionKeys: session && typeof session === 'object' ? Object.keys(session) : 'not an object'
+            })
+        } catch (sessionError) {
+            logger.error('Session retrieval error:', sessionError)
+            return res.status(500).json({
+                success: false,
+                message: 'Session service error',
+            })
+        }
+
         if (!session) {
+            logger.warn('No session found for:', {
+                adminId: decoded.adminId,
+                tokenId: decoded.tokenId
+            })
             return res.status(401).json({
                 success: false,
                 message: 'Session expired or invalid',
@@ -139,16 +168,22 @@ const authenticateAdmin = async (req, res, next) => {
         }
 
         // Update session activity
-        await adminSessionManager.updateSessionActivity(
-            decoded.adminId,
-            decoded.tokenId
-        )
+        try {
+            await adminSessionManager.updateSessionActivity(
+                decoded.adminId,
+                decoded.tokenId
+            )
+        } catch (sessionUpdateError) {
+            logger.warn('Failed to update session activity:', sessionUpdateError)
+            // Don't fail the request if session update fails
+        }
 
         // Attach admin and token info to request
         req.admin = admin
         req.tokenId = decoded.tokenId
         req.sessionData = session
 
+        logger.debug('Authentication successful for admin:', admin.email)
         next()
     } catch (error) {
         logger.error('Admin authentication error:', error)
