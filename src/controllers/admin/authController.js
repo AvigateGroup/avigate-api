@@ -15,7 +15,6 @@ const validateEmailDomain = (email) => {
 
 const authController = {
     // Admin Login
-    // Admin Login (Updated section of authController)
 login: async (req, res) => {
     try {
         const { email, password, totpToken, backupCode } = req.body
