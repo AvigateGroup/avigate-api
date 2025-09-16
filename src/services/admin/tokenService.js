@@ -2,15 +2,15 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const { logger } = require('../../utils/logger')
 
-// Generate JWT access token for admin
-const generateAdminAccessToken = (admin) => {
+// Generate JWT access token for admin with provided tokenId
+const generateAdminAccessToken = (admin, tokenId) => {
     const payload = {
         adminId: admin.id,
         email: admin.email,
         role: admin.role,
         permissions: admin.permissions,
         type: 'admin',
-        tokenId: crypto.randomUUID(),
+        tokenId: tokenId, // Use the provided tokenId
     }
 
     return jwt.sign(payload, process.env.JWT_SECRET, {
@@ -20,14 +20,13 @@ const generateAdminAccessToken = (admin) => {
     })
 }
 
-// Generate JWT refresh token for admin
-const generateAdminRefreshToken = (admin) => {
-    const tokenId = crypto.randomUUID()
+// Generate JWT refresh token for admin with provided tokenId
+const generateAdminRefreshToken = (admin, tokenId) => {
     const payload = {
         adminId: admin.id,
         email: admin.email,
         type: 'admin_refresh',
-        tokenId,
+        tokenId: tokenId, // Use the provided tokenId
     }
 
     const token = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
@@ -39,18 +38,18 @@ const generateAdminRefreshToken = (admin) => {
     return { token, tokenId }
 }
 
-// Generate both access and refresh tokens for admin
+// Generate both access and refresh tokens for admin with same tokenId
 const generateAdminTokens = (admin) => {
-    const accessToken = generateAdminAccessToken(admin)
-    const refreshTokenData = generateAdminRefreshToken(admin)
-
-    // Extract tokenId from access token for consistency
-    const accessPayload = jwt.decode(accessToken)
+    // Generate ONE tokenId for both tokens
+    const tokenId = crypto.randomUUID()
+    
+    const accessToken = generateAdminAccessToken(admin, tokenId)
+    const refreshTokenData = generateAdminRefreshToken(admin, tokenId)
 
     return {
         accessToken,
         refreshToken: refreshTokenData.token,
-        tokenId: accessPayload.tokenId,
+        tokenId: tokenId, // Return the shared tokenId
     }
 }
 
