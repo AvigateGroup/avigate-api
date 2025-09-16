@@ -15,110 +15,117 @@ const validateEmailDomain = (email) => {
 
 const authController = {
     // Admin Login
-login: async (req, res) => {
-    try {
-        const { email, password, totpToken, backupCode } = req.body
+    login: async (req, res) => {
+        try {
+            const { email, password, totpToken, backupCode } = req.body
 
-        // Validate email domain
-        if (!validateEmailDomain(email)) {
-            return res.status(403).json({
-                success: false,
-                message: 'Access restricted to authorized domains',
-            })
-        }
-
-        // Find admin
-        const admin = await Admin.findByEmail(email)
-        if (!admin) {
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials',
-            })
-        }
-
-        // Check if account is locked - using the correct method call
-        if (admin.isLocked()) {
-            return res.status(423).json({
-                success: false,
-                message: 'Account is temporarily locked due to multiple failed attempts',
-            })
-        }
-
-        // Verify password - using the security method
-        const isPasswordValid = await admin.comparePassword(password)
-        if (!isPasswordValid) {
-            await admin.incrementFailedAttempts()
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid credentials',
-            })
-        }
-
-        // Check TOTP if enabled
-        if (admin.totpEnabled) {
-            let totpValid = false
-
-            if (totpToken) {
-                totpValid = admin.verifyTOTP(totpToken)
-            } else if (backupCode) {
-                totpValid = await admin.useBackupCode(backupCode)
-            }
-
-            if (!totpValid) {
-                return res.status(401).json({
+            // Validate email domain
+            if (!validateEmailDomain(email)) {
+                return res.status(403).json({
                     success: false,
-                    message: 'Invalid TOTP token or backup code',
-                    requiresTOTP: true,
+                    message: 'Access restricted to authorized domains',
                 })
             }
+
+            // Find admin
+            const admin = await Admin.findByEmail(email)
+            if (!admin) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid credentials',
+                })
+            }
+
+            // Check if account is locked
+            if (admin.isLocked()) {
+                return res.status(423).json({
+                    success: false,
+                    message: 'Account is temporarily locked due to multiple failed attempts',
+                })
+            }
+
+            // Verify password
+            const isPasswordValid = await admin.comparePassword(password)
+            if (!isPasswordValid) {
+                await admin.incrementFailedAttempts()
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid credentials',
+                })
+            }
+
+            // Check TOTP if enabled
+            if (admin.totpEnabled) {
+                let totpValid = false
+
+                if (totpToken) {
+                    totpValid = admin.verifyTOTP(totpToken)
+                } else if (backupCode) {
+                    totpValid = await admin.useBackupCode(backupCode)
+                }
+
+                if (!totpValid) {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Invalid TOTP token or backup code',
+                        requiresTOTP: true,
+                    })
+                }
+            }
+
+            // Generate tokens with shared tokenId
+            const tokens = generateAdminTokens(admin)
+            
+            console.log('Generated tokens with tokenId:', tokens.tokenId) // Debug log
+
+            // Update login info and create session
+            await admin.updateLastLogin(req.ip, req.get('User-Agent'))
+            
+            console.log('Creating session with:', {
+                adminId: admin.id,
+                tokenId: tokens.tokenId  // Use the shared tokenId from tokens object
+            }) // Debug log
+
+            // Create session with the shared tokenId
+            const sessionResult = await adminSessionManager.createSession(admin, tokens.tokenId, req)
+            console.log('Session creation result:', sessionResult) // Debug log
+
+            // Log successful login
+            await AuditLog.create({
+                adminId: admin.id,
+                action: 'login',
+                resource: 'admin',
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
+                severity: 'medium',
+            })
+
+            logger.info(`Admin logged in: ${email}`)
+
+            // Set refresh token as httpOnly cookie
+            res.cookie('refreshToken', tokens.refreshToken, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            })
+
+            res.json({
+                success: true,
+                message: 'Login successful',
+                data: {
+                    admin: admin.toJSON(),
+                    accessToken: tokens.accessToken,
+                },
+            })
+        } catch (error) {
+            logger.error('Admin login error:', error)
+            res.status(500).json({
+                success: false,
+                message: 'Login failed',
+            })
         }
-
-        // Generate tokens with tokenId
-        const tokens = generateAdminTokens(admin)
-        const tokenPayload = JSON.parse(
-            Buffer.from(tokens.refreshToken.split('.')[1], 'base64')
-        )
-
-        // Update login info and create session - using the security method
-        await admin.updateLastLogin(req.ip, req.get('User-Agent'))
-        adminSessionManager.createSession(admin, tokenPayload.tokenId, req)
-
-        // Log successful login
-        await AuditLog.create({
-            adminId: admin.id,
-            action: 'login',
-            resource: 'admin',
-            ipAddress: req.ip,
-            userAgent: req.get('User-Agent'),
-            severity: 'medium',
-        })
-
-        logger.info(`Admin logged in: ${email}`)
-
-        // Set refresh token as httpOnly cookie
-        res.cookie('refreshToken', tokens.refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        })
-
-        res.json({
-            success: true,
-            message: 'Login successful',
-            data: {
-                admin: admin.toJSON(),
-                accessToken: tokens.accessToken,
-            },
-        })
-    } catch (error) {
-        logger.error('Admin login error:', error)
-        res.status(500).json({
-            success: false,
-            message: 'Login failed',
-        })
-    }
-},
+    },
 
     // Refresh Token Endpoint
     refreshToken: async (req, res) => {
@@ -153,7 +160,7 @@ login: async (req, res) => {
             }
 
             // Check session
-            const session = adminSessionManager.getSession(
+            const session = await adminSessionManager.getSession(
                 decoded.adminId,
                 decoded.tokenId
             )
@@ -165,22 +172,15 @@ login: async (req, res) => {
                 })
             }
 
-            // Generate new tokens
+            // Generate new tokens with shared tokenId
             const newTokens = generateAdminTokens(admin)
-            const newTokenPayload = JSON.parse(
-                Buffer.from(newTokens.refreshToken.split('.')[1], 'base64')
-            )
 
-            // Update session
-            adminSessionManager.removeSession(decoded.adminId, decoded.tokenId)
-            adminSessionManager.createSession(
-                admin,
-                newTokenPayload.tokenId,
-                req
-            )
+            // Update session - remove old and create new
+            await adminSessionManager.removeSession(decoded.adminId, decoded.tokenId)
+            await adminSessionManager.createSession(admin, newTokens.tokenId, req)
 
             // Blacklist old refresh token
-            blacklistAdminToken(decoded.tokenId)
+            await blacklistAdminToken(decoded.tokenId)
 
             // Set new refresh token cookie
             res.cookie('refreshToken', newTokens.refreshToken, {
@@ -212,8 +212,8 @@ login: async (req, res) => {
 
             // Remove session
             if (req.tokenId) {
-                adminSessionManager.removeSession(admin.id, req.tokenId)
-                blacklistAdminToken(req.tokenId)
+                await adminSessionManager.removeSession(admin.id, req.tokenId)
+                await blacklistAdminToken(req.tokenId)
             }
 
             // Clear refresh token cookie
