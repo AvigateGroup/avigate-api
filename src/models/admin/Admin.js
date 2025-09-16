@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs')
 const { DataTypes } = require('sequelize')
 const { adminSecurityMethods, securityFields } = require('./AdminSecurity')
+const { adminTOTPMethods, totpFields } = require('./AdminTOTP')
+const { adminPermissionMethods, adminStaticMethods } = require('./AdminPermissions')
 
 module.exports = (sequelize) => {
     const Admin = sequelize.define(
@@ -142,8 +144,9 @@ module.exports = (sequelize) => {
                     key: 'id',
                 },
             },
-            // ADD SECURITY FIELDS HERE
+            // SPREAD ALL ADDITIONAL FIELDS
             ...securityFields,
+            ...totpFields,
         },
         {
             tableName: 'admins',
@@ -253,39 +256,13 @@ module.exports = (sequelize) => {
         }
     )
 
-    // Add static methods
-    Admin.findByEmail = async function(email) {
-        return await this.findOne({
-            where: { 
-                email: email.toLowerCase() 
-            }
-        })
-    }
+    // APPLY ALL STATIC METHODS
+    Object.assign(Admin, adminStaticMethods)
 
-    Admin.getPermissionsList = function() {
-        return [
-            'user_management',
-            'content_moderation',
-            'analytics_view',
-            'system_settings',
-            'audit_logs',
-            'backup_restore',
-            'security_management'
-        ]
-    }
-
-    Admin.getRolePermissions = function(role) {
-        const permissions = {
-            super_admin: this.getPermissionsList(),
-            admin: ['user_management', 'content_moderation', 'analytics_view', 'audit_logs'],
-            moderator: ['content_moderation', 'analytics_view'],
-            analyst: ['analytics_view']
-        }
-        return permissions[role] || []
-    }
-
-    // APPLY SECURITY METHODS TO PROTOTYPE
+    // APPLY ALL INSTANCE METHODS
     Object.assign(Admin.prototype, adminSecurityMethods)
+    Object.assign(Admin.prototype, adminTOTPMethods)
+    Object.assign(Admin.prototype, adminPermissionMethods)
 
     // Keep the existing method for backward compatibility
     Admin.prototype.updateLastLogin = async function(ipAddress, userAgent) {
