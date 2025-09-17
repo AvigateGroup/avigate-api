@@ -22,11 +22,9 @@ const colors = {
 // Add colors to winston
 winston.addColors(colors)
 
-// Function to determine log level based on environment
+// Function to determine log level
 const level = () => {
-    const env = process.env.NODE_ENV || 'development'
-    const isDevelopment = env === 'development'
-    return isDevelopment ? 'debug' : 'warn'
+    return 'warn'
 }
 
 // Function to determine log directory
@@ -56,8 +54,8 @@ const transports = [
     }),
 ]
 
-// Add file transports only in production or if LOG_DIR is specified
-if (process.env.NODE_ENV === 'production' || process.env.LOG_DIR) {
+// Add file transports if LOG_DIR is specified
+if (process.env.LOG_DIR) {
     transports.push(
         // Error log file
         new winston.transports.File({
@@ -178,11 +176,10 @@ const logError = (error, context = {}) => {
 }
 
 // Log application startup
-const logStartup = (port, env) => {
+const logStartup = (port) => {
     logger.info('='.repeat(50))
     logger.info('🚀 Avigate API Server Starting...')
     logger.info(`📍 Port: ${port}`)
-    logger.info(`🌍 Environment: ${env}`)
     logger.info(`📝 Log Level: ${level()}`)
     logger.info(`⏰ Started at: ${new Date().toISOString()}`)
     logger.info('='.repeat(50))
