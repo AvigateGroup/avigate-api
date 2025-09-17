@@ -4,6 +4,7 @@ const {
     verifyAdminPasswordResetToken,
     adminSecurityUtils,
 } = require('../../services/admin')
+const { sendPasswordResetEmail } = require('../../services/email/adminZeptomailService')
 const { logger } = require('../../utils/logger')
 
 // Email domain validation
@@ -205,14 +206,6 @@ const passwordController = {
             })
         }
     },
-}
-
-// Email service function (implement based on your email provider)
-const sendPasswordResetEmail = async (email, firstName, resetToken) => {
-    // Implement your email sending logic here
-    logger.info(
-        `Password reset email sent to ${email} with token: ${resetToken}`
-    )
 }
 
 module.exports = passwordController
