@@ -3,6 +3,7 @@ const cors = require('cors')
 const helmet = require('helmet')
 const morgan = require('morgan')
 const compression = require('compression')
+const cookieParser = require('cookie-parser')
 
 // Load environment variables first
 require('dotenv').config()
@@ -21,6 +22,8 @@ const adminAuthRoutes = require('./routes/admin/adminAuthRoutes')
 
 const app = express()
 const PORT = process.env.PORT || 3000
+
+app.use(cookieParser());
 
 // CORS should be before helmet for correct headers
 app.use(
