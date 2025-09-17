@@ -5,6 +5,7 @@ const {
     adminSessionManager,
     adminSecurityUtils,
 } = require('../../services/admin')
+const { sendAdminInvitationEmail } = require('../../services/email/adminZeptomailService')
 const { logger } = require('../../utils/logger')
 const { Op } = require('sequelize')
 
@@ -383,18 +384,6 @@ const managementController = {
             })
         }
     },
-}
-
-// Email service functions (implement based on your email provider)
-const sendAdminInvitationEmail = async (
-    email,
-    firstName,
-    tempPassword,
-    inviteToken
-) => {
-    // Implement your email sending logic here
-    // This is a placeholder - use your actual email service
-    logger.info(`Invitation email sent to ${email} with token: ${inviteToken}`)
 }
 
 module.exports = managementController
