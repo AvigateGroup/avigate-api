@@ -119,7 +119,19 @@ Location.hasMany(UserDirection, {
     as: 'directionsAsEnd',
 })
 
-// Admin associations
+// Admin associations - ADD THESE
+Admin.belongsTo(Admin, {
+    foreignKey: 'createdBy',
+    as: 'creator',
+    constraints: false
+})
+
+Admin.belongsTo(Admin, {
+    foreignKey: 'lastModifiedBy', 
+    as: 'lastModifier',
+    constraints: false
+})
+
 Admin.hasMany(AuditLogModel, { foreignKey: 'adminId', as: 'auditLogs' })
 AuditLogModel.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' })
 
