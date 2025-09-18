@@ -238,35 +238,7 @@ const adminStaticMethods = {
     },
 }
 
-// Define associations
-const adminAssociations = (models) => {
-    return {
-        // Self-referencing associations for creator tracking
-        creator: {
-            association: models.Admin.belongsTo(models.Admin, {
-                foreignKey: 'createdBy',
-                as: 'creator',
-                constraints: false,
-            }),
-        },
-        lastModifier: {
-            association: models.Admin.belongsTo(models.Admin, {
-                foreignKey: 'lastModifiedBy',
-                as: 'lastModifier',
-                constraints: false,
-            }),
-        },
-        auditLogs: {
-            association: models.Admin.hasMany(models.AuditLog, {
-                foreignKey: 'adminId',
-                as: 'auditLogs',
-            }),
-        },
-    }
-}
-
 module.exports = {
     adminPermissionMethods,
     adminStaticMethods,
-    adminAssociations,
 }
