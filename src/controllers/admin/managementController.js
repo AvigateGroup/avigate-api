@@ -384,6 +384,110 @@ const managementController = {
             })
         }
     },
+
+// Delete Admin (Super Admin Only)
+deleteAdmin: async (req, res) => {
+    try {
+        const currentAdmin = req.admin
+        const { adminId } = req.params
+
+        // Only super admins can delete admins
+        if (currentAdmin.role !== 'super_admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only super administrators can delete admin accounts',
+            })
+        }
+
+        // Prevent self-deletion
+        if (currentAdmin.id === adminId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete your own account',
+            })
+        }
+
+        // Find target admin
+        const targetAdmin = await Admin.findByPk(adminId)
+        if (!targetAdmin) {
+            return res.status(404).json({
+                success: false,
+                message: 'Admin not found',
+            })
+        }
+
+        // Prevent deletion of the last super admin
+        if (targetAdmin.role === 'super_admin') {
+            const superAdminCount = await Admin.count({
+                where: {
+                    role: 'super_admin',
+                    isActive: true,
+                }
+            })
+            
+            if (superAdminCount <= 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Cannot delete the last super administrator',
+                })
+            }
+        }
+
+        // Store admin data for audit log before deletion
+        const adminData = {
+            email: targetAdmin.email,
+            firstName: targetAdmin.firstName,
+            lastName: targetAdmin.lastName,
+            role: targetAdmin.role,
+            permissions: targetAdmin.permissions,
+        }
+
+        // Remove all admin sessions before deletion
+        const removedSessions = await adminSessionManager.removeAllAdminSessions(adminId)
+        logger.info(`Removed ${removedSessions} sessions for deleted admin: ${targetAdmin.email}`)
+
+        // Delete the admin
+        await targetAdmin.destroy()
+
+        // Log admin deletion
+        await AuditLog.create({
+            adminId: currentAdmin.id,
+            action: 'delete_admin',
+            resource: 'admin',
+            resourceId: adminId,
+            metadata: {
+                deletedAdminData: adminData,
+                removedSessions,
+            },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            severity: 'critical',
+        })
+
+        logger.warn(`Admin deleted: ${adminData.email} by ${currentAdmin.email}`)
+
+        res.json({
+            success: true,
+            message: 'Admin deleted successfully',
+            data: {
+                deletedAdmin: {
+                    id: adminId,
+                    email: adminData.email,
+                    name: `${adminData.firstName} ${adminData.lastName}`,
+                    role: adminData.role,
+                },
+                removedSessions,
+            },
+        })
+    } catch (error) {
+        logger.error('Delete admin error:', error)
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete admin',
+        })
+    }
+},
+
 }
 
 module.exports = managementController
