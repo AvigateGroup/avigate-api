@@ -38,6 +38,10 @@ const adminValidators = {
         totpToken: Joi.string().length(6).pattern(/^\d+$/).required(),
     }),
 
+    deleteAdmin: Joi.object({
+    adminId: Joi.string().uuid().required(),
+    }),
+
     generateBackupCodes: Joi.object({
         currentPassword: Joi.string().required(),
         totpToken: Joi.string().length(6).pattern(/^\d+$/).required(),
@@ -238,60 +242,11 @@ router.put(
     validate(adminValidators.updateAdmin),
     managementController.updateAdmin
 )
-
-// // ================================
-// // DASHBOARD & ANALYTICS ROUTES
-// // ================================
-// router.get('/dashboard',
-//   authenticateAdmin,
-//   requirePermission('analytics.view'),
-//   authController.getDashboardOverview
-// );
-
-// router.get('/analytics/user-growth',
-//   authenticateAdmin,
-//   requirePermission('analytics.view'),
-//   validate(adminValidators.getUserGrowthMetrics, 'query'),
-//   authController.getUserGrowthMetrics
-// );
-
-// router.get('/analytics/geographic',
-//   authenticateAdmin,
-//   requirePermission('analytics.view'),
-//   authController.getGeographicAnalytics
-// );
-
-// // ================================
-// // SYSTEM & MONITORING ROUTES
-// // ================================
-// router.get('/system/health',
-//   authenticateAdmin,
-//   requirePermission('system.health'),
-//   authController.getSystemHealth
-// );
-
-// router.get('/audit-logs',
-//   authenticateAdmin,
-//   requirePermission('system.logs'),
-//   validate(adminValidators.getAuditLogs, 'query'),
-//   authController.getAuditLogs
-// );
-
-// // ================================
-// // USER MANAGEMENT ROUTES
-// // ================================
-// router.get('/users',
-//   authenticateAdmin,
-//   requirePermission('users.view'),
-//   validate(adminValidators.getUserManagement, 'query'),
-//   authController.getUserManagement
-// );
-
-// router.put('/users/:userId/status',
-//   authenticateAdmin,
-//   requirePermission('users.edit'),
-//   validate(adminValidators.updateUserStatus),
-//   authController.updateUserStatus
-// );
+router.delete(
+    '/admins/:adminId',
+    authenticateAdmin,
+    requirePermission('admins.delete'),
+    managementController.deleteAdmin
+)
 
 module.exports = router
