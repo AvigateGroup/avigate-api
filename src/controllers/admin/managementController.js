@@ -407,12 +407,23 @@ deleteAdmin: async (req, res) => {
             })
         }
 
-        // Find target admin
-        const targetAdmin = await Admin.findByPk(adminId)
+        // Find target admin (including soft-deleted ones to prevent errors)
+        const targetAdmin = await Admin.findByPk(adminId, {
+            paranoid: false // This includes soft-deleted records
+        })
+        
         if (!targetAdmin) {
             return res.status(404).json({
                 success: false,
                 message: 'Admin not found',
+            })
+        }
+
+        // Check if already deleted
+        if (targetAdmin.deletedAt) {
+            return res.status(400).json({
+                success: false,
+                message: 'Admin is already deleted',
             })
         }
 
@@ -446,8 +457,14 @@ deleteAdmin: async (req, res) => {
         const removedSessions = await adminSessionManager.removeAllAdminSessions(adminId)
         logger.info(`Removed ${removedSessions} sessions for deleted admin: ${targetAdmin.email}`)
 
-        // Delete the admin
-        await targetAdmin.destroy()
+        // Soft delete the admin
+        await targetAdmin.update({
+            isActive: false,
+            deletedBy: currentAdmin.id,
+        })
+        
+        // Perform the soft delete
+        await targetAdmin.destroy() // This sets deletedAt when paranoid is true
 
         // Log admin deletion
         await AuditLog.create({
@@ -458,13 +475,14 @@ deleteAdmin: async (req, res) => {
             metadata: {
                 deletedAdminData: adminData,
                 removedSessions,
+                deletionType: 'soft_delete'
             },
             ipAddress: req.ip,
             userAgent: req.get('User-Agent'),
             severity: 'critical',
         })
 
-        logger.warn(`Admin deleted: ${adminData.email} by ${currentAdmin.email}`)
+        logger.warn(`Admin soft-deleted: ${adminData.email} by ${currentAdmin.email}`)
 
         res.json({
             success: true,
@@ -487,7 +505,6 @@ deleteAdmin: async (req, res) => {
         })
     }
 },
-
 }
 
 module.exports = managementController
