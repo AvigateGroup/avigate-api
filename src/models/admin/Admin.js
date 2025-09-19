@@ -144,6 +144,19 @@ module.exports = (sequelize) => {
                     key: 'id',
                 },
             },
+            // SOFT DELETE FIELDS
+            deletedAt: {
+                type: DataTypes.DATE,
+                allowNull: true,
+            },
+            deletedBy: {
+                type: DataTypes.UUID,
+                allowNull: true,
+                references: {
+                    model: 'admins',
+                    key: 'id',
+                },
+            },
             // SPREAD ALL ADDITIONAL FIELDS
             ...securityFields,
             ...totpFields,
@@ -151,6 +164,9 @@ module.exports = (sequelize) => {
         {
             tableName: 'admins',
             timestamps: true,
+            // ENABLE PARANOID MODE FOR SOFT DELETES
+            paranoid: true,
+            deletedAt: 'deletedAt',
             indexes: [
                 {
                     unique: true,
@@ -164,6 +180,13 @@ module.exports = (sequelize) => {
                 },
                 {
                     fields: ['createdBy'],
+                },
+                // ADD INDEX FOR SOFT DELETE
+                {
+                    fields: ['deletedAt'],
+                },
+                {
+                    fields: ['deletedBy'],
                 },
             ],
             hooks: {
@@ -252,6 +275,14 @@ module.exports = (sequelize) => {
                         admin.permissions = Admin.getRolePermissions(admin.role)
                     }
                 },
+                // ADD SOFT DELETE HOOK
+                beforeDestroy: async (admin, options) => {
+                    // This hook runs before soft delete
+                    // You can add any cleanup logic here if needed
+                    if (options.context && options.context.deletedBy) {
+                        admin.deletedBy = options.context.deletedBy
+                    }
+                }
             },
         }
     )
@@ -272,6 +303,37 @@ module.exports = (sequelize) => {
         this.failedLoginAttempts = 0
         this.lockedUntil = null
         await this.save()
+    }
+
+    // ADD SOFT DELETE UTILITY METHODS
+    Admin.prototype.softDelete = async function(deletedBy) {
+        this.deletedBy = deletedBy
+        return await this.destroy()
+    }
+
+    Admin.prototype.restore = async function() {
+        this.deletedBy = null
+        return await this.restore()
+    }
+
+    // Static method to find including deleted
+    Admin.findAllWithDeleted = function(options = {}) {
+        return this.findAll({
+            ...options,
+            paranoid: false
+        })
+    }
+
+    // Static method to find only deleted
+    Admin.findDeleted = function(options = {}) {
+        return this.findAll({
+            ...options,
+            where: {
+                ...options.where,
+                deletedAt: { [sequelize.Sequelize.Op.ne]: null }
+            },
+            paranoid: false
+        })
     }
 
     return Admin
