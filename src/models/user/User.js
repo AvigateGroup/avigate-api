@@ -1,4 +1,4 @@
-// models/User.js - Updated version with English only
+// models/user/User.js - Updated version with English only
 const bcrypt = require('bcryptjs')
 
 module.exports = (sequelize, DataTypes) => {

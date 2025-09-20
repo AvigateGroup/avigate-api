@@ -1,4 +1,4 @@
-// models/UserDevice.js
+// models/user/UserDevice.js
 module.exports = (sequelize, DataTypes) => {
     const UserDevice = sequelize.define(
         'UserDevice',

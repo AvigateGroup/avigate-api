@@ -1,4 +1,4 @@
-// models/UserOTP.js
+// models/user/UserOTP.js
 module.exports = (sequelize, DataTypes) => {
     const UserOTP = sequelize.define(
         'UserOTP',
