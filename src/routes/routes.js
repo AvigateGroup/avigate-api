@@ -6,7 +6,7 @@ const {
     queryValidators,
     validate,
 } = require('../utils/validators')
-const { authenticate, optionalAuth } = require('../middleware/auth')
+const { authenticate, optionalAuth } = require('../middleware/user/auth')
 const rateLimiter = require('../middleware/rateLimiter')
 
 // Search routes

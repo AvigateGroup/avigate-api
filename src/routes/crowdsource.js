@@ -10,7 +10,7 @@ const {
     authenticate,
     requireVerified,
     requireMinReputation,
-} = require('../middleware/auth')
+} = require('../middleware/user/auth')
 const rateLimiter = require('../middleware/rateLimiter')
 const { asyncHandler } = require('../middleware/errorHandler')
 

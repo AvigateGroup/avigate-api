@@ -10,7 +10,7 @@ const {
     authenticate,
     optionalAuth,
     requireVerified,
-} = require('../middleware/auth')
+} = require('../middleware/user/auth')
 const rateLimiter = require('../middleware/rateLimiter')
 
 // Get popular directions

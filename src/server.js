@@ -13,7 +13,7 @@ const { logger } = require('./utils/logger')
 const { errorHandler } = require('./middleware/errorHandler')
 
 // Import routes
-const authRoutes = require('./routes/auth')
+const authRoutes = require('./routes/user/auth')
 const locationRoutes = require('./routes/locations')
 const routeRoutes = require('./routes/routes')
 const directionRoutes = require('./routes/directions')

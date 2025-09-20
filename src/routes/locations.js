@@ -10,7 +10,7 @@ const {
     authenticate,
     optionalAuth,
     requireMinReputation,
-} = require('../middleware/auth')
+} = require('../middleware/user/auth')
 const rateLimiter = require('../middleware/rateLimiter')
 
 router.get(
