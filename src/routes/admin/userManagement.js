@@ -2,7 +2,7 @@
 const express = require('express')
 const router = express.Router()
 const userManagementController = require('../../controllers/admin/userManagementController')
-const { adminAuth, requirePermission } = require('../../middleware/adminAuth')
+const { adminAuth, requirePermission } = require('../../middleware/admin/authMiddleware')
 const { adminValidators } = require('../../utils/adminValidators')
 const rateLimiter = require('../../middleware/rateLimiter')
 

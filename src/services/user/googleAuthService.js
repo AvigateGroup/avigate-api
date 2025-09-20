@@ -1,6 +1,6 @@
 // services/user/googleAuthService.js
 const { OAuth2Client } = require('google-auth-library')
-const { logger } = require('../utils/logger')
+const { logger } = require('../../utils/logger')
 
 // Google OAuth configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
