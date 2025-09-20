@@ -16,7 +16,7 @@ const sequelize = new Sequelize(
 )
 
 // Import models after sequelize is created
-const User = require('./User')(sequelize, Sequelize.DataTypes)
+const User = require('./user/User.js')(sequelize, Sequelize.DataTypes)
 const Location = require('./Location')(sequelize, Sequelize.DataTypes)
 const Route = require('./Route')(sequelize, Sequelize.DataTypes)
 const RouteStep = require('./RouteStep')(sequelize, Sequelize.DataTypes)
