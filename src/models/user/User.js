@@ -1,3 +1,4 @@
+// models/User.js - Updated version with English only
 const bcrypt = require('bcryptjs')
 
 module.exports = (sequelize, DataTypes) => {
@@ -48,10 +49,10 @@ module.exports = (sequelize, DataTypes) => {
             phoneNumber: {
                 type: DataTypes.STRING,
                 allowNull: false,
+                unique: true,
                 validate: {
                     isValidNigerianPhone(value) {
-                        const phoneRegex =
-                            /^(\+234|234|0)(70|80|81|90|91)[0-9]{8}$/
+                        const phoneRegex = /^(\+234|234|0)(70|80|81|90|91)[0-9]{8}$/
                         if (!phoneRegex.test(value)) {
                             throw new Error(
                                 'Please provide a valid Nigerian phone number'
@@ -84,16 +85,17 @@ module.exports = (sequelize, DataTypes) => {
                     },
                 },
             },
+            // Language preference - English only now
             preferredLanguage: {
-                type: DataTypes.ENUM(
-                    'English',
-                    'Hausa',
-                    'Igbo',
-                    'Yoruba',
-                    'Pidgin'
-                ),
+                type: DataTypes.STRING,
                 defaultValue: 'English',
                 allowNull: false,
+                validate: {
+                    isIn: {
+                        args: [['English']],
+                        msg: 'Only English is supported',
+                    },
+                },
             },
             isVerified: {
                 type: DataTypes.BOOLEAN,
@@ -159,16 +161,23 @@ module.exports = (sequelize, DataTypes) => {
                 },
                 {
                     unique: true,
-                    fields: ['googleId'],
+                    fields: ['phoneNumber'],
                 },
                 {
-                    fields: ['phoneNumber'],
+                    unique: true,
+                    fields: ['googleId'],
                 },
                 {
                     fields: ['isActive'],
                 },
                 {
+                    fields: ['isVerified'],
+                },
+                {
                     fields: ['reputationScore'],
+                },
+                {
+                    fields: ['lastLoginAt'],
                 },
             ],
             hooks: {
@@ -196,6 +205,21 @@ module.exports = (sequelize, DataTypes) => {
             },
         }
     )
+
+    // Associations
+    User.associate = (models) => {
+        User.hasMany(models.UserDevice, {
+            foreignKey: 'userId',
+            as: 'devices',
+            onDelete: 'CASCADE',
+        })
+        
+        User.hasMany(models.UserOTP, {
+            foreignKey: 'userId',
+            as: 'otps',
+            onDelete: 'CASCADE',
+        })
+    }
 
     // Instance methods
     User.prototype.comparePassword = async function (candidatePassword) {
