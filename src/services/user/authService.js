@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
-const { logger } = require('../utils/logger')
+const { logger } = require('../../utils/logger')
 
 // Generate JWT access token
 const generateAccessToken = (user) => {
