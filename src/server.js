@@ -13,12 +13,13 @@ const { logger } = require('./utils/logger')
 const { errorHandler } = require('./middleware/errorHandler')
 
 // Import routes
-const authRoutes = require('./routes/user/auth')
+const userAuthRoutes = require('./routes/user/userAuthRoute')
 const locationRoutes = require('./routes/locations')
 const routeRoutes = require('./routes/routes')
 const directionRoutes = require('./routes/directions')
 const crowdsourceRoutes = require('./routes/crowdsource')
 const adminAuthRoutes = require('./routes/admin/adminAuthRoutes')
+const adminUserManagementRoutes = require('./routes/admin/userManagement')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -53,12 +54,13 @@ app.use(
 )
 
 // API routes
-app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/user/auth', userAuthRoutes)
 app.use('/api/v1/locations', locationRoutes)
 app.use('/api/v1/routes', routeRoutes)
 app.use('/api/v1/directions', directionRoutes)
 app.use('/api/v1/crowdsource', crowdsourceRoutes)
-app.use('/api/v1/adminAuth', adminAuthRoutes)
+app.use('/api/v1/admin/auth', adminAuthRoutes)
+app.use('/api/v1/admin/user', adminUserManagementRoutes)
 
 // 404 handler
 app.use('*', (req, res) => {
