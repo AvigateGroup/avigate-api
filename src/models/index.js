@@ -15,8 +15,12 @@ const sequelize = new Sequelize(
     }
 )
 
-// Import models after sequelize is created
+// Import user models
 const User = require('./user/User.js')(sequelize, Sequelize.DataTypes)
+const UserDevice = require('./user/UserDevice.js')(sequelize, Sequelize.DataTypes)
+const UserOTP = require('./user/UserOTP.js')(sequelize, Sequelize.DataTypes)
+
+// Import other models
 const Location = require('./Location')(sequelize, Sequelize.DataTypes)
 const Route = require('./Route')(sequelize, Sequelize.DataTypes)
 const RouteStep = require('./RouteStep')(sequelize, Sequelize.DataTypes)
@@ -49,6 +53,8 @@ const db = {
     sequelize,
     Sequelize,
     User,
+    UserDevice,
+    UserOTP,
     Location,
     Route,
     RouteStep,
@@ -63,11 +69,19 @@ const db = {
     AuditLog: AuditLogModel,
 }
 
-// Define associations
+// Define associations after all models are initialized
 // User associations
+User.hasMany(UserDevice, { foreignKey: 'userId', as: 'devices', onDelete: 'CASCADE' })
+User.hasMany(UserOTP, { foreignKey: 'userId', as: 'otps', onDelete: 'CASCADE' })
 User.hasMany(Route, { foreignKey: 'createdBy', as: 'createdRoutes' })
 User.hasMany(UserDirection, { foreignKey: 'createdBy', as: 'directions' })
 User.hasMany(FareFeedback, { foreignKey: 'userId', as: 'fareFeedbacks' })
+
+// UserDevice associations
+UserDevice.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'CASCADE' })
+
+// UserOTP associations
+UserOTP.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'CASCADE' })
 
 // Route associations
 Route.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' })
@@ -119,7 +133,7 @@ Location.hasMany(UserDirection, {
     as: 'directionsAsEnd',
 })
 
-// Admin associations - ADD THESE
+// Admin associations
 Admin.belongsTo(Admin, {
     foreignKey: 'createdBy',
     as: 'creator',
@@ -134,6 +148,13 @@ Admin.belongsTo(Admin, {
 
 Admin.hasMany(AuditLogModel, { foreignKey: 'adminId', as: 'auditLogs' })
 AuditLogModel.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' })
+
+// Call associate methods if they exist
+Object.keys(db).forEach(modelName => {
+    if (db[modelName].associate) {
+        db[modelName].associate(db)
+    }
+})
 
 // Test database connection
 const testConnection = async () => {
