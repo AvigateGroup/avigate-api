@@ -2,14 +2,14 @@
 const express = require('express')
 const router = express.Router()
 const userManagementController = require('../../controllers/admin/userManagementController')
-const { adminAuth, requirePermission } = require('../../middleware/admin/authMiddleware')
+const { authenticateAdmin, requirePermission } = require('../../middleware/admin')
 const { adminValidators } = require('../../utils/adminValidators')
 const rateLimiter = require('../../middleware/rateLimiter')
 
 // Get all users with pagination and filters
 router.get(
     '/users',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('view_users'),
     rateLimiter.admin,
     adminValidators.validateGetAllUsers,
@@ -19,7 +19,7 @@ router.get(
 // Get user statistics dashboard
 router.get(
     '/users/stats',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('view_users'),
     rateLimiter.admin,
     adminValidators.validateGetUserStats,
@@ -29,7 +29,7 @@ router.get(
 // Search users with advanced filters
 router.post(
     '/users/search',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('view_users'),
     rateLimiter.admin,
     adminValidators.validateSearchUsers,
@@ -39,7 +39,7 @@ router.post(
 // Get single user details
 router.get(
     '/users/:userId',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('view_users'),
     rateLimiter.admin,
     adminValidators.validateUserId,
@@ -49,7 +49,7 @@ router.get(
 // Update user status (verify, activate/deactivate)
 router.patch(
     '/users/:userId/status',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('edit_users'),
     rateLimiter.admin,
     adminValidators.validateUserId,
@@ -60,7 +60,7 @@ router.patch(
 // Reset user password (admin action)
 router.post(
     '/users/:userId/reset-password',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('edit_users'),
     rateLimiter.admin,
     adminValidators.validateUserId,
@@ -71,7 +71,7 @@ router.post(
 // Delete user account (admin action)
 router.delete(
     '/users/:userId',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('delete_users'),
     rateLimiter.admin,
     adminValidators.validateUserId,
@@ -82,7 +82,7 @@ router.delete(
 // Get user devices
 router.get(
     '/users/:userId/devices',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('view_users'),
     rateLimiter.admin,
     adminValidators.validateUserId,
@@ -92,7 +92,7 @@ router.get(
 // Deactivate user device
 router.patch(
     '/users/:userId/devices/:deviceId/deactivate',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('edit_users'),
     rateLimiter.admin,
     adminValidators.validateUserId,
@@ -104,7 +104,7 @@ router.patch(
 // Get user OTP history
 router.get(
     '/users/:userId/otp-history',
-    adminAuth,
+    authenticateAdmin,
     requirePermission('view_users'),
     rateLimiter.admin,
     adminValidators.validateUserId,
