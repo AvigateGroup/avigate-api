@@ -70,18 +70,10 @@ const db = {
 }
 
 // Define associations after all models are initialized
-// User associations
-User.hasMany(UserDevice, { foreignKey: 'userId', as: 'devices', onDelete: 'CASCADE' })
-User.hasMany(UserOTP, { foreignKey: 'userId', as: 'otps', onDelete: 'CASCADE' })
+// Other model associations (User associations are handled in associate methods)
 User.hasMany(Route, { foreignKey: 'createdBy', as: 'createdRoutes' })
 User.hasMany(UserDirection, { foreignKey: 'createdBy', as: 'directions' })
 User.hasMany(FareFeedback, { foreignKey: 'userId', as: 'fareFeedbacks' })
-
-// UserDevice associations
-UserDevice.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'CASCADE' })
-
-// UserOTP associations
-UserOTP.belongsTo(User, { foreignKey: 'userId', as: 'user', onDelete: 'CASCADE' })
 
 // Route associations
 Route.belongsTo(User, { foreignKey: 'createdBy', as: 'creator' })
