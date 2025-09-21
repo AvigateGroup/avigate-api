@@ -11,6 +11,15 @@ const FROM_NAME = 'Avigate'
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://avigate.co'
 const LOGO_URL = 'https://avigate.co/images/avigate-logo-email.png'
 
+// Social Media Links
+const SOCIAL_MEDIA_LINKS = {
+    instagram: 'https://www.instagram.com/try_avigate/',
+    twitter: 'https://x.com/try_avigate',
+    tiktok: 'https://www.tiktok.com/@try_avigate',
+    facebook: 'https://web.facebook.com/profile.php?id=61580695756879',
+    linkedin: 'https://www.linkedin.com/company/109130197'
+}
+
 // Initialize ZeptoMail client
 let zeptomailClient = null
 
@@ -125,6 +134,35 @@ const logEmailEvent = async (emailType, recipient, success, errorMessage = null,
     } catch (logError) {
         logger.error('Failed to log user email event:', logError)
     }
+}
+
+/**
+ * Generate social media footer HTML
+ */
+const generateSocialMediaFooter = () => {
+    return `
+        <div style="background-color: #f8f9fa; padding: 25px; margin: 30px 0; text-align: center; border-radius: 8px;">
+            <h3 style="color: #007bff; margin: 0 0 15px 0; font-size: 18px;">Follow Us</h3>
+            <p style="color: #666; margin: 0 0 20px 0; font-size: 14px;">Stay connected and get the latest updates on transportation in Nigeria</p>
+            <div style="display: inline-block;">
+                <a href="${SOCIAL_MEDIA_LINKS.instagram}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/instagram.svg" alt="Instagram" style="width: 32px; height: 32px; filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);">
+                </a>
+                <a href="${SOCIAL_MEDIA_LINKS.twitter}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg" alt="X (Twitter)" style="width: 32px; height: 32px; filter: invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);">
+                </a>
+                <a href="${SOCIAL_MEDIA_LINKS.tiktok}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/tiktok.svg" alt="TikTok" style="width: 32px; height: 32px; filter: invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);">
+                </a>
+                <a href="${SOCIAL_MEDIA_LINKS.facebook}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg" alt="Facebook" style="width: 32px; height: 32px; filter: invert(24%) sepia(94%) saturate(1957%) hue-rotate(213deg) brightness(103%) contrast(107%);">
+                </a>
+                <a href="${SOCIAL_MEDIA_LINKS.linkedin}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
+                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg" alt="LinkedIn" style="width: 32px; height: 32px; filter: invert(13%) sepia(94%) saturate(1352%) hue-rotate(187deg) brightness(85%) contrast(88%);">
+                </a>
+            </div>
+        </div>
+    `
 }
 
 /**
@@ -376,11 +414,13 @@ const generateWelcomeHTML = (firstName, otpCode) => {
                 
                 <p>If you didn't create this account, please ignore this email.</p>
                 
+                ${generateSocialMediaFooter()}
+                
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 
                 <p style="font-size: 12px; color: #666; text-align: center;">
                     This is an automated message from Avigate.<br>
-                    Need help? Contact us at <a href="mailto:support@avigate.co">support@avigate.co</a>
+                    Need help? Contact us at <a href="mailto:hello@avigate.co">hello@avigate.co</a>
                 </p>
             </div>
         </body>
@@ -420,6 +460,8 @@ const generateVerificationOTPHTML = (firstName, otpCode) => {
                 <p><strong>This code expires in 10 minutes</strong> for your security.</p>
                 
                 <p>If you didn't request this verification, please ignore this email.</p>
+                
+                ${generateSocialMediaFooter()}
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 
@@ -471,6 +513,8 @@ const generateLoginOTPHTML = (firstName, otpCode, deviceInfo) => {
                 ` : ''}
                 
                 <p>If you didn't try to log in, please secure your account immediately by changing your password.</p>
+                
+                ${generateSocialMediaFooter()}
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 
@@ -527,11 +571,13 @@ const generateNewDeviceLoginHTML = (firstName, deviceInfo, location) => {
                     <a href="${FRONTEND_URL}/change-password" style="display: inline-block; background-color: #ff6b35; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px;">Change Password</a>
                 </p>
                 
+                ${generateSocialMediaFooter()}
+                
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 
                 <p style="font-size: 12px; color: #666; text-align: center;">
                     This is an automated security alert from Avigate.<br>
-                    Need help? Contact us at <a href="mailto:support@avigate.co">support@avigate.co</a>
+                    Need help? Contact us at <a href="mailto:hello@avigate.co">hello@avigate.co</a>
                 </p>
             </div>
         </body>
@@ -571,8 +617,10 @@ const generatePasswordChangeHTML = (firstName, changeTime) => {
                 <p>If you didn't make this change, please contact our support team immediately.</p>
                 
                 <p>
-                    <a href="mailto:support@avigate.co" style="display: inline-block; background-color: #dc3545; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px;">Report Unauthorized Change</a>
+                    <a href="mailto:hello@avigate.co" style="display: inline-block; background-color: #dc3545; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px;">Report Unauthorized Change</a>
                 </p>
+                
+                ${generateSocialMediaFooter()}
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 
@@ -617,6 +665,8 @@ const generateAccountDeletionHTML = (firstName, deletionTime) => {
                 <p>All your personal data has been removed from our systems. We're sorry to see you go!</p>
                 
                 <p>Thank you for using Avigate. If you change your mind, you're always welcome to create a new account.</p>
+                
+                ${generateSocialMediaFooter()}
                 
                 <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
                 
