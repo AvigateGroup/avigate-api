@@ -14,22 +14,36 @@ const requirePermission = (requiredPermission) => {
                 })
             }
 
+            // Check if admin has the hasPermission method
+            if (!admin.hasPermission) {
+                logger.error('Admin instance missing hasPermission method', { adminId: admin.id })
+                return res.status(500).json({
+                    success: false,
+                    message: 'Authorization service error - missing methods',
+                })
+            }
+
             if (!admin.hasPermission(requiredPermission)) {
                 // Log unauthorized access attempt
-                await AuditLog.create({
-                    adminId: admin.id,
-                    action: 'unauthorized_access_attempt',
-                    resource: 'admin',
-                    metadata: {
-                        requiredPermission,
-                        userPermissions: admin.permissions,
-                        attemptedPath: req.path,
-                        method: req.method,
-                    },
-                    ipAddress: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    severity: 'medium',
-                })
+                try {
+                    await AuditLog.create({
+                        adminId: admin.id,
+                        action: 'unauthorized_access_attempt',
+                        resource: 'admin',
+                        metadata: {
+                            requiredPermission,
+                            userPermissions: admin.permissions,
+                            attemptedPath: req.path,
+                            method: req.method,
+                        },
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        severity: 'medium',
+                    })
+                } catch (auditError) {
+                    logger.error('Failed to create audit log:', auditError)
+                    // Don't fail the request if audit logging fails
+                }
 
                 return res.status(403).json({
                     success: false,
@@ -62,21 +76,34 @@ const requireAnyPermission = (requiredPermissions) => {
                 })
             }
 
-            if (!admin.hasAnyPermission(requiredPermissions)) {
-                await AuditLog.create({
-                    adminId: admin.id,
-                    action: 'unauthorized_access_attempt',
-                    resource: 'admin',
-                    metadata: {
-                        requiredPermissions,
-                        userPermissions: admin.permissions,
-                        attemptedPath: req.path,
-                        method: req.method,
-                    },
-                    ipAddress: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    severity: 'medium',
+            // Check if admin has the hasAnyPermission method
+            if (!admin.hasAnyPermission) {
+                logger.error('Admin instance missing hasAnyPermission method', { adminId: admin.id })
+                return res.status(500).json({
+                    success: false,
+                    message: 'Authorization service error - missing methods',
                 })
+            }
+
+            if (!admin.hasAnyPermission(requiredPermissions)) {
+                try {
+                    await AuditLog.create({
+                        adminId: admin.id,
+                        action: 'unauthorized_access_attempt',
+                        resource: 'admin',
+                        metadata: {
+                            requiredPermissions,
+                            userPermissions: admin.permissions,
+                            attemptedPath: req.path,
+                            method: req.method,
+                        },
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        severity: 'medium',
+                    })
+                } catch (auditError) {
+                    logger.error('Failed to create audit log:', auditError)
+                }
 
                 return res.status(403).json({
                     success: false,
@@ -112,20 +139,24 @@ const requireRole = (requiredRoles) => {
             }
 
             if (!roles.includes(admin.role)) {
-                await AuditLog.create({
-                    adminId: admin.id,
-                    action: 'role_access_attempt',
-                    resource: 'admin',
-                    metadata: {
-                        requiredRoles,
-                        userRole: admin.role,
-                        attemptedPath: req.path,
-                        method: req.method,
-                    },
-                    ipAddress: req.ip,
-                    userAgent: req.get('User-Agent'),
-                    severity: 'medium',
-                })
+                try {
+                    await AuditLog.create({
+                        adminId: admin.id,
+                        action: 'role_access_attempt',
+                        resource: 'admin',
+                        metadata: {
+                            requiredRoles,
+                            userRole: admin.role,
+                            attemptedPath: req.path,
+                            method: req.method,
+                        },
+                        ipAddress: req.ip,
+                        userAgent: req.get('User-Agent'),
+                        severity: 'medium',
+                    })
+                } catch (auditError) {
+                    logger.error('Failed to create audit log:', auditError)
+                }
 
                 return res.status(403).json({
                     success: false,
@@ -159,19 +190,23 @@ const requireSuperAdmin = async (req, res, next) => {
 
         if (admin.role !== 'super_admin') {
             // Log super admin access attempt
-            await AuditLog.create({
-                adminId: admin.id,
-                action: 'super_admin_access_attempt',
-                resource: 'admin',
-                metadata: {
-                    userRole: admin.role,
-                    attemptedPath: req.path,
-                    method: req.method,
-                },
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent'),
-                severity: 'high',
-            })
+            try {
+                await AuditLog.create({
+                    adminId: admin.id,
+                    action: 'super_admin_access_attempt',
+                    resource: 'admin',
+                    metadata: {
+                        userRole: admin.role,
+                        attemptedPath: req.path,
+                        method: req.method,
+                    },
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                    severity: 'high',
+                })
+            } catch (auditError) {
+                logger.error('Failed to create audit log:', auditError)
+            }
 
             return res.status(403).json({
                 success: false,
@@ -223,8 +258,8 @@ const canManageAdmin = async (req, res, next) => {
             })
         }
 
-        // Check role hierarchy
-        if (!Admin.canManageRole(currentAdmin.role, targetAdmin.role)) {
+        // Check role hierarchy - use static method
+        if (!Admin.canManageRole || !Admin.canManageRole(currentAdmin.role, targetAdmin.role)) {
             return res.status(403).json({
                 success: false,
                 message: 'Cannot manage admin with equal or higher role',
