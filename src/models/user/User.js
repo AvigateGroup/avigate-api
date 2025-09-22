@@ -1,4 +1,4 @@
-// models/user/User.js - FIXED VERSION
+// models/user/User.js
 const bcrypt = require('bcryptjs')
 
 module.exports = (sequelize, DataTypes) => {
@@ -117,7 +117,6 @@ module.exports = (sequelize, DataTypes) => {
                 defaultValue: true,
                 allowNull: false,
             },
-            // ✅ ADD MISSING isTestAccount field
             isTestAccount: {
                 type: DataTypes.BOOLEAN,
                 defaultValue: false,

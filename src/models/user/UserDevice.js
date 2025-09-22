@@ -22,13 +22,13 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: true,
                 validate: {
                     len: {
-                        args: [1, 500],
-                        msg: 'FCM token must be between 1 and 500 characters',
+                        args: [10, 2000],
+                        msg: 'FCM token must be between 10 and 2000 characters',
                     },
                 },
             },
             deviceFingerprint: {
-                type: DataTypes.STRING,
+                type: DataTypes.STRING(255),
                 allowNull: false,
                 validate: {
                     len: {
@@ -40,12 +40,6 @@ module.exports = (sequelize, DataTypes) => {
             deviceInfo: {
                 type: DataTypes.TEXT,
                 allowNull: true,
-                validate: {
-                    len: {
-                        args: [1, 1000],
-                        msg: 'Device info must be less than 1000 characters',
-                    },
-                },
             },
             deviceType: {
                 type: DataTypes.ENUM('mobile', 'tablet', 'desktop', 'unknown'),
@@ -58,39 +52,27 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
             },
             appVersion: {
-                type: DataTypes.STRING,
+                type: DataTypes.STRING(20),
                 allowNull: true,
-                validate: {
-                    len: {
-                        args: [1, 20],
-                        msg: 'App version must be less than 20 characters',
-                    },
-                },
             },
             ipAddress: {
-                type: DataTypes.STRING,
+                type: DataTypes.STRING(45),
                 allowNull: true,
-                validate: {
-                    isIP: {
-                        msg: 'Must be a valid IP address',
-                    },
-                },
             },
             lastActiveAt: {
                 type: DataTypes.DATE,
-                allowNull: false,
                 defaultValue: DataTypes.NOW,
+                allowNull: false,
             },
             isActive: {
                 type: DataTypes.BOOLEAN,
-                allowNull: false,
                 defaultValue: true,
+                allowNull: false,
             },
-            // Metadata for additional device information
             metadata: {
-                type: DataTypes.JSON,
-                allowNull: true,
+                type: DataTypes.JSONB,
                 defaultValue: {},
+                allowNull: true,
             },
         },
         {
@@ -104,11 +86,6 @@ module.exports = (sequelize, DataTypes) => {
                     fields: ['fcmToken'],
                 },
                 {
-                    unique: true,
-                    fields: ['userId', 'deviceFingerprint'],
-                    name: 'unique_user_device',
-                },
-                {
                     fields: ['isActive'],
                 },
                 {
@@ -117,7 +94,23 @@ module.exports = (sequelize, DataTypes) => {
                 {
                     fields: ['platform'],
                 },
+                {
+                    unique: true,
+                    fields: ['userId', 'deviceFingerprint'],
+                    name: 'user_device_unique_fingerprint'
+                },
             ],
+            hooks: {
+                // Ensure default values are set before creation
+                beforeCreate: async (userDevice) => {
+                    if (!userDevice.lastActiveAt) {
+                        userDevice.lastActiveAt = new Date();
+                    }
+                    if (userDevice.isActive === null || userDevice.isActive === undefined) {
+                        userDevice.isActive = true;
+                    }
+                },
+            },
         }
     )
 
@@ -141,43 +134,45 @@ module.exports = (sequelize, DataTypes) => {
         await this.save({ fields: ['isActive'] })
     }
 
-    UserDevice.prototype.toJSON = function () {
-        const device = { ...this.get() }
-        // Don't expose sensitive information
-        delete device.fcmToken
-        return device
+    UserDevice.prototype.updateFCMToken = async function (newToken) {
+        this.fcmToken = newToken
+        this.lastActiveAt = new Date()
+        await this.save({ fields: ['fcmToken', 'lastActiveAt'] })
     }
 
     // Class methods
-    UserDevice.findActiveByUser = function (userId) {
+    UserDevice.findByUserAndFingerprint = function (userId, deviceFingerprint) {
+        return UserDevice.findOne({
+            where: {
+                userId,
+                deviceFingerprint,
+                isActive: true,
+            },
+        })
+    }
+
+    UserDevice.findActiveDevicesForUser = function (userId) {
         return UserDevice.findAll({
-            where: { userId, isActive: true },
+            where: {
+                userId,
+                isActive: true,
+            },
             order: [['lastActiveAt', 'DESC']],
         })
     }
 
-    UserDevice.findByFCMToken = function (fcmToken) {
-        return UserDevice.findOne({
-            where: { fcmToken, isActive: true },
-        })
-    }
-
-    UserDevice.deactivateOldDevices = async function (userId, keepDays = 30) {
-        const cutoffDate = new Date()
-        cutoffDate.setDate(cutoffDate.getDate() - keepDays)
-
-        await UserDevice.update(
-            { isActive: false },
-            {
-                where: {
-                    userId,
-                    lastActiveAt: { [sequelize.Sequelize.Op.lt]: cutoffDate },
-                    isActive: true,
+    UserDevice.cleanupInactiveDevices = async function (daysInactive = 90) {
+        const cutoffDate = new Date(Date.now() - daysInactive * 24 * 60 * 60 * 1000)
+        const deletedCount = await UserDevice.destroy({
+            where: {
+                lastActiveAt: {
+                    [sequelize.Sequelize.Op.lt]: cutoffDate,
                 },
-            }
-        )
+                isActive: false,
+            },
+        })
+        return deletedCount
     }
 
     return UserDevice
 }
-
