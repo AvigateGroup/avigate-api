@@ -57,11 +57,14 @@ const authController = {
                 passwordHash: password, // Will be hashed by the model hook
                 firstName,
                 lastName,
-                sex, // Add sex field
+                sex,
                 phoneNumber,
                 preferredLanguage: 'English',
-                isVerified: isTestAccount, // Auto-verify test accounts
-                isTestAccount,
+                isVerified: isTestAccount,
+                isTestAccount: isTestAccount,
+                reputationScore: 100,
+                totalContributions: 0,
+                isActive: true,
             })
 
             // For test accounts, skip OTP and return tokens immediately

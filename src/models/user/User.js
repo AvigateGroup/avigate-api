@@ -1,4 +1,4 @@
-// models/user/User.js
+// models/user/User.js - FIXED VERSION
 const bcrypt = require('bcryptjs')
 
 module.exports = (sequelize, DataTypes) => {
@@ -117,6 +117,12 @@ module.exports = (sequelize, DataTypes) => {
                 defaultValue: true,
                 allowNull: false,
             },
+            // ✅ ADD MISSING isTestAccount field
+            isTestAccount: {
+                type: DataTypes.BOOLEAN,
+                defaultValue: false,
+                allowNull: false,
+            },
             lastLoginAt: {
                 type: DataTypes.DATE,
                 allowNull: true,
@@ -144,7 +150,7 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 validate: {
                     min: {
-                        args: 0,
+                        args: [0], // ✅ Fixed: should be [0] not 0
                         msg: 'Reputation score cannot be negative',
                     },
                 },
@@ -155,7 +161,7 @@ module.exports = (sequelize, DataTypes) => {
                 allowNull: false,
                 validate: {
                     min: {
-                        args: 0,
+                        args: [0], // ✅ Fixed: should be [0] not 0
                         msg: 'Total contributions cannot be negative',
                     },
                 },
@@ -184,6 +190,9 @@ module.exports = (sequelize, DataTypes) => {
                     fields: ['isVerified'],
                 },
                 {
+                    fields: ['isTestAccount'], 
+                },
+                {
                     fields: ['reputationScore'],
                 },
                 {
@@ -202,6 +211,14 @@ module.exports = (sequelize, DataTypes) => {
                             user.passwordHash,
                             salt
                         )
+                    }
+                    
+                    // Ensure default values are set
+                    if (user.reputationScore === null || user.reputationScore === undefined) {
+                        user.reputationScore = 100
+                    }
+                    if (user.totalContributions === null || user.totalContributions === undefined) {
+                        user.totalContributions = 0
                     }
                 },
 
