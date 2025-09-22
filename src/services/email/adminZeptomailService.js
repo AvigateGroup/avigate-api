@@ -230,7 +230,7 @@ const generateInvitationHTML = (firstName, email, inviteUrl, tempPassword) => {
             <title>Admin Invitation</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; color: #333;">
-            <div style="max-width: 560px; margin: 40px auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="max-width: 560px; margin: 40px auto; background: white; border-radius: 8px;">
                 
                 <!-- Header -->
                 <div style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #eee;">
@@ -287,7 +287,7 @@ const generatePasswordResetHTML = (firstName, resetUrl) => {
             <title>Password Reset</title>
         </head>
         <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; color: #333;">
-            <div style="max-width: 560px; margin: 40px auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="max-width: 560px; margin: 40px auto; background: white; border-radius: 8px;">
                 
                 <!-- Header -->
                 <div style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #eee;">
