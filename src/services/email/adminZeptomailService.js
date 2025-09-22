@@ -218,7 +218,7 @@ const sendPasswordResetEmail = async (email, firstName, resetToken) => {
 }
 
 /**
- * Generate invitation HTML email
+ * Generate simplified admin invitation HTML email
  */
 const generateInvitationHTML = (firstName, email, inviteUrl, tempPassword) => {
     return `
@@ -227,46 +227,47 @@ const generateInvitationHTML = (firstName, email, inviteUrl, tempPassword) => {
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Admin Access Invitation</title>
+            <title>Admin Invitation</title>
         </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; color: #333;">
+            <div style="max-width: 560px; margin: 40px auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                
+                <!-- Header -->
+                <div style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #eee;">
+                    <img src="${LOGO_URL}" alt="Avigate" style="height: 50px;">
                 </div>
                 
-                <h1 style="color: #86B300; text-align: center; margin-bottom: 30px;">Welcome to Avigate Admin</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hello ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">You have been invited to access the Avigate Admin Portal. Please use the credentials below to activate your account:</p>
-                
-                <div style="background-color: #f0f8e8; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #86B300;">
-                    <p style="margin: 0 0 10px 0; color: #333;"><strong>Email:</strong> ${email}</p>
-                    <p style="margin: 0; color: #333;"><strong>Temporary Password:</strong> <code style="background-color: #e8f5e8; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #5a7c00;">${tempPassword}</code></p>
+                <!-- Content -->
+                <div style="padding: 40px;">
+                    <h2 style="margin: 0 0 24px; color: #333; font-size: 24px; font-weight: 600;">Admin Access Invitation</h2>
+                    
+                    <p style="margin: 0 0 24px; color: #666; line-height: 1.6;">Hi ${firstName},</p>
+                    
+                    <p style="margin: 0 0 32px; color: #666; line-height: 1.6;">You've been invited to access the Avigate Admin Portal. Use these credentials to get started:</p>
+                    
+                    <!-- Credentials -->
+                    <div style="background: #f8f9fa; padding: 24px; border-radius: 6px; margin: 0 0 32px;">
+                        <p style="margin: 0 0 8px; color: #333; font-size: 14px;"><strong>Email:</strong> ${email}</p>
+                        <p style="margin: 0; color: #333; font-size: 14px;"><strong>Password:</strong> <code style="background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #495057;">${tempPassword}</code></p>
+                    </div>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center; margin: 0 0 32px;">
+                        <a href="${inviteUrl}" style="display: inline-block; background: #86B300; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">Access Admin Portal</a>
+                    </div>
+                    
+                    <!-- Important Note -->
+                    <div style="padding: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 0 0 24px;">
+                        <p style="margin: 0; color: #856404; font-size: 14px;">Please change your password on first login. This invitation expires in 7 days.</p>
+                    </div>
+                    
+                    <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">Need help? Contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a></p>
                 </div>
                 
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="${inviteUrl}" style="display: inline-block; background-color: #86B300; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; font-size: 16px;">Activate Account</a>
+                <!-- Footer -->
+                <div style="padding: 24px 40px; background: #f8f9fa; border-top: 1px solid #eee; border-radius: 0 0 8px 8px;">
+                    <p style="margin: 0; color: #999; font-size: 12px; text-align: center;">© 2025 Avigate. This is an automated message.</p>
                 </div>
-                
-                <div style="background-color: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 6px; border-left: 4px solid #ffc107;">
-                    <p style="margin: 0; color: #856404;"><strong>Important:</strong> You must change this temporary password during your first login. This invitation expires in 7 days.</p>
-                </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;">After activation, you can access the admin portal at:</p>
-                <p style="font-size: 16px; line-height: 1.6; text-align: center;">
-                    <a href="${FRONTEND_URL}/admin/login" style="color: #86B300; text-decoration: none; font-weight: bold;">${FRONTEND_URL}/admin/login</a>
-                </p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">If you need assistance, please contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a></p>
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is an automated message from Avigate Admin.<br>
-                    If you did not expect this invitation, please contact support.
-                </p>
             </div>
         </body>
         </html>
@@ -274,7 +275,7 @@ const generateInvitationHTML = (firstName, email, inviteUrl, tempPassword) => {
 }
 
 /**
- * Generate password reset HTML email
+ * Generate simplified password reset HTML email
  */
 const generatePasswordResetHTML = (firstName, resetUrl) => {
     return `
@@ -283,42 +284,43 @@ const generatePasswordResetHTML = (firstName, resetUrl) => {
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Password Reset Request</title>
+            <title>Password Reset</title>
         </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; color: #333;">
+            <div style="max-width: 560px; margin: 40px auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                
+                <!-- Header -->
+                <div style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #eee;">
+                    <img src="${LOGO_URL}" alt="Avigate" style="height: 50px;">
                 </div>
                 
-                <h1 style="color: #86B300; text-align: center; margin-bottom: 30px;">Password Reset Request</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hello ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">We received a request to reset your password for your Avigate Admin account.</p>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="${resetUrl}" style="display: inline-block; background-color: #86B300; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; font-size: 16px;">Reset Password</a>
+                <!-- Content -->
+                <div style="padding: 40px;">
+                    <h2 style="margin: 0 0 24px; color: #333; font-size: 24px; font-weight: 600;">Reset Your Password</h2>
+                    
+                    <p style="margin: 0 0 24px; color: #666; line-height: 1.6;">Hi ${firstName},</p>
+                    
+                    <p style="margin: 0 0 32px; color: #666; line-height: 1.6;">We received a request to reset your password. Click the button below to create a new one:</p>
+                    
+                    <!-- CTA Button -->
+                    <div style="text-align: center; margin: 0 0 32px;">
+                        <a href="${resetUrl}" style="display: inline-block; background: #86B300; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">Reset Password</a>
+                    </div>
+                    
+                    <!-- Important Note -->
+                    <div style="padding: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 0 0 24px;">
+                        <p style="margin: 0; color: #856404; font-size: 14px;">This link expires in 1 hour for security.</p>
+                    </div>
+                    
+                    <p style="margin: 0 0 16px; color: #666; font-size: 14px; line-height: 1.6;">If you didn't request this, you can safely ignore this email.</p>
+                    
+                    <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">Questions? Contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a></p>
                 </div>
                 
-                <div style="background-color: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 6px; border-left: 4px solid #ffc107;">
-                    <p style="margin: 0; color: #856404;"><strong>Important:</strong> This link will expire in 1 hour for security reasons.</p>
+                <!-- Footer -->
+                <div style="padding: 24px 40px; background: #f8f9fa; border-top: 1px solid #eee; border-radius: 0 0 8px 8px;">
+                    <p style="margin: 0; color: #999; font-size: 12px; text-align: center;">© 2025 Avigate. This is an automated security message.</p>
                 </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;">If you did not request this password reset, please ignore this email or contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a></p>
-                
-                <div style="background-color: #f8f9fa; padding: 20px; margin: 30px 0; text-align: center; border-radius: 8px;">
-                    <p style="margin: 0; color: #666; font-size: 14px;">For security purposes, you can also access the admin portal directly at:</p>
-                    <p style="margin: 5px 0 0 0;">
-                        <a href="${FRONTEND_URL}/admin/login" style="color: #86B300; text-decoration: none; font-weight: bold;">${FRONTEND_URL}/admin/login</a>
-                    </p>
-                </div>
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is an automated security message from Avigate Admin.
-                </p>
             </div>
         </body>
         </html>

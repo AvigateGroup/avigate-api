@@ -11,15 +11,6 @@ const FROM_NAME = 'Avigate'
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://avigate.co'
 const LOGO_URL = 'https://avigate.co/images/avigate-logo-email.png'
 
-// Social Media Links
-const SOCIAL_MEDIA_LINKS = {
-    instagram: 'https://www.instagram.com/try_avigate/',
-    twitter: 'https://x.com/try_avigate',
-    tiktok: 'https://www.tiktok.com/@try_avigate',
-    facebook: 'https://web.facebook.com/profile.php?id=61580695756879',
-    linkedin: 'https://www.linkedin.com/company/109130197'
-}
-
 // Initialize ZeptoMail client
 let zeptomailClient = null
 
@@ -137,31 +128,41 @@ const logEmailEvent = async (emailType, recipient, success, errorMessage = null,
 }
 
 /**
- * Generate social media footer HTML
+ * Generate base email template
  */
-const generateSocialMediaFooter = () => {
+const generateBaseEmailHTML = (title, content, footerText = null) => {
     return `
-        <div style="background-color: #f8f9fa; padding: 25px; margin: 30px 0; text-align: center; border-radius: 8px;">
-            <h3 style="color: #86B300; margin: 0 0 15px 0; font-size: 18px;">Follow Us</h3>
-            <p style="color: #666; margin: 0 0 20px 0; font-size: 14px;">Stay connected and get the latest updates on transportation in Nigeria</p>
-            <div style="display: inline-block;">
-                <a href="${SOCIAL_MEDIA_LINKS.instagram}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/instagram.svg" alt="Instagram" style="width: 32px; height: 32px; filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);">
-                </a>
-                <a href="${SOCIAL_MEDIA_LINKS.twitter}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/x.svg" alt="X (Twitter)" style="width: 32px; height: 32px; filter: invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);">
-                </a>
-                <a href="${SOCIAL_MEDIA_LINKS.tiktok}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/tiktok.svg" alt="TikTok" style="width: 32px; height: 32px; filter: invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%);">
-                </a>
-                <a href="${SOCIAL_MEDIA_LINKS.facebook}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/facebook.svg" alt="Facebook" style="width: 32px; height: 32px; filter: invert(24%) sepia(94%) saturate(1957%) hue-rotate(213deg) brightness(103%) contrast(107%);">
-                </a>
-                <a href="${SOCIAL_MEDIA_LINKS.linkedin}" style="display: inline-block; margin: 0 10px; text-decoration: none;">
-                    <img src="https://cdn.jsdelivr.net/npm/simple-icons@v9/icons/linkedin.svg" alt="LinkedIn" style="width: 32px; height: 32px; filter: invert(13%) sepia(94%) saturate(1352%) hue-rotate(187deg) brightness(85%) contrast(88%);">
-                </a>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${title}</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; color: #333;">
+            <div style="max-width: 480px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                
+                <!-- Header -->
+                <div style="background-color: #86B300; padding: 24px; text-align: center;">
+                    <img src="${LOGO_URL}" alt="Avigate" style="height: 32px;">
+                </div>
+                
+                <!-- Content -->
+                <div style="padding: 32px 24px;">
+                    ${content}
+                </div>
+                
+                <!-- Footer -->
+                <div style="background-color: #f8f9fa; padding: 16px 24px; text-align: center; border-top: 1px solid #e9ecef;">
+                    <p style="margin: 0; font-size: 12px; color: #6c757d; line-height: 1.4;">
+                        ${footerText || 'This is an automated message from Avigate.'}
+                        <br>Need help? Contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a>
+                    </p>
+                </div>
+                
             </div>
-        </div>
+        </body>
+        </html>
     `
 }
 
@@ -171,6 +172,25 @@ const generateSocialMediaFooter = () => {
 const sendWelcomeEmail = async (email, firstName, otpCode) => {
     try {
         logger.info(`Preparing welcome email with OTP`, { email, firstName })
+        
+        const content = `
+            <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #333;">Welcome to Avigate</h1>
+            
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #555;">
+                Welcome to Nigeria's smartest transportation guide. To complete your registration, please verify your email with this code:
+            </p>
+            
+            <div style="background-color: #f8f9fa; border: 2px solid #86B300; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+                <div style="font-size: 32px; font-weight: bold; color: #86B300; letter-spacing: 4px; margin: 0;">${otpCode}</div>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #6c757d;">Expires in 10 minutes</p>
+            </div>
+            
+            <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5; color: #6c757d;">
+                If you didn't create this account, please ignore this email.
+            </p>
+        `
         
         const emailData = {
             from: {
@@ -186,7 +206,7 @@ const sendWelcomeEmail = async (email, firstName, otpCode) => {
                 },
             ],
             subject: 'Welcome to Avigate - Verify Your Email',
-            htmlbody: generateWelcomeHTML(firstName, otpCode)
+            htmlbody: generateBaseEmailHTML('Welcome to Avigate', content)
         }
 
         await sendZeptoMailEmail(emailData, 'welcome_verification')
@@ -206,6 +226,21 @@ const sendEmailVerificationOTP = async (email, firstName, otpCode) => {
     try {
         logger.info(`Preparing email verification OTP`, { email, firstName })
         
+        const content = `
+            <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #333;">Verify Your Email</h1>
+            
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #555;">
+                Please use this code to verify your email address:
+            </p>
+            
+            <div style="background-color: #f8f9fa; border: 2px solid #86B300; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+                <div style="font-size: 32px; font-weight: bold; color: #86B300; letter-spacing: 4px; margin: 0;">${otpCode}</div>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #6c757d;">Expires in 10 minutes</p>
+            </div>
+        `
+        
         const emailData = {
             from: {
                 address: FROM_EMAIL,
@@ -220,7 +255,7 @@ const sendEmailVerificationOTP = async (email, firstName, otpCode) => {
                 },
             ],
             subject: 'Verify Your Email - Avigate',
-            htmlbody: generateVerificationOTPHTML(firstName, otpCode)
+            htmlbody: generateBaseEmailHTML('Verify Your Email', content, 'This is a security verification from Avigate.')
         }
 
         await sendZeptoMailEmail(emailData, 'email_verification')
@@ -240,6 +275,31 @@ const sendLoginOTP = async (email, firstName, otpCode, deviceInfo) => {
     try {
         logger.info(`Preparing login OTP email`, { email, firstName })
         
+        const content = `
+            <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #333;">Login Verification</h1>
+            
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #555;">
+                Here's your login verification code:
+            </p>
+            
+            <div style="background-color: #f8f9fa; border: 2px solid #86B300; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+                <div style="font-size: 32px; font-weight: bold; color: #86B300; letter-spacing: 4px; margin: 0;">${otpCode}</div>
+                <p style="margin: 8px 0 0 0; font-size: 14px; color: #6c757d;">Expires in 5 minutes</p>
+            </div>
+            
+            ${deviceInfo ? `
+                <div style="background-color: #f8f9fa; border-radius: 4px; padding: 16px; margin: 16px 0;">
+                    <p style="margin: 0; font-size: 14px; color: #6c757d;"><strong>Device:</strong> ${deviceInfo}</p>
+                </div>
+            ` : ''}
+            
+            <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5; color: #6c757d;">
+                If you didn't request this code, please secure your account immediately.
+            </p>
+        `
+        
         const emailData = {
             from: {
                 address: FROM_EMAIL,
@@ -254,7 +314,7 @@ const sendLoginOTP = async (email, firstName, otpCode, deviceInfo) => {
                 },
             ],
             subject: 'Your Avigate Login Code',
-            htmlbody: generateLoginOTPHTML(firstName, otpCode, deviceInfo)
+            htmlbody: generateBaseEmailHTML('Login Verification', content, 'This is a security verification from Avigate.')
         }
 
         await sendZeptoMailEmail(emailData, 'login_otp')
@@ -274,6 +334,31 @@ const sendNewDeviceLoginNotification = async (email, firstName, deviceInfo, loca
     try {
         logger.info(`Preparing new device login notification`, { email, firstName })
         
+        const content = `
+            <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #d63384;">New Device Login</h1>
+            
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #555;">
+                Your account was accessed from a new device.
+            </p>
+            
+            <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; color: #856404;"><strong>Login Details:</strong></p>
+                <p style="margin: 4px 0; font-size: 14px; color: #856404;">Time: ${new Date().toLocaleString()}</p>
+                ${deviceInfo ? `<p style="margin: 4px 0; font-size: 14px; color: #856404;">Device: ${deviceInfo}</p>` : ''}
+                ${location ? `<p style="margin: 4px 0; font-size: 14px; color: #856404;">Location: ${location}</p>` : ''}
+            </div>
+            
+            <p style="margin: 16px 0; font-size: 16px; line-height: 1.5; color: #555;">
+                If this wasn't you, please change your password immediately.
+            </p>
+            
+            <div style="text-align: center; margin: 24px 0;">
+                <a href="${FRONTEND_URL}/change-password" style="display: inline-block; background-color: #86B300; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: 500;">Change Password</a>
+            </div>
+        `
+        
         const emailData = {
             from: {
                 address: FROM_EMAIL,
@@ -288,7 +373,7 @@ const sendNewDeviceLoginNotification = async (email, firstName, deviceInfo, loca
                 },
             ],
             subject: 'New Device Login - Avigate',
-            htmlbody: generateNewDeviceLoginHTML(firstName, deviceInfo, location)
+            htmlbody: generateBaseEmailHTML('New Device Login', content, 'This is a security alert from Avigate.')
         }
 
         await sendZeptoMailEmail(emailData, 'new_device_login')
@@ -308,6 +393,24 @@ const sendPasswordChangeConfirmation = async (email, firstName, changeTime) => {
     try {
         logger.info(`Preparing password change confirmation`, { email, firstName })
         
+        const content = `
+            <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #198754;">Password Changed</h1>
+            
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
+            
+            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #555;">
+                Your password was successfully changed.
+            </p>
+            
+            <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0; font-size: 14px; color: #0f5132;">Changed: ${changeTime}</p>
+            </div>
+            
+            <p style="margin: 16px 0 0 0; font-size: 14px; line-height: 1.5; color: #6c757d;">
+                If you didn't make this change, contact our support team immediately.
+            </p>
+        `
+        
         const emailData = {
             from: {
                 address: FROM_EMAIL,
@@ -321,8 +424,8 @@ const sendPasswordChangeConfirmation = async (email, firstName, changeTime) => {
                     },
                 },
             ],
-            subject: 'Password Changed Successfully - Avigate',
-            htmlbody: generatePasswordChangeHTML(firstName, changeTime)
+            subject: 'Password Changed - Avigate',
+            htmlbody: generateBaseEmailHTML('Password Changed', content, 'This is a security confirmation from Avigate.')
         }
 
         await sendZeptoMailEmail(emailData, 'password_change')
@@ -342,6 +445,24 @@ const sendAccountDeletionConfirmation = async (email, firstName, deletionTime) =
     try {
         logger.info(`Preparing account deletion confirmation`, { email, firstName })
         
+        const content = `
+            <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #6c757d;">Account Deleted</h1>
+            
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
+            
+            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #555;">
+                Your Avigate account has been permanently deleted.
+            </p>
+            
+            <div style="background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0; font-size: 14px; color: #495057;">Deleted: ${deletionTime}</p>
+            </div>
+            
+            <p style="margin: 16px 0 0 0; font-size: 16px; line-height: 1.5; color: #555;">
+                Thank you for using Avigate. You're welcome to create a new account anytime.
+            </p>
+        `
+        
         const emailData = {
             from: {
                 address: FROM_EMAIL,
@@ -356,7 +477,7 @@ const sendAccountDeletionConfirmation = async (email, firstName, deletionTime) =
                 },
             ],
             subject: 'Account Deleted - Avigate',
-            htmlbody: generateAccountDeletionHTML(firstName, deletionTime)
+            htmlbody: generateBaseEmailHTML('Account Deleted', content, 'This is a final confirmation from Avigate.')
         }
 
         await sendZeptoMailEmail(emailData, 'account_deletion')
@@ -367,316 +488,6 @@ const sendAccountDeletionConfirmation = async (email, firstName, deletionTime) =
         logger.error(`Failed to send account deletion confirmation to ${email}:`, error)
         throw error
     }
-}
-
-/**
- * Generate welcome HTML email
- */
-const generateWelcomeHTML = (firstName, otpCode) => {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Welcome to Avigate</title>
-        </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
-                </div>
-                
-                <h1 style="color: #86B300; text-align: center; margin-bottom: 30px;">Welcome to Avigate!</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Welcome to Avigate - Nigeria's smartest transportation guide! We're excited to help you navigate your journey with ease.</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">To get started, please verify your email address using the code below:</p>
-                
-                <div style="background-color: #f8f9fa; padding: 30px; margin: 30px 0; text-align: center; border-radius: 8px; border: 2px solid #86B300;">
-                    <h2 style="color: #86B300; font-size: 36px; margin: 0; letter-spacing: 8px; font-weight: bold;">${otpCode}</h2>
-                    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">Enter this code in the app to verify your email</p>
-                </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;"><strong>This code expires in 10 minutes</strong> for your security.</p>
-                
-                <div style="background-color: #f0f8e8; padding: 20px; margin: 30px 0; border-radius: 8px; border-left: 4px solid #86B300;">
-                    <h3 style="margin-top: 0; color: #5a7c00; font-size: 18px;">What you can do with Avigate:</h3>
-                    <ul style="color: #666; margin: 10px 0;">
-                        <li style="margin-bottom: 8px;">Find the best routes between any two locations in Nigeria</li>
-                        <li style="margin-bottom: 8px;">Get real-time fare information and travel times</li>
-                        <li style="margin-bottom: 8px;">Discover landmarks and navigation tips from local experts</li>
-                        <li style="margin-bottom: 8px;">Share your favorite routes with friends and family</li>
-                    </ul>
-                </div>
-                
-                <p style="font-size: 14px; line-height: 1.6; color: #666;">If you didn't create this account, please ignore this email.</p>
-                
-                ${generateSocialMediaFooter()}
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is an automated message from Avigate.<br>
-                    Need help? Contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a>
-                </p>
-            </div>
-        </body>
-        </html>
-    `
-}
-
-/**
- * Generate email verification OTP HTML
- */
-const generateVerificationOTPHTML = (firstName, otpCode) => {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Verify Your Email</title>
-        </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
-                </div>
-                
-                <h1 style="color: #86B300; text-align: center; margin-bottom: 30px;">Verify Your Email</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Please use the verification code below to verify your email address:</p>
-                
-                <div style="background-color: #f8f9fa; padding: 30px; margin: 30px 0; text-align: center; border-radius: 8px; border: 2px solid #86B300;">
-                    <h2 style="color: #86B300; font-size: 36px; margin: 0; letter-spacing: 8px; font-weight: bold;">${otpCode}</h2>
-                    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">Verification Code</p>
-                </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;"><strong>This code expires in 10 minutes</strong> for your security.</p>
-                
-                <p style="font-size: 14px; line-height: 1.6; color: #666;">If you didn't request this verification, please ignore this email.</p>
-                
-                ${generateSocialMediaFooter()}
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is an automated security message from Avigate.
-                </p>
-            </div>
-        </body>
-        </html>
-    `
-}
-
-/**
- * Generate login OTP HTML
- */
-const generateLoginOTPHTML = (firstName, otpCode, deviceInfo) => {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Your Login Code</title>
-        </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
-                </div>
-                
-                <h1 style="color: #86B300; text-align: center; margin-bottom: 30px;">Your Login Code</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Here's your login verification code:</p>
-                
-                <div style="background-color: #f8f9fa; padding: 30px; margin: 30px 0; text-align: center; border-radius: 8px; border: 2px solid #86B300;">
-                    <h2 style="color: #86B300; font-size: 36px; margin: 0; letter-spacing: 8px; font-weight: bold;">${otpCode}</h2>
-                    <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">Login Verification Code</p>
-                </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;"><strong>This code expires in 5 minutes</strong> for your security.</p>
-                
-                ${deviceInfo ? `
-                <div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 6px;">
-                    <p style="margin: 0; font-size: 14px; color: #666;"><strong>Device Information:</strong></p>
-                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">${deviceInfo}</p>
-                </div>
-                ` : ''}
-                
-                <p style="font-size: 14px; line-height: 1.6; color: #666;">If you didn't try to log in, please secure your account immediately by changing your password.</p>
-                
-                ${generateSocialMediaFooter()}
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is an automated security message from Avigate.
-                </p>
-            </div>
-        </body>
-        </html>
-    `
-}
-
-/**
- * Generate new device login HTML
- */
-const generateNewDeviceLoginHTML = (firstName, deviceInfo, location) => {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>New Device Login</title>
-        </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
-                </div>
-                
-                <h1 style="color: #ff6b35; text-align: center; margin-bottom: 30px;">New Device Login</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Your Avigate account was just accessed from a new device.</p>
-                
-                <div style="background-color: #fff3e0; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #ff6b35;">
-                    <p style="margin: 0 0 10px 0; font-weight: bold;">Login Details:</p>
-                    <p style="margin: 5px 0; color: #666;"><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-                    ${deviceInfo ? `<p style="margin: 5px 0; color: #666;"><strong>Device:</strong> ${deviceInfo}</p>` : ''}
-                    ${location ? `<p style="margin: 5px 0; color: #666;"><strong>Location:</strong> ${location}</p>` : ''}
-                </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;"><strong>Was this you?</strong></p>
-                <p style="font-size: 16px; line-height: 1.6;">If this was you, you can ignore this email. If you don't recognize this activity, please:</p>
-                
-                <ul style="color: #666; margin: 10px 0; padding-left: 20px;">
-                    <li style="margin-bottom: 8px;">Change your password immediately</li>
-                    <li style="margin-bottom: 8px;">Review your account activity</li>
-                    <li style="margin-bottom: 8px;">Contact our support team if needed</li>
-                </ul>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="${FRONTEND_URL}/change-password" style="display: inline-block; background-color: #ff6b35; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Change Password</a>
-                </div>
-                
-                ${generateSocialMediaFooter()}
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is an automated security alert from Avigate.<br>
-                    Need help? Contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a>
-                </p>
-            </div>
-        </body>
-        </html>
-    `
-}
-
-/**
- * Generate password change confirmation HTML
- */
-const generatePasswordChangeHTML = (firstName, changeTime) => {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Password Changed</title>
-        </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
-                </div>
-                
-                <h1 style="color: #28a745; text-align: center; margin-bottom: 30px;">Password Changed Successfully</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Your Avigate account password was successfully changed.</p>
-                
-                <div style="background-color: #d4edda; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #28a745;">
-                    <p style="margin: 0; font-weight: bold;">Change Details:</p>
-                    <p style="margin: 5px 0 0 0; color: #155724;">Time: ${changeTime}</p>
-                </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;">If you didn't make this change, please contact our support team immediately.</p>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <a href="mailto:hello@avigate.co" style="display: inline-block; background-color: #dc3545; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: bold;">Report Unauthorized Change</a>
-                </div>
-                
-                ${generateSocialMediaFooter()}
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is an automated security confirmation from Avigate.
-                </p>
-            </div>
-        </body>
-        </html>
-    `
-}
-
-/**
- * Generate account deletion confirmation HTML
- */
-const generateAccountDeletionHTML = (firstName, deletionTime) => {
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Account Deleted</title>
-        </head>
-        <body style="margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #ffffff; color: #333333;">
-            <div style="max-width: 600px; margin: 0 auto;">
-                <div style="margin-bottom: 30px; text-align: center;">
-                    <img src="${LOGO_URL}" alt="Avigate" style="height: 60px; display: block; margin: 0 auto;">
-                </div>
-                
-                <h1 style="color: #6c757d; text-align: center; margin-bottom: 30px;">Account Deleted</h1>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Hi ${firstName},</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Your Avigate account has been permanently deleted as requested.</p>
-                
-                <div style="background-color: #f8f9fa; padding: 20px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #6c757d;">
-                    <p style="margin: 0; font-weight: bold;">Deletion Details:</p>
-                    <p style="margin: 5px 0 0 0; color: #495057;">Time: ${deletionTime}</p>
-                </div>
-                
-                <p style="font-size: 16px; line-height: 1.6;">All your personal data has been removed from our systems. We're sorry to see you go!</p>
-                
-                <p style="font-size: 16px; line-height: 1.6;">Thank you for using Avigate. If you change your mind, you're always welcome to create a new account.</p>
-                
-                ${generateSocialMediaFooter()}
-                
-                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                
-                <p style="font-size: 12px; color: #666; text-align: center; line-height: 1.6;">
-                    This is a final confirmation from Avigate.
-                </p>
-            </div>
-        </body>
-        </html>
-    `
 }
 
 module.exports = {
