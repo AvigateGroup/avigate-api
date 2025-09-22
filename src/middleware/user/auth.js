@@ -1,3 +1,4 @@
+//middleware/user/auth
 const jwt = require('jsonwebtoken')
 const { User } = require('../../models')
 const { logger } = require('../../utils/logger')
