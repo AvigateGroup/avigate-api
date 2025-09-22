@@ -1,12 +1,32 @@
 // controllers/admin/userManagementController.js
-const { User, UserDevice, UserOTP, AuditLog } = require('../../models')
+const { User, UserDevice, UserOTP, AuditLog: AuditLogModel } = require('../../models') // ✅ Fixed import
 const { logger } = require('../../utils/logger')
 const { Op } = require('sequelize')
 
 const userManagementController = {
-    // Get all users with pagination and filters
     getAllUsers: async (req, res) => {
         try {
+            logger.info('=== getAllUsers START ===')
+            logger.info('getAllUsers called with query:', req.query)
+            logger.info('Admin info:', { 
+                id: req.admin?.id, 
+                email: req.admin?.email,
+                role: req.admin?.role,
+                hasPermissionMethod: typeof req.admin?.hasPermission
+            })
+
+            // Test database connection first
+            try {
+                await User.sequelize.authenticate()
+                logger.info('Database connection successful')
+            } catch (dbError) {
+                logger.error('Database connection failed:', dbError)
+                return res.status(503).json({
+                    success: false,
+                    message: 'Database connection error',
+                })
+            }
+
             const {
                 page = 1,
                 limit = 20,
@@ -19,6 +39,10 @@ const userManagementController = {
                 dateTo,
             } = req.query
 
+            logger.info('Parsed query parameters:', { 
+                page, limit, search, isVerified, isActive, sortBy, sortOrder 
+            })
+
             const offset = (page - 1) * limit
             const where = {}
 
@@ -28,6 +52,7 @@ const userManagementController = {
                     { firstName: { [Op.iLike]: `%${search}%` } },
                     { lastName: { [Op.iLike]: `%${search}%` } },
                     { email: { [Op.iLike]: `%${search}%` } },
+                    { sex: { [Op.iLike]: `%${search}%` } }, // ✅ Fixed: was 'query'
                     { phoneNumber: { [Op.iLike]: `%${search}%` } },
                 ]
             }
@@ -51,7 +76,10 @@ const userManagementController = {
                 }
             }
 
+            logger.info('Built where clause:', JSON.stringify(where, null, 2))
+
             // Get users with pagination
+            logger.info('Executing database query...')
             const { count, rows: users } = await User.findAndCountAll({
                 where,
                 limit: parseInt(limit),
@@ -60,18 +88,31 @@ const userManagementController = {
                 attributes: { exclude: ['passwordHash', 'refreshToken'] },
             })
 
-            // Log admin action
-            await AuditLog.create({
-                adminId: req.admin.id,
-                action: 'view_users',
-                resource: 'user',
-                metadata: {
-                    filters: { search, isVerified, isActive, dateFrom, dateTo },
-                    pagination: { page, limit },
-                    totalUsers: count,
-                },
-                severity: 'low',
-            })
+            logger.info(`Query successful: found ${count} users, returning ${users.length}`)
+
+            // Create audit log with all required fields
+            logger.info('Creating audit log...')
+            try {
+                await AuditLogModel.create({
+                    adminId: req.admin.id,
+                    action: 'view_users',
+                    resource: 'user',
+                    method: req.method, // ✅ Added missing field
+                    endpoint: req.path, // ✅ Added missing field
+                    metadata: {
+                        filters: { search, isVerified, isActive, dateFrom, dateTo },
+                        pagination: { page, limit },
+                        totalUsers: count,
+                    },
+                    ipAddress: req.ip,
+                    userAgent: req.get('User-Agent'),
+                    severity: 'low',
+                })
+                logger.info('Audit log created successfully')
+            } catch (auditError) {
+                // Don't fail the request if audit logging fails
+                logger.error('Audit log creation failed:', auditError)
+            }
 
             res.json({
                 success: true,
@@ -85,16 +126,47 @@ const userManagementController = {
                     },
                 },
             })
+
+            logger.info('Response sent successfully')
+            logger.info('=== getAllUsers END ===')
+
         } catch (error) {
-            logger.error('Get all users error:', error)
-            res.status(500).json({
-                success: false,
-                message: 'Failed to fetch users',
-                error: error.message,
+            logger.error('=== getAllUsers ERROR ===')
+            logger.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+                code: error.code,
             })
+
+            // Determine error type and respond accordingly
+            let statusCode = 500
+            let message = 'Failed to fetch users'
+
+            if (error.name === 'SequelizeConnectionError') {
+                statusCode = 503
+                message = 'Database connection error'
+            } else if (error.name === 'SequelizeValidationError') {
+                statusCode = 400
+                message = 'Invalid query parameters'
+            } else if (error.name === 'SequelizeDatabaseError') {
+                statusCode = 500
+                message = 'Database error'
+            }
+
+            res.status(statusCode).json({
+                success: false,
+                message,
+                error: process.env.NODE_ENV === 'development' ? {
+                    message: error.message,
+                    name: error.name,
+                } : undefined,
+            })
+
+            logger.error('=== getAllUsers ERROR END ===')
         }
     },
-
+    
     // Get single user details
     getUserDetails: async (req, res) => {
         try {
@@ -617,6 +689,7 @@ const userManagementController = {
                     { firstName: { [Op.iLike]: `%${query}%` } },
                     { lastName: { [Op.iLike]: `%${query}%` } },
                     { email: { [Op.iLike]: `%${query}%` } },
+                    { sex: { [Op.iLike]: `%${query}%` } },
                     { phoneNumber: { [Op.iLike]: `%${query}%` } },
                 ]
             }
