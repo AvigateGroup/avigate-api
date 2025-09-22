@@ -143,7 +143,7 @@ const generateBaseEmailHTML = (title, content, footerText = null) => {
             <div style="max-width: 480px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 
                 <!-- Header -->
-                <div style="background-color: #86B300; padding: 24px; text-align: center;">
+                <div style="padding: 24px; text-align: center; border-bottom: 1px solid #e9ecef;">
                     <img src="${LOGO_URL}" alt="Avigate" style="height: 32px;">
                 </div>
                 
@@ -154,10 +154,26 @@ const generateBaseEmailHTML = (title, content, footerText = null) => {
                 
                 <!-- Footer -->
                 <div style="background-color: #f8f9fa; padding: 16px 24px; text-align: center; border-top: 1px solid #e9ecef;">
-                    <p style="margin: 0; font-size: 12px; color: #6c757d; line-height: 1.4;">
+                    <p style="margin: 0 0 12px 0; font-size: 12px; color: #6c757d; line-height: 1.4;">
                         ${footerText || 'This is an automated message from Avigate.'}
                         <br>Need help? Contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a>
                     </p>
+                    
+                    <!-- Social Media Links -->
+                    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #dee2e6;">
+                        <p style="margin: 0 0 8px 0; font-size: 11px; color: #6c757d; font-weight: 600;">Follow us on social media:</p>
+                        <div style="margin: 0;">
+                            <a href="https://www.instagram.com/try_avigate/" style="color: #86B300; text-decoration: none; font-size: 11px; margin: 0 6px;">Instagram</a>
+                            <span style="color: #dee2e6; margin: 0 2px;">•</span>
+                            <a href="https://x.com/try_avigate" style="color: #86B300; text-decoration: none; font-size: 11px; margin: 0 6px;">X (Twitter)</a>
+                            <span style="color: #dee2e6; margin: 0 2px;">•</span>
+                            <a href="https://www.tiktok.com/@try_avigate" style="color: #86B300; text-decoration: none; font-size: 11px; margin: 0 6px;">TikTok</a>
+                            <br style="margin: 4px 0;">
+                            <a href="https://web.facebook.com/profile.php?id=61580695756879" style="color: #86B300; text-decoration: none; font-size: 11px; margin: 0 6px;">Facebook</a>
+                            <span style="color: #dee2e6; margin: 0 2px;">•</span>
+                            <a href="https://www.linkedin.com/company/109130197" style="color: #86B300; text-decoration: none; font-size: 11px; margin: 0 6px;">LinkedIn</a>
+                        </div>
+                    </div>
                 </div>
                 
             </div>
