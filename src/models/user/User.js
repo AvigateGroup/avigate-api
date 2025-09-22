@@ -46,6 +46,16 @@ module.exports = (sequelize, DataTypes) => {
                     },
                 },
             },
+            sex: {
+                type: DataTypes.ENUM('male', 'female'),
+                allowNull: false,
+                validate: {
+                    isIn: {
+                        args: [['male', 'female']],
+                        msg: 'Sex must be either male or female',
+                    },
+                },
+            },
             phoneNumber: {
                 type: DataTypes.STRING,
                 allowNull: false,
@@ -179,6 +189,9 @@ module.exports = (sequelize, DataTypes) => {
                 {
                     fields: ['lastLoginAt'],
                 },
+                {
+                    fields: ['sex'],
+                },
             ],
             hooks: {
                 // Hash password before creating user
@@ -280,6 +293,7 @@ module.exports = (sequelize, DataTypes) => {
                 'id',
                 'firstName',
                 'lastName',
+                'sex',
                 'reputationScore',
                 'totalContributions',
                 'createdAt',

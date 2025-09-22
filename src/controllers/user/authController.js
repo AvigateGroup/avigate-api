@@ -17,48 +17,50 @@ const { TEST_ACCOUNTS } = require('../../config/testAccounts')
 const authController = {
     // Register new user with email verification
     register: async (req, res) => {
-        try {
-            const {
-                email,
-                password,
-                firstName,
-                lastName,
-                phoneNumber,
-                fcmToken,
-                deviceInfo,
-            } = req.body
+    try {
+        const {
+            email,
+            password,
+            firstName,
+            lastName,
+            sex, // Add sex field
+            phoneNumber,
+            fcmToken,
+            deviceInfo,
+        } = req.body
 
-            // Check if user already exists
-            const existingUser = await User.findOne({
-                where: {
-                    $or: [{ email }, { phoneNumber }],
-                },
+        // Check if user already exists
+        const existingUser = await User.findOne({
+            where: {
+                $or: [{ email }, { phoneNumber }],
+            },
+        })
+
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
+                message:
+                    existingUser.email === email
+                        ? 'User with this email already exists'
+                        : 'User with this phone number already exists',
             })
+        }
 
-            if (existingUser) {
-                return res.status(409).json({
-                    success: false,
-                    message:
-                        existingUser.email === email
-                            ? 'User with this email already exists'
-                            : 'User with this phone number already exists',
-                })
-            }
+        // Check if this is a test account registration
+        const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase())
 
-            // Check if this is a test account registration
-            const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase())
-
-            // Create new user
-            const user = await User.create({
-                email,
-                passwordHash: password, // Will be hashed by the model hook
-                firstName,
-                lastName,
-                phoneNumber,
-                preferredLanguage: 'English',
-                isVerified: isTestAccount, // Auto-verify test accounts
-                isTestAccount,
-            })
+        // Create new user
+        const user = await User.create({
+            email,
+            passwordHash: password, // Will be hashed by the model hook
+            firstName,
+            lastName,
+            sex, // Add sex field
+            phoneNumber,
+            preferredLanguage: 'English',
+            isVerified: isTestAccount, // Auto-verify test accounts
+            isTestAccount,
+        })
 
             // For test accounts, skip OTP and return tokens immediately
             if (isTestAccount) {
@@ -138,48 +140,54 @@ const authController = {
     },
 
     // Google OAuth login (test accounts supported)
-    googleAuth: async (req, res) => {
-        try {
-            const { token, firstName, lastName, phoneNumber, fcmToken, deviceInfo } = req.body
+    // Update for googleAuth method
+googleAuth: async (req, res) => {
+    try {
+        const { token, firstName, lastName, sex, phoneNumber, fcmToken, deviceInfo } = req.body
 
-            // Handle test Google auth or real Google auth
-            const googleUser = await authController._verifyGoogleToken(token)
-            if (!googleUser) {
-                return res.status(401).json({
-                    success: false,
-                    message: 'Invalid Google token',
-                })
+        // Handle test Google auth or real Google auth
+        const googleUser = await authController._verifyGoogleToken(token)
+        if (!googleUser) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid Google token',
+            })
+        }
+
+        // Check if user exists or create new one
+        let user = await User.findByEmail(googleUser.email)
+
+        if (!user) {
+            // Create new user with Google data
+            const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(googleUser.email.toLowerCase())
+            
+            user = await User.create({
+                email: googleUser.email,
+                firstName: firstName || googleUser.given_name,
+                lastName: lastName || googleUser.family_name,
+                sex: sex || 'male', // Default or from request - you might want to handle this differently
+                phoneNumber: phoneNumber || '+2348012345673', // Default for test
+                googleId: googleUser.sub,
+                profilePicture: googleUser.picture,
+                isVerified: googleUser.email_verified,
+                preferredLanguage: 'English',
+                isTestAccount,
+            })
+        } else if (!user.googleId) {
+            // Link existing account with Google
+            user.googleId = googleUser.sub
+            if (!user.profilePicture) {
+                user.profilePicture = googleUser.picture
             }
-
-            // Check if user exists or create new one
-            let user = await User.findByEmail(googleUser.email)
-
-            if (!user) {
-                // Create new user with Google data
-                const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(googleUser.email.toLowerCase())
-                
-                user = await User.create({
-                    email: googleUser.email,
-                    firstName: firstName || googleUser.given_name,
-                    lastName: lastName || googleUser.family_name,
-                    phoneNumber: phoneNumber || '+2348012345673', // Default for test
-                    googleId: googleUser.sub,
-                    profilePicture: googleUser.picture,
-                    isVerified: googleUser.email_verified,
-                    preferredLanguage: 'English',
-                    isTestAccount,
-                })
-            } else if (!user.googleId) {
-                // Link existing account with Google
-                user.googleId = googleUser.sub
-                if (!user.profilePicture) {
-                    user.profilePicture = googleUser.picture
-                }
-                if (!user.isVerified && googleUser.email_verified) {
-                    user.isVerified = true
-                }
-                await user.save()
+            if (!user.isVerified && googleUser.email_verified) {
+                user.isVerified = true
             }
+            // Update sex if provided and not already set
+            if (sex && !user.sex) {
+                user.sex = sex
+            }
+            await user.save()
+        }
 
             // Generate tokens and complete login
             const { accessToken, refreshToken } = generateTokens(user)

@@ -31,54 +31,56 @@ const profileController = {
 
     // Update user profile
     updateProfile: async (req, res) => {
-        try {
-            const user = req.user
-            const {
-                firstName,
-                lastName,
-                phoneNumber,
-                profilePicture,
-            } = req.body
+    try {
+        const user = req.user
+        const {
+            firstName,
+            lastName,
+            sex, // Add sex field
+            phoneNumber,
+            profilePicture,
+        } = req.body
 
-            // Check if phone number is already taken by another user
-            if (phoneNumber && phoneNumber !== user.phoneNumber) {
-                const existingUser = await User.findByPhoneNumber(phoneNumber)
-                if (existingUser && existingUser.id !== user.id) {
-                    return res.status(409).json({
-                        success: false,
-                        message:
-                            'Phone number is already in use by another user',
-                    })
-                }
+        // Check if phone number is already taken by another user
+        if (phoneNumber && phoneNumber !== user.phoneNumber) {
+            const existingUser = await User.findByPhoneNumber(phoneNumber)
+            if (existingUser && existingUser.id !== user.id) {
+                return res.status(409).json({
+                    success: false,
+                    message:
+                        'Phone number is already in use by another user',
+                })
             }
-
-            // Update user fields
-            const updates = {}
-            if (firstName) updates.firstName = firstName
-            if (lastName) updates.lastName = lastName
-            if (phoneNumber) updates.phoneNumber = phoneNumber
-            if (profilePicture) updates.profilePicture = profilePicture
-
-            await user.update(updates)
-
-            logger.info(`Profile updated for user: ${user.email}`)
-
-            res.json({
-                success: true,
-                message: 'Profile updated successfully',
-                data: {
-                    user: user.toJSON(),
-                },
-            })
-        } catch (error) {
-            logger.error('Profile update error:', error)
-            res.status(500).json({
-                success: false,
-                message: 'Failed to update profile',
-                error: error.message,
-            })
         }
-    },
+
+        // Update user fields
+        const updates = {}
+        if (firstName) updates.firstName = firstName
+        if (lastName) updates.lastName = lastName
+        if (sex) updates.sex = sex // Add sex field update
+        if (phoneNumber) updates.phoneNumber = phoneNumber
+        if (profilePicture) updates.profilePicture = profilePicture
+
+        await user.update(updates)
+
+        logger.info(`Profile updated for user: ${user.email}`)
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully',
+            data: {
+                user: user.toJSON(),
+            },
+        })
+    } catch (error) {
+        logger.error('Profile update error:', error)
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update profile',
+            error: error.message,
+        })
+    }
+},
 
     // Change password
     changePassword: async (req, res) => {

@@ -1,4 +1,4 @@
-// middleware/user/validators.js - Enhanced version with new auth validators
+// middleware/user/validators.js - Enhanced version with sex field
 const Joi = require('joi')
 
 // Nigerian phone number regex pattern
@@ -11,6 +11,7 @@ const authValidators = {
         password: Joi.string().min(8).max(128).required(),
         firstName: Joi.string().min(2).max(50).required(),
         lastName: Joi.string().min(2).max(50).required(),
+        sex: Joi.string().valid('male', 'female').required(),
         phoneNumber: Joi.string().pattern(nigerianPhoneRegex).required(),
         fcmToken: Joi.string().min(10).max(500).optional(),
         deviceInfo: Joi.string().max(1000).optional(),
@@ -43,6 +44,7 @@ const authValidators = {
         token: Joi.string().required(),
         firstName: Joi.string().min(2).max(50).optional(),
         lastName: Joi.string().min(2).max(50).optional(),
+        sex: Joi.string().valid('male', 'female').optional(),
         phoneNumber: Joi.string().pattern(nigerianPhoneRegex).optional(),
         fcmToken: Joi.string().min(10).max(500).optional(),
         deviceInfo: Joi.string().max(1000).optional(),
@@ -51,6 +53,7 @@ const authValidators = {
     updateProfile: Joi.object({
         firstName: Joi.string().min(2).max(50).optional(),
         lastName: Joi.string().min(2).max(50).optional(),
+        sex: Joi.string().valid('male', 'female').optional(),
         phoneNumber: Joi.string().pattern(nigerianPhoneRegex).optional(),
         profilePicture: Joi.string().uri().optional(),
     }),
