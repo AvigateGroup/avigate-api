@@ -1,5 +1,7 @@
-// controllers/user/authController.js - Registration & Login
+
+// controllers/user/authController.js
 const { User, UserDevice, UserOTP } = require('../../models')
+const { Op } = require('sequelize') 
 const { logger } = require('../../utils/logger')
 const {
     generateTokens,
@@ -17,50 +19,50 @@ const { TEST_ACCOUNTS } = require('../../config/testAccounts')
 const authController = {
     // Register new user with email verification
     register: async (req, res) => {
-    try {
-        const {
-            email,
-            password,
-            firstName,
-            lastName,
-            sex, // Add sex field
-            phoneNumber,
-            fcmToken,
-            deviceInfo,
-        } = req.body
+        try {
+            const {
+                email,
+                password,
+                firstName,
+                lastName,
+                sex, 
+                phoneNumber,
+                fcmToken,
+                deviceInfo,
+            } = req.body
 
-        // Check if user already exists
-        const existingUser = await User.findOne({
-            where: {
-                $or: [{ email }, { phoneNumber }],
-            },
-        })
-
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                message:
-                    existingUser.email === email
-                        ? 'User with this email already exists'
-                        : 'User with this phone number already exists',
+            // Use Sequelize Op.or instead of $or
+            const existingUser = await User.findOne({
+                where: {
+                    [Op.or]: [{ email }, { phoneNumber }],
+                },
             })
-        }
 
-        // Check if this is a test account registration
-        const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase())
+            if (existingUser) {
+                return res.status(409).json({
+                    success: false,
+                    message:
+                        existingUser.email === email
+                            ? 'User with this email already exists'
+                            : 'User with this phone number already exists',
+                })
+            }
 
-        // Create new user
-        const user = await User.create({
-            email,
-            passwordHash: password, // Will be hashed by the model hook
-            firstName,
-            lastName,
-            sex, // Add sex field
-            phoneNumber,
-            preferredLanguage: 'English',
-            isVerified: isTestAccount, // Auto-verify test accounts
-            isTestAccount,
-        })
+            // Check if this is a test account registration
+            const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase())
+
+            // Create new user
+            const user = await User.create({
+                email,
+                passwordHash: password, // Will be hashed by the model hook
+                firstName,
+                lastName,
+                sex, // Add sex field
+                phoneNumber,
+                preferredLanguage: 'English',
+                isVerified: isTestAccount, // Auto-verify test accounts
+                isTestAccount,
+            })
 
             // For test accounts, skip OTP and return tokens immediately
             if (isTestAccount) {
