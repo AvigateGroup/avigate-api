@@ -1,4 +1,4 @@
-const { User, UserDevice, UserOTP, AuditLog } = require('../../models')
+const { User, UserDevice, UserOTP, AuditLog, sequelize } = require('../../models')
 const { logger } = require('../../utils/logger')
 const { Op } = require('sequelize')
 
@@ -100,12 +100,15 @@ const userManagementController = {
 
             // Apply filters
             if (search) {
-                console.log('Adding search filter for:', search)
                 where[Op.or] = [
                     { firstName: { [Op.iLike]: `%${search}%` } },
                     { lastName: { [Op.iLike]: `%${search}%` } },
                     { email: { [Op.iLike]: `%${search}%` } },
-                    { sex: { [Op.iLike]: `%${search}%` } },
+                    // Cast enum to text for ILIKE search
+                    sequelize.where(
+                        sequelize.cast(sequelize.col('sex'), 'TEXT'),
+                        { [Op.iLike]: `%${search}%` }
+                    ),
                     { phoneNumber: { [Op.iLike]: `%${search}%` } },
                 ]
             }
@@ -902,7 +905,11 @@ const userManagementController = {
                     { firstName: { [Op.iLike]: `%${query}%` } },
                     { lastName: { [Op.iLike]: `%${query}%` } },
                     { email: { [Op.iLike]: `%${query}%` } },
-                    { sex: { [Op.iLike]: `%${query}%` } },
+                    // Cast enum to text for ILIKE search
+                    sequelize.where(
+                        sequelize.cast(sequelize.col('sex'), 'TEXT'),
+                        { [Op.iLike]: `%${query}%` }
+                    ),
                     { phoneNumber: { [Op.iLike]: `%${query}%` } },
                 ]
             }
