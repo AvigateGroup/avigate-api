@@ -4,6 +4,7 @@ const { logger } = require('../../utils/logger')
 const { generateTokens } = require('../../services/user/authService')
 const { parseDeviceInfo } = require('../../utils/deviceUtils')
 const { TEST_ACCOUNTS } = require('../../config/testAccounts')
+const { Op } = require('sequelize')
 
 const loginHelper = {
     // Complete test login (bypass OTP and device checks)
@@ -135,7 +136,7 @@ const loginHelper = {
                     otpCode,
                     otpType: 'login_verification',
                     isUsed: false,
-                    expiresAt: { $gt: new Date() },
+                    expiresAt: { [Op.gt]: new Date() },
                 },
             })
 
