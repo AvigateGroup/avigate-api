@@ -7,8 +7,9 @@ const authController = require('../../controllers/user/authController')
 const loginHelper = require('../../controllers/user/loginHelper')
 const verificationController = require('../../controllers/user/verificationController')
 const profileController = require('../../controllers/user/profileController')
-const { deviceController, tokenController } = require('../../controllers/user/deviceController')
+const deviceController = require('../../controllers/user/deviceController')
 const testController = require('../../controllers/user/testController')
+const tokenController = require('../../controllers/user/tokenController')
 
 // Import middleware
 const { validationMiddleware } = require('../../middleware/user/validation')
