@@ -1,7 +1,7 @@
 // controllers/user/verificationController.js - Email & OTP verification
 const { User, UserDevice, UserOTP } = require('../../models')
 const { logger } = require('../../utils/logger')
-const { Op } = require('sequelize') // ✅ ADD THIS MISSING IMPORT
+const { Op } = require('sequelize') 
 const {
     generateTokens,
     generateSecureRandomString,

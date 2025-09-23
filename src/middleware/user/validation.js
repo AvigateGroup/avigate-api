@@ -102,7 +102,7 @@ const validate = (schema, source = 'body') => {
                 type: detail.type,
             }))
 
-            const { logger } = require('./logger')
+            const { logger } = require('../../utils/logger')
             logger.warn('Validation failed', {
                 endpoint: req.originalUrl,
                 method: req.method,
@@ -128,7 +128,7 @@ const validate = (schema, source = 'body') => {
 const validateOTPAttempts = async (req, res, next) => {
     try {
         const { email } = req.body
-        const { User, UserOTP } = require('../models')
+        const { User, UserOTP } = require('../../models')
 
         const user = await User.findByEmail(email)
         if (!user) {
@@ -152,7 +152,7 @@ const validateOTPAttempts = async (req, res, next) => {
 
         next()
     } catch (error) {
-        const { logger } = require('./logger')
+        const { logger } = require('../../utils/logger')
         logger.error('OTP validation error:', error)
         next() // Continue on error, let main controller handle
     }
