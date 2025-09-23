@@ -1,3 +1,4 @@
+//services/user/authService.js - JWT and token management
 const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const { logger } = require('../../utils/logger')
@@ -84,14 +85,22 @@ const generateEmailVerificationToken = () => {
     return crypto.randomBytes(32).toString('hex')
 }
 
-// Generate secure random string for share codes, etc.
-const generateSecureRandomString = (length = 8) => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+// Generate secure random string for share codes, etc. - FIXED!
+const generateSecureRandomString = (length = 8, charSet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') => {
+    console.log('=== GENERATE SECURE RANDOM STRING ===')
+    console.log('Length:', length)
+    console.log('Character set:', charSet)
+    
     let result = ''
 
     for (let i = 0; i < length; i++) {
-        result += chars.charAt(crypto.randomInt(0, chars.length))
+        const randomIndex = crypto.randomInt(0, charSet.length)
+        result += charSet.charAt(randomIndex)
+        console.log(`Character ${i + 1}: ${charSet.charAt(randomIndex)} (index ${randomIndex})`)
     }
+
+    console.log('Generated result:', result)
+    console.log('==========================================')
 
     return result
 }
