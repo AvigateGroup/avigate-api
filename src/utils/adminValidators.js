@@ -1,4 +1,4 @@
-// utils/adminValidators.js - Admin-specific validators
+// utils/adminValidators.js 
 const Joi = require('joi')
 
 const adminValidators = {

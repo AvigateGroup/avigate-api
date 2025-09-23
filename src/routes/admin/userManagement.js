@@ -5,14 +5,40 @@ const userManagementController = require('../../controllers/admin/userManagement
 const { authenticateAdmin, requirePermission } = require('../../middleware/admin')
 const { adminValidators } = require('../../utils/adminValidators')
 const rateLimiter = require('../../middleware/rateLimiter')
+const { logger } = require('../../utils/logger')
+
+// Debug middleware
+const debugMiddleware = (name) => (req, res, next) => {
+    logger.info(`=== ${name} MIDDLEWARE START ===`)
+    logger.info(`${name} - Request URL:`, req.url)
+    logger.info(`${name} - Request Method:`, req.method)
+    logger.info(`${name} - Request Query:`, req.query)
+    logger.info(`${name} - Admin present:`, !!req.admin)
+    if (req.admin) {
+        logger.info(`${name} - Admin ID:`, req.admin.id)
+        logger.info(`${name} - Admin Email:`, req.admin.email)
+        logger.info(`${name} - Admin Role:`, req.admin.role)
+    }
+    logger.info(`=== ${name} MIDDLEWARE END ===`)
+    next()
+}
 
 // Get all users with pagination and filters
 router.get(
     '/users',
+    debugMiddleware('ROUTE_START'),
     authenticateAdmin,
+    debugMiddleware('AUTH_PASSED'),
     requirePermission('view_users'),
+    debugMiddleware('PERMISSION_PASSED'),
     rateLimiter.admin,
+    debugMiddleware('RATE_LIMIT_PASSED'),
     adminValidators.validateGetAllUsers,
+    debugMiddleware('VALIDATION_PASSED'),
+    (req, res, next) => {
+        logger.info('=== CALLING CONTROLLER ===')
+        next()
+    },
     userManagementController.getAllUsers
 )
 

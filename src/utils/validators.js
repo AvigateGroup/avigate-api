@@ -1,3 +1,4 @@
+//utils/validator
 const Joi = require('joi')
 
 // Nigerian phone number regex pattern

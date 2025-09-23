@@ -1,3 +1,4 @@
+//middleware/admin/auditMiddleware.js
 const { AuditLog } = require('../../models')
 const { logger } = require('../../utils/logger')
 

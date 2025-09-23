@@ -157,10 +157,10 @@ const userManagementController = {
             res.status(statusCode).json({
                 success: false,
                 message,
-                error: process.env.NODE_ENV === 'development' ? {
+                error: {
                     message: error.message,
                     name: error.name,
-                } : undefined,
+                }
             })
 
             logger.error('=== getAllUsers ERROR END ===')

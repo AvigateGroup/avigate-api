@@ -1,3 +1,4 @@
+//middleware/admin/index.js
 const { authenticateAdmin } = require('./authMiddleware')
 const {
     requirePermission,
