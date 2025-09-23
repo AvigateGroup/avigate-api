@@ -1,12 +1,29 @@
-// controllers/admin/userManagementController.js
-const { User, UserDevice, UserOTP, AuditLog: AuditLogModel } = require('../../models') // ✅ Fixed import
+const { User, UserDevice, UserOTP, AuditLog } = require('../../models')
 const { logger } = require('../../utils/logger')
 const { Op } = require('sequelize')
 
 const userManagementController = {
     getAllUsers: async (req, res) => {
+        console.log('=== GET ALL USERS START ===')
+        console.log('Request URL:', req.url)
+        console.log('Request method:', req.method)
+        console.log('Request query:', JSON.stringify(req.query, null, 2))
+        console.log('Request headers:', {
+            'content-type': req.get('Content-Type'),
+            'user-agent': req.get('User-Agent'),
+            'authorization': req.get('Authorization') ? '[PRESENT]' : '[MISSING]'
+        })
+        console.log('Admin present:', !!req.admin)
+        if (req.admin) {
+            console.log('Admin details:', {
+                id: req.admin.id,
+                email: req.admin.email,
+                role: req.admin.role,
+                hasPermissionMethod: typeof req.admin.hasPermission
+            })
+        }
+
         try {
-            logger.info('=== getAllUsers START ===')
             logger.info('getAllUsers called with query:', req.query)
             logger.info('Admin info:', { 
                 id: req.admin?.id, 
@@ -16,17 +33,23 @@ const userManagementController = {
             })
 
             // Test database connection first
+            console.log('Testing database connection...')
             try {
                 await User.sequelize.authenticate()
+                console.log('✅ Database connection successful')
                 logger.info('Database connection successful')
             } catch (dbError) {
+                console.error('❌ Database connection failed:', dbError)
                 logger.error('Database connection failed:', dbError)
                 return res.status(503).json({
                     success: false,
                     message: 'Database connection error',
+                    error: dbError.message
                 })
             }
 
+            // Parse and validate query parameters
+            console.log('Parsing query parameters...')
             const {
                 page = 1,
                 limit = 20,
@@ -39,46 +62,133 @@ const userManagementController = {
                 dateTo,
             } = req.query
 
-            logger.info('Parsed query parameters:', { 
-                page, limit, search, isVerified, isActive, sortBy, sortOrder 
+            console.log('Parsed parameters:', { 
+                page: parseInt(page), 
+                limit: parseInt(limit), 
+                search, 
+                isVerified, 
+                isActive, 
+                sortBy, 
+                sortOrder,
+                dateFrom,
+                dateTo
             })
 
-            const offset = (page - 1) * limit
+            // Validate parameters
+            if (isNaN(parseInt(page)) || parseInt(page) < 1) {
+                console.log('❌ Invalid page parameter')
+                return res.status(400).json({
+                    success: false,
+                    message: 'Page must be a positive integer'
+                })
+            }
+
+            if (isNaN(parseInt(limit)) || parseInt(limit) < 1 || parseInt(limit) > 100) {
+                console.log('❌ Invalid limit parameter')
+                return res.status(400).json({
+                    success: false,
+                    message: 'Limit must be between 1 and 100'
+                })
+            }
+
+            const offset = (parseInt(page) - 1) * parseInt(limit)
+            console.log('Calculated offset:', offset)
+
+            // Build where clause
+            console.log('Building where clause...')
             const where = {}
 
             // Apply filters
             if (search) {
+                console.log('Adding search filter for:', search)
                 where[Op.or] = [
                     { firstName: { [Op.iLike]: `%${search}%` } },
                     { lastName: { [Op.iLike]: `%${search}%` } },
                     { email: { [Op.iLike]: `%${search}%` } },
-                    { sex: { [Op.iLike]: `%${search}%` } }, // ✅ Fixed: was 'query'
+                    { sex: { [Op.iLike]: `%${search}%` } },
                     { phoneNumber: { [Op.iLike]: `%${search}%` } },
                 ]
             }
 
             if (isVerified !== undefined) {
+                console.log('Adding isVerified filter:', isVerified)
                 where.isVerified = isVerified === 'true'
             }
 
             if (isActive !== undefined) {
+                console.log('Adding isActive filter:', isActive)
                 where.isActive = isActive === 'true'
             }
 
             if (dateFrom) {
-                where.createdAt = { [Op.gte]: new Date(dateFrom) }
-            }
-
-            if (dateTo) {
-                where.createdAt = {
-                    ...where.createdAt,
-                    [Op.lte]: new Date(dateTo),
+                console.log('Adding dateFrom filter:', dateFrom)
+                try {
+                    const fromDate = new Date(dateFrom)
+                    if (isNaN(fromDate.getTime())) {
+                        throw new Error('Invalid dateFrom format')
+                    }
+                    where.createdAt = { [Op.gte]: fromDate }
+                } catch (dateError) {
+                    console.log('❌ Invalid dateFrom:', dateError.message)
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Invalid dateFrom format. Use YYYY-MM-DD or ISO format'
+                    })
                 }
             }
 
+            if (dateTo) {
+                console.log('Adding dateTo filter:', dateTo)
+                try {
+                    const toDate = new Date(dateTo)
+                    if (isNaN(toDate.getTime())) {
+                        throw new Error('Invalid dateTo format')
+                    }
+                    where.createdAt = {
+                        ...where.createdAt,
+                        [Op.lte]: toDate,
+                    }
+                } catch (dateError) {
+                    console.log('❌ Invalid dateTo:', dateError.message)
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Invalid dateTo format. Use YYYY-MM-DD or ISO format'
+                    })
+                }
+            }
+
+            console.log('Final where clause:', JSON.stringify(where, null, 2))
             logger.info('Built where clause:', JSON.stringify(where, null, 2))
 
+            // Validate sortBy field
+            const allowedSortFields = ['createdAt', 'updatedAt', 'email', 'firstName', 'lastName', 'reputationScore', 'lastLoginAt']
+            if (!allowedSortFields.includes(sortBy)) {
+                console.log('❌ Invalid sortBy field:', sortBy)
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid sortBy field. Allowed values: ${allowedSortFields.join(', ')}`
+                })
+            }
+
+            // Validate sortOrder
+            if (!['asc', 'desc'].includes(sortOrder.toLowerCase())) {
+                console.log('❌ Invalid sortOrder:', sortOrder)
+                return res.status(400).json({
+                    success: false,
+                    message: 'sortOrder must be either "asc" or "desc"'
+                })
+            }
+
             // Get users with pagination
+            console.log('Executing database query...')
+            console.log('Query parameters:', {
+                where,
+                limit: parseInt(limit),
+                offset: parseInt(offset),
+                order: [[sortBy, sortOrder.toUpperCase()]],
+                attributes: { exclude: ['passwordHash', 'refreshToken'] }
+            })
+            
             logger.info('Executing database query...')
             const { count, rows: users } = await User.findAndCountAll({
                 where,
@@ -88,33 +198,53 @@ const userManagementController = {
                 attributes: { exclude: ['passwordHash', 'refreshToken'] },
             })
 
+            console.log(`✅ Query successful: found ${count} total users, returning ${users.length} users`)
             logger.info(`Query successful: found ${count} users, returning ${users.length}`)
 
+            // Sample first user for debugging (without sensitive data)
+            if (users.length > 0) {
+                console.log('Sample user (first result):', {
+                    id: users[0].id,
+                    email: users[0].email,
+                    firstName: users[0].firstName,
+                    lastName: users[0].lastName,
+                    isVerified: users[0].isVerified,
+                    isActive: users[0].isActive
+                })
+            }
+
             // Create audit log with all required fields
+            console.log('Creating audit log...')
             logger.info('Creating audit log...')
             try {
-                await AuditLogModel.create({
+                const auditLogData = {
                     adminId: req.admin.id,
                     action: 'view_users',
                     resource: 'user',
-                    method: req.method, // ✅ Added missing field
-                    endpoint: req.path, // ✅ Added missing field
+                    method: req.method,
+                    endpoint: req.path, 
                     metadata: {
                         filters: { search, isVerified, isActive, dateFrom, dateTo },
-                        pagination: { page, limit },
+                        pagination: { page: parseInt(page), limit: parseInt(limit) },
                         totalUsers: count,
                     },
                     ipAddress: req.ip,
                     userAgent: req.get('User-Agent'),
                     severity: 'low',
-                })
+                }
+                
+                console.log('Audit log data:', JSON.stringify(auditLogData, null, 2))
+                
+                await AuditLog.create(auditLogData)
+                console.log('✅ Audit log created successfully')
                 logger.info('Audit log created successfully')
             } catch (auditError) {
                 // Don't fail the request if audit logging fails
+                console.error('❌ Audit log creation failed:', auditError)
                 logger.error('Audit log creation failed:', auditError)
             }
 
-            res.json({
+            const responseData = {
                 success: true,
                 data: {
                     users,
@@ -122,21 +252,62 @@ const userManagementController = {
                         page: parseInt(page),
                         limit: parseInt(limit),
                         total: count,
-                        pages: Math.ceil(count / limit),
+                        pages: Math.ceil(count / parseInt(limit)),
+                        hasNextPage: (parseInt(page) * parseInt(limit)) < count,
+                        hasPreviousPage: parseInt(page) > 1
                     },
                 },
+            }
+
+            console.log('Response summary:', {
+                success: true,
+                userCount: users.length,
+                totalUsers: count,
+                currentPage: parseInt(page),
+                totalPages: Math.ceil(count / parseInt(limit))
             })
 
+            res.json(responseData)
+
+            console.log('✅ Response sent successfully')
+            console.log('=== GET ALL USERS END ===')
             logger.info('Response sent successfully')
             logger.info('=== getAllUsers END ===')
 
         } catch (error) {
-            logger.error('=== getAllUsers ERROR ===')
-            logger.error('Error details:', {
+            console.error('=== GET ALL USERS ERROR ===')
+            console.error('Error type:', error.constructor.name)
+            console.error('Error name:', error.name)
+            console.error('Error message:', error.message)
+            console.error('Error code:', error.code)
+            console.error('Error stack:', error.stack)
+            
+            // Log Sequelize specific error details
+            if (error.sql) {
+                console.error('SQL Query:', error.sql)
+                console.error('SQL Parameters:', error.parameters)
+            }
+            
+            if (error.original) {
+                console.error('Original error:', error.original)
+            }
+            
+            console.error('Request details:', {
+                url: req.url,
+                method: req.method,
+                query: req.query,
+                adminId: req.admin?.id
+            })
+            console.error('=========================')
+
+            logger.error('getAllUsers ERROR:', {
                 message: error.message,
                 stack: error.stack,
                 name: error.name,
                 code: error.code,
+                sql: error.sql,
+                parameters: error.parameters,
+                original: error.original
             })
 
             // Determine error type and respond accordingly
@@ -154,14 +325,27 @@ const userManagementController = {
                 message = 'Database error'
             }
 
-            res.status(statusCode).json({
+            const errorResponse = {
                 success: false,
                 message,
                 error: {
                     message: error.message,
                     name: error.name,
+                    code: error.code
                 }
-            })
+            }
+
+            // Add debug info in development
+            if (process.env.NODE_ENV === 'development') {
+                errorResponse.debug = {
+                    stack: error.stack,
+                    sql: error.sql,
+                    parameters: error.parameters,
+                    original: error.original
+                }
+            }
+
+            res.status(statusCode).json(errorResponse)
 
             logger.error('=== getAllUsers ERROR END ===')
         }
@@ -169,6 +353,9 @@ const userManagementController = {
     
     // Get single user details
     getUserDetails: async (req, res) => {
+        console.log('=== GET USER DETAILS START ===')
+        console.log('User ID param:', req.params.userId)
+        
         try {
             const { userId } = req.params
 
@@ -184,11 +371,14 @@ const userManagementController = {
             })
 
             if (!user) {
+                console.log('❌ User not found')
                 return res.status(404).json({
                     success: false,
                     message: 'User not found',
                 })
             }
+
+            console.log('✅ User found:', user.email)
 
             // Get user statistics
             const stats = {
@@ -202,6 +392,8 @@ const userManagementController = {
                 }),
             }
 
+            console.log('User stats:', stats)
+
             // Log admin action
             await AuditLog.create({
                 adminId: req.admin.id,
@@ -209,6 +401,8 @@ const userManagementController = {
                 resource: 'user',
                 resourceId: userId,
                 metadata: { userEmail: user.email },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'low',
             })
 
@@ -219,7 +413,12 @@ const userManagementController = {
                     stats,
                 },
             })
+            
+            console.log('✅ User details response sent')
         } catch (error) {
+            console.error('=== GET USER DETAILS ERROR ===')
+            console.error('Error:', error)
+            
             logger.error('Get user details error:', error)
             res.status(500).json({
                 success: false,
@@ -261,12 +460,14 @@ const userManagementController = {
                 action: 'update_user_status',
                 resource: 'user',
                 resourceId: userId,
+                oldValues: originalStatus,
+                newValues: { isVerified, isActive },
                 metadata: {
                     userEmail: user.email,
-                    originalStatus,
-                    newStatus: { isVerified, isActive },
                     reason,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'medium',
             })
 
@@ -346,6 +547,8 @@ const userManagementController = {
                     reason,
                     notifyUser,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'high',
             })
 
@@ -413,6 +616,8 @@ const userManagementController = {
                     reason,
                     sendNotification,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'high',
             })
 
@@ -469,6 +674,8 @@ const userManagementController = {
                     userEmail: user.email,
                     deviceCount: devices.length,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'low',
             })
 
@@ -527,6 +734,8 @@ const userManagementController = {
                     deviceInfo: device.deviceInfo,
                     reason,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'medium',
             })
 
@@ -585,6 +794,8 @@ const userManagementController = {
                     userEmail: user.email,
                     otpCount: count,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'low',
             })
 
@@ -653,6 +864,8 @@ const userManagementController = {
                     dateRange: { dateFrom, dateTo },
                     totalUsers: stats.totalUsers,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'low',
             })
 
@@ -736,6 +949,8 @@ const userManagementController = {
                     filters,
                     resultsCount: count,
                 },
+                ipAddress: req.ip,
+                userAgent: req.get('User-Agent'),
                 severity: 'low',
             })
 
