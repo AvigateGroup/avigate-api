@@ -39,6 +39,22 @@ try {
     store = undefined
 }
 
+// Safe key generator helper function
+const safeKeyGenerator = (req, prefix = 'general') => {
+    // For admin endpoints, try req.admin first
+    if (req.admin && req.admin.id) {
+        return `${prefix}:admin:${req.admin.id}`
+    }
+    
+    // For user endpoints, try req.user
+    if (req.user && req.user.id) {
+        return `${prefix}:user:${req.user.id}`
+    }
+    
+    // Fallback to IP address
+    return `${prefix}:ip:${req.ip}`
+}
+
 // General rate limiter
 const generalLimiter = rateLimit({
     store,
@@ -56,8 +72,10 @@ const generalLimiter = rateLimit({
         return req.path === '/health'
     },
     keyGenerator: (req) => {
-        // Use user ID if authenticated, otherwise IP
-        return req.user ? `user:${req.user.id}` : req.ip
+        console.log('General rate limiter - keyGenerator called')
+        console.log('req.user present:', !!req.user)
+        console.log('req.admin present:', !!req.admin)
+        return safeKeyGenerator(req, 'general')
     },
 })
 
@@ -74,7 +92,10 @@ const authLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     skipSuccessfulRequests: true, // Don't count successful requests
-    keyGenerator: (req) => `auth:${req.ip}`,
+    keyGenerator: (req) => {
+        console.log('Auth rate limiter - using IP:', req.ip)
+        return `auth:${req.ip}`
+    },
 })
 
 // Search rate limiter (more generous)
@@ -98,7 +119,8 @@ const searchLimiter = rateLimit({
         retryAfter: '1 minute',
     },
     keyGenerator: (req) => {
-        return req.user ? `search:user:${req.user.id}` : `search:ip:${req.ip}`
+        console.log('Search rate limiter - keyGenerator called')
+        return safeKeyGenerator(req, 'search')
     },
 })
 
@@ -122,7 +144,8 @@ const createLimiter = rateLimit({
         retryAfter: '1 hour',
     },
     keyGenerator: (req) => {
-        return req.user ? `create:user:${req.user.id}` : `create:ip:${req.ip}`
+        console.log('Create rate limiter - keyGenerator called')
+        return safeKeyGenerator(req, 'create')
     },
 })
 
@@ -134,7 +157,8 @@ const expensiveOpSlowDown = slowDown({
     maxDelayMs: 20000, // Maximum delay of 20 seconds
     skipSuccessfulRequests: false,
     keyGenerator: (req) => {
-        return req.user ? `slow:user:${req.user.id}` : `slow:ip:${req.ip}`
+        console.log('Slow down middleware - keyGenerator called')
+        return safeKeyGenerator(req, 'slow')
     },
 })
 
@@ -158,7 +182,8 @@ const crowdsourceLimiter = rateLimit({
         retryAfter: '5 minutes',
     },
     keyGenerator: (req) => {
-        return req.user ? `crowd:user:${req.user.id}` : `crowd:ip:${req.ip}`
+        console.log('Crowdsource rate limiter - keyGenerator called')
+        return safeKeyGenerator(req, 'crowd')
     },
 })
 
@@ -173,11 +198,12 @@ const uploadLimiter = rateLimit({
         retryAfter: '1 hour',
     },
     keyGenerator: (req) => {
-        return req.user ? `upload:user:${req.user.id}` : `upload:ip:${req.ip}`
+        console.log('Upload rate limiter - keyGenerator called')
+        return safeKeyGenerator(req, 'upload')
     },
 })
 
-// Admin endpoints rate limiter
+// Admin endpoints rate limiter - FIXED!
 const adminLimiter = rateLimit({
     store,
     windowMs: 1 * 60 * 1000, // 1 minute
@@ -186,7 +212,22 @@ const adminLimiter = rateLimit({
         success: false,
         message: 'Admin operation rate limit exceeded',
     },
-    keyGenerator: (req) => `admin:user:${req.user.id}`,
+    keyGenerator: (req) => {
+        console.log('Admin rate limiter - keyGenerator called')
+        console.log('req.admin present:', !!req.admin)
+        console.log('req.admin.id:', req.admin?.id)
+        console.log('req.user present:', !!req.user)
+        console.log('Fallback IP:', req.ip)
+        
+        // FIXED: Use req.admin.id instead of req.user.id, with fallback
+        if (req.admin && req.admin.id) {
+            console.log('Using admin ID for rate limiting')
+            return `admin:user:${req.admin.id}`
+        } else {
+            console.log('Admin not available, falling back to IP')
+            return `admin:ip:${req.ip}`
+        }
+    },
 })
 
 // Custom rate limiter for specific endpoints
@@ -208,9 +249,8 @@ const customLimiter = (options = {}) => {
             retryAfter: `${Math.floor(windowMs / 60000)} minutes`,
         },
         keyGenerator: (req) => {
-            return req.user
-                ? `${keyPrefix}:user:${req.user.id}`
-                : `${keyPrefix}:ip:${req.ip}`
+            console.log(`Custom rate limiter (${keyPrefix}) - keyGenerator called`)
+            return safeKeyGenerator(req, keyPrefix)
         },
     })
 }
@@ -218,9 +258,16 @@ const customLimiter = (options = {}) => {
 // Error handler for rate limiting
 const rateLimitErrorHandler = (err, req, res, next) => {
     if (err && err.status === 429) {
+        console.log('Rate limit error handler triggered')
+        console.log('IP:', req.ip)
+        console.log('User ID:', req.user?.id)
+        console.log('Admin ID:', req.admin?.id)
+        console.log('Endpoint:', req.path)
+        
         logger.warn(`Rate limit exceeded for ${req.ip}`, {
             ip: req.ip,
-            user: req.user?.id,
+            userId: req.user?.id,
+            adminId: req.admin?.id,
             endpoint: req.path,
             method: req.method,
         })
@@ -233,9 +280,17 @@ const logRateLimit = (req, res, next) => {
     const originalSend = res.send
     res.send = function (body) {
         if (res.statusCode === 429) {
+            console.log('Rate limit hit - logging details')
+            console.log('Status Code:', res.statusCode)
+            console.log('IP:', req.ip)
+            console.log('User ID:', req.user?.id)
+            console.log('Admin ID:', req.admin?.id)
+            console.log('Endpoint:', req.originalUrl)
+            
             logger.warn('Rate limit hit', {
                 ip: req.ip,
                 userId: req.user?.id,
+                adminId: req.admin?.id,
                 endpoint: req.originalUrl,
                 userAgent: req.get('User-Agent'),
             })
