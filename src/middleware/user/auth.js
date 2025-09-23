@@ -29,7 +29,7 @@ const authenticate = async (req, res, next) => {
 
         // Find user
         const user = await User.findByPk(decoded.userId, {
-            attributes: { exclude: ['passwordHash', 'refreshToken'] },
+            attributes: { exclude: [ 'refreshToken'] },
         })
 
         if (!user) {
