@@ -2,7 +2,7 @@
 
 > **Backend API for Nigeria's local transportation navigation system**
 
-Navigate Nigerian cities using buses, taxis, keke napep, okada, and trains with real-time route information and crowdsourced updates.
+Navigate Nigerian cities using buses, taxis, keke napep, okada, and train with real-time route information and crowdsourced updates.
 
 ## 🚀 Quick Start
 
