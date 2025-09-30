@@ -2,7 +2,6 @@
 const {
     Location,
     Landmark,
-    GeographicBoundary,
     Route,
     User,
     AuditLog,
