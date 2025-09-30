@@ -101,19 +101,77 @@ class PushNotificationService {
         return results
     }
 
-    // Send notification to users in a specific location
-    async sendToLocation(locationId, notification, data = {}, radiusKm = 5) {
-        try {
-            // This would require a more complex query to find users near a location
-            // For now, we'll implement a simpler version
-            logger.info(`Sending location-based notification for location ${locationId}`)
-            
-            return { success: true, message: 'Location-based notifications not fully implemented' }
-        } catch (error) {
-            logger.error('Error sending location-based notification:', error)
-            return { success: false, error: error.message }
+    // Send notification to users in a specific location (optimized with geography)
+async sendToLocation(locationId, notification, data = {}, radiusKm = 5) {
+    try {
+        if (!this.isInitialized) {
+            return { success: false, error: 'Service not initialized' }
         }
+
+        const { Location } = require('../../models')
+        const sequelize = require('../../config/database')
+
+        // Get the location coordinates
+        const location = await Location.findByPk(locationId)
+        if (!location) {
+            return { success: false, error: 'Location not found' }
+        }
+
+        // Raw query for better PostGIS performance with geography
+        const [nearbyUserDevices] = await sequelize.query(`
+            SELECT DISTINCT u.id as user_id
+            FROM users u
+            INNER JOIN user_devices ud ON ud."userId" = u.id
+            WHERE ud."isActive" = true 
+            AND ud."fcmToken" IS NOT NULL
+            AND u.latitude IS NOT NULL 
+            AND u.longitude IS NOT NULL
+            AND ST_DWithin(
+                ST_SetSRID(ST_MakePoint(u.longitude, u.latitude), 4326)::geography,
+                ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+                $3
+            )
+        `, {
+            bind: [location.longitude, location.latitude, radiusKm * 1000], // meters
+            type: sequelize.QueryTypes.SELECT
+        })
+
+        if (nearbyUserDevices.length === 0) {
+            return { 
+                success: true, 
+                message: 'No users found in location radius',
+                notifiedUsers: 0
+            }
+        }
+
+        // Send notifications to all nearby users
+        const userIds = nearbyUserDevices.map(row => row.user_id)
+        const results = await this.sendToUsers(userIds, notification, {
+            ...data,
+            locationId,
+            radiusKm
+        })
+
+        const successCount = results.filter(r => r.success).length
+        const failureCount = results.length - successCount
+
+        logger.info(
+            `Location-based notification sent for location ${locationId}: ` +
+            `${successCount}/${results.length} users notified within ${radiusKm}km`
+        )
+
+        return {
+            success: true,
+            notifiedUsers: successCount,
+            failedUsers: failureCount,
+            totalUsers: results.length,
+            results
+        }
+    } catch (error) {
+        logger.error('Error sending location-based notification:', error)
+        return { success: false, error: error.message }
     }
+}
 
     // Send notification to topic subscribers
     async sendToTopic(topic, notification, data = {}) {

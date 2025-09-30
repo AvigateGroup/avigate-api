@@ -303,112 +303,173 @@ const analyticsController = {
 
     // Get geographic analytics
     getGeographicAnalytics: async (req, res) => {
-        try {
-            const admin = req.admin
-            const { period = 30 } = req.query
+    try {
+        const admin = req.admin
+        const { period = 30 } = req.query
 
-            const periodStart = new Date(Date.now() - parseInt(period) * 24 * 60 * 60 * 1000)
+        const periodStart = new Date(Date.now() - parseInt(period) * 24 * 60 * 60 * 1000)
 
-            // Users by city
-            const usersByCity = await Location.findAll({
-                attributes: [
-                    'city',
-                    [Location.sequelize.fn('COUNT', Location.sequelize.fn('DISTINCT', Location.sequelize.col('id'))), 'locationCount'],
-                ],
-                where: { isActive: true },
-                group: ['city'],
-                order: [[Location.sequelize.fn('COUNT', Location.sequelize.fn('DISTINCT', Location.sequelize.col('id'))), 'DESC']],
-                limit: 20,
-                raw: true,
-            })
+        // Users by city
+        const usersByCity = await Location.findAll({
+            attributes: [
+                'city',
+                [Location.sequelize.fn('COUNT', Location.sequelize.fn('DISTINCT', Location.sequelize.col('id'))), 'locationCount'],
+            ],
+            where: { isActive: true },
+            group: ['city'],
+            order: [[Location.sequelize.fn('COUNT', Location.sequelize.fn('DISTINCT', Location.sequelize.col('id'))), 'DESC']],
+            limit: 20,
+            raw: true,
+        })
 
-            // Routes by city
-            const routesByCity = await Route.findAll({
-                attributes: [
-                    [Route.sequelize.literal('"startLocation"."city"'), 'city'],
-                    [Route.sequelize.fn('COUNT', Route.sequelize.col('Route.id')), 'routeCount'],
-                ],
-                include: [
-                    {
-                        model: Location,
-                        as: 'startLocation',
-                        attributes: [],
-                    },
-                ],
-                where: { isActive: true },
-                group: [Route.sequelize.literal('"startLocation"."city"')],
-                order: [[Route.sequelize.fn('COUNT', Route.sequelize.col('Route.id')), 'DESC']],
-                limit: 20,
-                raw: true,
-            })
-
-            // Most popular locations
-            const popularLocations = await Location.findAll({
-                where: { isActive: true },
-                order: [['popularityScore', 'DESC']],
-                limit: 20,
-                attributes: ['id', 'name', 'city', 'state', 'popularityScore', 'type'],
-            })
-
-            // Most popular routes
-            const popularRoutes = await Route.findAll({
-                where: { isActive: true },
-                include: [
-                    { model: Location, as: 'startLocation', attributes: ['name', 'city'] },
-                    { model: Location, as: 'endLocation', attributes: ['name', 'city'] },
-                ],
-                order: [['popularityScore', 'DESC']],
-                limit: 20,
-            })
-
-            // Search activity by city
-            const searchesByCity = await SearchLog.findAll({
-                where: {
-                    createdAt: { [Op.gte]: periodStart },
-                    userLat: { [Op.ne]: null },
-                    userLng: { [Op.ne]: null },
+        // Routes by city
+        const routesByCity = await Route.findAll({
+            attributes: [
+                [Route.sequelize.literal('"startLocation"."city"'), 'city'],
+                [Route.sequelize.fn('COUNT', Route.sequelize.col('Route.id')), 'routeCount'],
+            ],
+            include: [
+                {
+                    model: Location,
+                    as: 'startLocation',
+                    attributes: [],
                 },
-                limit: 1000, // Sample for performance
-                raw: true,
-            })
+            ],
+            where: { isActive: true },
+            group: [Route.sequelize.literal('"startLocation"."city"')],
+            order: [[Route.sequelize.fn('COUNT', Route.sequelize.col('Route.id')), 'DESC']],
+            limit: 20,
+            raw: true,
+        })
 
-            // You would typically reverse geocode to get cities, for now we'll just count
-            const searchCount = searchesByCity.length
+        // Most popular locations
+        const popularLocations = await Location.findAll({
+            where: { isActive: true },
+            order: [['popularityScore', 'DESC']],
+            limit: 20,
+            attributes: ['id', 'name', 'city', 'state', 'popularityScore', 'type'],
+        })
 
-            // Log admin action
-            await AuditLog.create({
-                adminId: admin.id,
-                action: 'view_geographic_analytics',
-                resource: 'analytics',
-                metadata: { period },
-                ipAddress: req.ip,
-                userAgent: req.get('User-Agent'),
-                severity: 'low',
-            })
+        // Most popular routes
+        const popularRoutes = await Route.findAll({
+            where: { isActive: true },
+            include: [
+                { model: Location, as: 'startLocation', attributes: ['name', 'city'] },
+                { model: Location, as: 'endLocation', attributes: ['name', 'city'] },
+            ],
+            order: [['popularityScore', 'DESC']],
+            limit: 20,
+        })
 
-            res.json({
-                success: true,
-                data: {
-                    usersByCity,
-                    routesByCity,
-                    popularLocations,
-                    popularRoutes,
-                    searchActivity: {
-                        totalSearches: searchCount,
-                        period: `${period} days`,
-                    },
+        // Search activity by city using PostGIS
+        // Use spatial query to find nearest location for each search and group by city
+        const searchesByCity = await SearchLog.sequelize.query(`
+            SELECT 
+                l.city,
+                COUNT(DISTINCT s.id) as search_count,
+                COUNT(DISTINCT s."userId") as unique_users
+            FROM search_logs s
+            CROSS JOIN LATERAL (
+                SELECT city, state
+                FROM locations l
+                WHERE l."isActive" = true
+                    AND l.latitude IS NOT NULL 
+                    AND l.longitude IS NOT NULL
+                ORDER BY ST_Distance(
+                    ST_SetSRID(ST_MakePoint(l.longitude, l.latitude), 4326)::geography,
+                    ST_SetSRID(ST_MakePoint(s."userLng", s."userLat"), 4326)::geography
+                )
+                LIMIT 1
+            ) l
+            WHERE s."createdAt" >= :periodStart
+                AND s."userLat" IS NOT NULL
+                AND s."userLng" IS NOT NULL
+            GROUP BY l.city
+            ORDER BY search_count DESC
+            LIMIT 20
+        `, {
+            replacements: { periodStart },
+            type: SearchLog.sequelize.QueryTypes.SELECT
+        })
+
+        // Total searches in period
+        const totalSearches = await SearchLog.count({
+            where: {
+                createdAt: { [Op.gte]: periodStart },
+                userLat: { [Op.ne]: null },
+                userLng: { [Op.ne]: null },
+            },
+        })
+
+        // Heat map data - searches grouped by geographic clusters
+        const searchHeatmap = await SearchLog.sequelize.query(`
+            SELECT 
+                ST_Y(centroid) as lat,
+                ST_X(centroid) as lng,
+                search_count,
+                unique_users
+            FROM (
+                SELECT 
+                    ST_Centroid(
+                        ST_Collect(
+                            ST_SetSRID(ST_MakePoint("userLng", "userLat"), 4326)
+                        )
+                    ) as centroid,
+                    COUNT(*) as search_count,
+                    COUNT(DISTINCT "userId") as unique_users
+                FROM search_logs
+                WHERE "createdAt" >= :periodStart
+                    AND "userLat" IS NOT NULL
+                    AND "userLng" IS NOT NULL
+                GROUP BY ST_SnapToGrid(
+                    ST_SetSRID(ST_MakePoint("userLng", "userLat"), 4326),
+                    0.01  -- ~1km grid cells
+                )
+            ) clustered
+            WHERE search_count >= 3
+            ORDER BY search_count DESC
+            LIMIT 100
+        `, {
+            replacements: { periodStart },
+            type: SearchLog.sequelize.QueryTypes.SELECT
+        })
+
+        // Log admin action
+        await AuditLog.create({
+            adminId: admin.id,
+            action: 'view_geographic_analytics',
+            resource: 'analytics',
+            metadata: { period },
+            ipAddress: req.ip,
+            userAgent: req.get('User-Agent'),
+            severity: 'low',
+        })
+
+        res.json({
+            success: true,
+            data: {
+                usersByCity,
+                routesByCity,
+                popularLocations,
+                popularRoutes,
+                searchActivity: {
+                    searchesByCity,
+                    totalSearches,
+                    searchHeatmap,
                     period: `${period} days`,
                 },
-            })
-        } catch (error) {
-            logger.error('Admin get geographic analytics error:', error)
-            res.status(500).json({
-                success: false,
-                message: 'Failed to get geographic analytics',
-                error: error.message,
-            })
-        }
-    },
+                period: `${period} days`,
+            },
+        })
+    } catch (error) {
+        logger.error('Admin get geographic analytics error:', error)
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get geographic analytics',
+            error: error.message,
+        })
+    }
+},
 
     // Export analytics data
     exportAnalytics: async (req, res) => {

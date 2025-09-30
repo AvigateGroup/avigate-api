@@ -2,12 +2,13 @@
 const {
     DirectionShare,
     Location,
-    User,
     UserInteraction,
 } = require('../../models')
 const { logger } = require('../../utils/logger')
 const { generateSecureRandomString } = require('../../services/user/authService')
 const routePlanningService = require('../../services/navigation/routePlanningService')
+const QRCode = require('qrcode')
+
 
 const directionsController = {
     // Create a new direction share
@@ -427,44 +428,100 @@ const directionsController = {
 
     // Generate QR code for direction share
     generateQRCode: async (req, res) => {
-        try {
-            const { shareId } = req.params
-            const user = req.user
+    try {
+        const { shareId } = req.params
+        const user = req.user
+        const { format = 'data_url' } = req.query // 'data_url', 'buffer', or 'svg'
 
-            const directionShare = await DirectionShare.findOne({
-                where: { shareId, createdBy: user.id },
+        const directionShare = await DirectionShare.findOne({
+            where: { shareId, createdBy: user.id },
+        })
+
+        if (!directionShare) {
+            return res.status(404).json({
+                success: false,
+                message: 'Direction share not found or access denied',
             })
+        }
 
-            if (!directionShare) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Direction share not found or access denied',
-                })
+        let qrCodeData
+
+        try {
+            switch (format) {
+                case 'svg':
+                    qrCodeData = await QRCode.toString(directionShare.shareUrl, {
+                        type: 'svg',
+                        width: 300,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#FFFFFF'
+                        }
+                    })
+                    break
+
+                case 'buffer':
+                    qrCodeData = await QRCode.toBuffer(directionShare.shareUrl, {
+                        width: 300,
+                        margin: 2,
+                    })
+                    // Return as image
+                    res.setHeader('Content-Type', 'image/png')
+                    res.setHeader('Content-Disposition', `inline; filename="qr-${shareId}.png"`)
+                    return res.send(qrCodeData)
+
+                case 'data_url':
+                default:
+                    qrCodeData = await QRCode.toDataURL(directionShare.shareUrl, {
+                        width: 300,
+                        margin: 2,
+                        errorCorrectionLevel: 'M'
+                    })
+                    break
             }
 
-            // Generate QR code URL (would use a QR code service in production)
-            const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(directionShare.shareUrl)}`
-
-            // Update direction share with QR code URL
-            directionShare.qrCodeUrl = qrCodeUrl
+            // Optionally store the QR code URL/data in the database
+            directionShare.qrCodeGenerated = true
+            directionShare.qrCodeGeneratedAt = new Date()
             await directionShare.save()
+
+            // Log interaction
+            await UserInteraction.create({
+                userId: user.id,
+                sessionId: req.sessionID,
+                interactionType: 'direction_share_qr_generate',
+                resourceId: directionShare.id,
+                resourceType: 'direction_share',
+                interactionData: { format },
+                ipAddress: req.ip,
+            })
 
             res.json({
                 success: true,
                 data: {
-                    qrCodeUrl,
+                    qrCode: qrCodeData,
                     shareUrl: directionShare.shareUrl,
+                    format,
                 },
             })
-        } catch (error) {
-            logger.error('Generate QR code error:', error)
-            res.status(500).json({
+        } catch (qrError) {
+            logger.error('QR code generation error:', qrError)
+            return res.status(500).json({
                 success: false,
                 message: 'Failed to generate QR code',
-                error: error.message,
+                error: qrError.message,
             })
         }
-    },
+    } catch (error) {
+        logger.error('Generate QR code error:', error)
+        res.status(500).json({
+            success: false,
+            message: 'Failed to generate QR code',
+            error: error.message,
+        })
+    }
+},
+
 }
 
 module.exports = directionsController

@@ -146,26 +146,6 @@ const requireMinReputation = (minScore = 50) => {
     }
 }
 
-// Admin role check (you can extend this based on your role system)
-const requireAdmin = (req, res, next) => {
-    if (!req.user) {
-        return res.status(401).json({
-            success: false,
-            message: 'Authentication required',
-        })
-    }
-
-    // You can implement admin role logic here
-    // For now, we'll check if user has very high reputation
-    if (req.user.reputationScore < 1000) {
-        return res.status(403).json({
-            success: false,
-            message: 'Admin privileges required',
-        })
-    }
-
-    next()
-}
 
 // Rate limiting based on user reputation
 const reputationBasedLimit = (req, res, next) => {
@@ -195,6 +175,5 @@ module.exports = {
     optionalAuth,
     requireVerified,
     requireMinReputation,
-    requireAdmin,
     reputationBasedLimit,
 }
