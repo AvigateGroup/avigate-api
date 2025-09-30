@@ -57,7 +57,7 @@ const {
     GeographicAnalytics,
     SystemMetrics,
     AuditLog,
-} = require('./Analytics')
+} = require('./analytics/Analytics')
 
 // Initialize old analytics models
 const UserAnalyticsModel = UserAnalytics(sequelize, Sequelize.DataTypes)
