@@ -28,9 +28,6 @@ const GeographicBoundary = require('./location/GeographicBoundary')(sequelize, S
 // Import transportation models
 const Route = require('./transportation/Route')(sequelize, Sequelize.DataTypes)
 const RouteStep = require('./transportation/RouteStep')(sequelize, Sequelize.DataTypes)
-const TransportOperator = require('./transportation/TransportOperator')(sequelize, Sequelize.DataTypes)
-const Vehicle = require('./transportation/Vehicle')(sequelize, Sequelize.DataTypes)
-const VehicleAvailability = require('./transportation/VehicleAvailability')(sequelize, Sequelize.DataTypes)
 
 // Import fare models
 const FareFeedback = require('./fare/FareFeedback')(sequelize, Sequelize.DataTypes)
@@ -51,20 +48,13 @@ const UserInteraction = require('./analytics/UserInteraction')(sequelize, Sequel
 
 // Import admin models
 const Admin = require('./admin/Admin.js')(sequelize, Sequelize.DataTypes)
-const {
-    UserAnalytics,
-    AppUsageAnalytics,
-    GeographicAnalytics,
-    SystemMetrics,
-    AuditLog,
-} = require('./analytics/Analytics')
 
-// Initialize old analytics models
-const UserAnalyticsModel = UserAnalytics(sequelize, Sequelize.DataTypes)
-const AppUsageAnalyticsModel = AppUsageAnalytics(sequelize, Sequelize.DataTypes)
-const GeographicAnalyticsModel = GeographicAnalytics(sequelize, Sequelize.DataTypes)
-const SystemMetricsModel = SystemMetrics(sequelize, Sequelize.DataTypes)
-const AuditLogModel = AuditLog(sequelize, Sequelize.DataTypes)
+// Analytics Models
+const UserAnalytics = require('./analytics/UserAnalytics')(sequelize, Sequelize.DataTypes)
+const AppUsageAnalytics = require('./analytics/AppUsageAnalytics')(sequelize, Sequelize.DataTypes)
+const GeographicAnalytics = require('./analytics/GeographicAnalytics')(sequelize, Sequelize.DataTypes)
+const SystemMetrics = require('./analytics/SystemMetrics')(sequelize, Sequelize.DataTypes)
+const AuditLog = require('./analytics/AuditLog')(sequelize, Sequelize.DataTypes)
 
 // Store models in db object
 const db = {
@@ -102,11 +92,11 @@ const db = {
     UserDirection,
     // Admin models
     Admin,
-    UserAnalytics: UserAnalyticsModel,
-    AppUsageAnalytics: AppUsageAnalyticsModel,
-    GeographicAnalytics: GeographicAnalyticsModel,
-    SystemMetrics: SystemMetricsModel,
-    AuditLog: AuditLogModel,
+    UserAnalytics,
+    AppUsageAnalytics,
+    GeographicAnalytics,
+    SystemMetrics,
+    AuditLog,
 }
 
 // Define associations after all models are initialized
@@ -237,20 +227,6 @@ TripLog.belongsTo(Location, { foreignKey: 'endLocationId', as: 'endLocation' })
 // UserInteraction associations
 UserInteraction.belongsTo(User, { foreignKey: 'userId', as: 'user' })
 
-// TransportOperator associations
-TransportOperator.belongsTo(Admin, { foreignKey: 'verifiedBy', as: 'verifier' })
-TransportOperator.hasMany(Vehicle, { foreignKey: 'operatorId', as: 'vehicles' })
-
-// Vehicle associations
-Vehicle.belongsTo(TransportOperator, { foreignKey: 'operatorId', as: 'operator' })
-Vehicle.belongsTo(Location, { foreignKey: 'currentLocationId', as: 'currentLocation' })
-Vehicle.belongsTo(Admin, { foreignKey: 'verifiedBy', as: 'verifier' })
-Vehicle.hasMany(VehicleAvailability, { foreignKey: 'vehicleId', as: 'availability' })
-
-// VehicleAvailability associations
-VehicleAvailability.belongsTo(Vehicle, { foreignKey: 'vehicleId', as: 'vehicle' })
-VehicleAvailability.belongsTo(Location, { foreignKey: 'locationId', as: 'location' })
-VehicleAvailability.belongsTo(User, { foreignKey: 'reportedBy', as: 'reporter' })
 
 // Admin associations
 Admin.belongsTo(Admin, {
@@ -265,8 +241,8 @@ Admin.belongsTo(Admin, {
     constraints: false
 })
 
-Admin.hasMany(AuditLogModel, { foreignKey: 'adminId', as: 'auditLogs' })
-AuditLogModel.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' })
+Admin.hasMany(AuditLog, { foreignKey: 'adminId', as: 'auditLogs' })
+AuditLog.belongsTo(Admin, { foreignKey: 'adminId', as: 'admin' })
 
 // Call associate methods if they exist (for any additional custom associations)
 Object.keys(db).forEach(modelName => {
