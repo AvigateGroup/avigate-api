@@ -92,6 +92,13 @@ export class Admin {
   @Column({ type: 'timestamp', nullable: true })
   resetTokenExpiry: Date;
 
+  // Admin Invitation Token Fields
+  @Column({ type: 'varchar', nullable: true, select: false })
+  inviteToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  inviteTokenExpiry: Date;
+
   @Column({ nullable: true, select: false })
   totpSecret: string;
 
@@ -170,6 +177,7 @@ export class Admin {
       refreshToken, 
       passwordHistory,
       resetToken,
+      inviteToken,
       ...admin 
     } = this as any;
     return admin;

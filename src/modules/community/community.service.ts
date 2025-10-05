@@ -117,7 +117,7 @@ export class CommunityService {
 
     // Update access tracking
     directionShare.accessCount += 1;
-    directionShare.lastAccessedBy = userId;
+    directionShare.lastAccessedBy = userId ?? '';
     directionShare.lastAccessedAt = new Date();
     await this.directionShareRepository.save(directionShare);
 
@@ -127,26 +127,26 @@ export class CommunityService {
     };
   }
 
-    async submitContribution(contributionData: any, userId: string) {
-    const contribution = this.contributionRepository.create({
-        ...contributionData,
-        contributorId: userId,
-        status: ContributionStatus.PENDING,
-    });
+async submitContribution(contributionData: any, userId: string) {
+  const contribution = this.contributionRepository.create({
+    ...contributionData,
+    contributorId: userId,
+    status: ContributionStatus.PENDING,
+  });
 
-    await this.contributionRepository.save(contribution);
+  const savedContribution = await this.contributionRepository.save(contribution);
 
-    // Award reputation points
-    await this.reputationService.awardRouteContributionPoints(
-        userId,
-        contribution.id,
-    );
+  // Award reputation points
+  await this.reputationService.awardRouteContributionPoints(
+    userId,
+    savedContribution.id,
+  );
 
-    return {
-        success: true,
-        message: 'Contribution submitted. You earned 15 reputation points!',
-        data: { contribution },
-    };
+  return {
+    success: true,
+    message: 'Contribution submitted. You earned 15 reputation points!',
+    data: { contribution: savedContribution },
+  };
 }
 
   async getContributions(status?: ContributionStatus, page: number = 1, limit: number = 20) {

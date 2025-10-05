@@ -1,5 +1,5 @@
 // src/modules/admin/controllers/user-management.controller.ts
-import { Controller, Get, Put, Delete, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminAuthGuard } from '@/common/guards/admin-auth.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';

@@ -1,5 +1,5 @@
 // src/modules/admin/services/admin-auth.service.ts
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -72,11 +72,10 @@ export class AdminAuthService {
 
     // Update login info
     admin.lastLoginAt = new Date();
-    admin.lastLoginIP = req.ip;
-    admin.lastUserAgent = req.get('User-Agent');
+    admin.lastLoginIP = req.ip ?? '';
+    admin.lastUserAgent = req.get('User-Agent') ?? '';
     admin.failedLoginAttempts = 0;
-    admin.lockedUntil = null;
-    admin.refreshToken = tokens.refreshToken;
+    admin.lockedUntil =    admin.refreshToken = tokens.refreshToken;
     admin.refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.adminRepository.save(admin);
 
@@ -94,8 +93,8 @@ export class AdminAuthService {
   }
 
   async logout(admin: Admin) {
-    admin.refreshToken = null;
-    admin.refreshTokenExpiresAt = null;
+    admin.refreshToken = '';
+    admin.refreshTokenExpiresAt = undefined;
     await this.adminRepository.save(admin);
 
     logger.info(`Admin logged out: ${admin.email}`);
