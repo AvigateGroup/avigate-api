@@ -1,6 +1,4 @@
-// ============================================
-// FILE 8: src/modules/auth/auth.module.ts (UPDATED)
-// ============================================
+// src/modules/auth/auth.module.ts
 
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
@@ -52,6 +50,6 @@ import { OtpService } from './services/otp.service';
     DeviceService,
     OtpService,
   ],
-  exports: [AuthService],
+  exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
