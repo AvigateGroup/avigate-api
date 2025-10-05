@@ -18,7 +18,11 @@ import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { RequirePermissions } from '@/common/decorators/permissions.decorator';
 import { CurrentAdmin } from '@/common/decorators/current-admin.decorator';
 import { Admin } from '../entities/admin.entity';
-import { AdminManagementService } from '../services/admin-management.service';
+import { AdminCrudService } from '../services/admin-crud.service';
+import { AdminStatusService } from '../services/admin-status.service';
+import { AdminPasswordService } from '../services/admin-password.service';
+import { AdminPermissionService } from '../services/admin-permission.service';
+import { AdminSessionService } from '../services/admin-session.service';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { UpdateAdminDto } from '../dto/update-admin.dto';
 
@@ -27,7 +31,13 @@ import { UpdateAdminDto } from '../dto/update-admin.dto';
 @UseGuards(AdminAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class AdminManagementController {
-  constructor(private adminManagementService: AdminManagementService) {}
+  constructor(
+    private adminCrudService: AdminCrudService,
+    private adminStatusService: AdminStatusService,
+    private adminPasswordService: AdminPasswordService,
+    private adminPermissionService: AdminPermissionService,
+    private adminSessionService: AdminSessionService,
+  ) {}
 
   @Post('create')
   @RequirePermissions('admins.create')
@@ -36,7 +46,7 @@ export class AdminManagementController {
     @Body() createAdminDto: CreateAdminDto,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminManagementService.createAdmin(createAdminDto, currentAdmin);
+    return this.adminCrudService.createAdmin(createAdminDto, currentAdmin);
   }
 
   @Get()
@@ -55,7 +65,7 @@ export class AdminManagementController {
     @Query('search') search?: string,
     @CurrentAdmin() currentAdmin?: Admin,
   ) {
-    return this.adminManagementService.getAdmins(
+    return this.adminCrudService.getAdmins(
       Number(page),
       Number(limit),
       role,
@@ -64,11 +74,18 @@ export class AdminManagementController {
     );
   }
 
+  @Get('roles/permissions')
+  @RequirePermissions('admins.view')
+  @ApiOperation({ summary: 'Get available roles and permissions' })
+  async getRolesAndPermissions() {
+    return this.adminPermissionService.getRolesAndPermissions();
+  }
+
   @Get(':adminId')
   @RequirePermissions('admins.view')
   @ApiOperation({ summary: 'Get admin by ID' })
   async getAdminById(@Param('adminId') adminId: string) {
-    return this.adminManagementService.getAdminById(adminId);
+    return this.adminCrudService.getAdminById(adminId);
   }
 
   @Put(':adminId')
@@ -79,7 +96,7 @@ export class AdminManagementController {
     @Body() updateAdminDto: UpdateAdminDto,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminManagementService.updateAdmin(
+    return this.adminCrudService.updateAdmin(
       adminId,
       updateAdminDto,
       currentAdmin,
@@ -94,7 +111,7 @@ export class AdminManagementController {
     @Param('adminId') adminId: string,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminManagementService.deleteAdmin(adminId, currentAdmin);
+    return this.adminCrudService.deleteAdmin(adminId, currentAdmin);
   }
 
   @Put(':adminId/restore')
@@ -104,7 +121,7 @@ export class AdminManagementController {
     @Param('adminId') adminId: string,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminManagementService.restoreAdmin(adminId, currentAdmin);
+    return this.adminCrudService.restoreAdmin(adminId, currentAdmin);
   }
 
   @Put(':adminId/activate')
@@ -115,36 +132,11 @@ export class AdminManagementController {
     @Body('isActive') isActive: boolean,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminManagementService.toggleAdminStatus(
+    return this.adminStatusService.toggleAdminStatus(
       adminId,
       isActive,
       currentAdmin,
     );
-  }
-
-  @Get(':adminId/sessions')
-  @RequirePermissions('admins.view')
-  @ApiOperation({ summary: 'Get admin active sessions' })
-  async getAdminSessions(@Param('adminId') adminId: string) {
-    return this.adminManagementService.getAdminSessions(adminId);
-  }
-
-  @Delete(':adminId/sessions')
-  @RequirePermissions('admins.edit')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Revoke all admin sessions' })
-  async revokeAdminSessions(
-    @Param('adminId') adminId: string,
-    @CurrentAdmin() currentAdmin: Admin,
-  ) {
-    return this.adminManagementService.revokeAllSessions(adminId, currentAdmin);
-  }
-
-  @Get('roles/permissions')
-  @RequirePermissions('admins.view')
-  @ApiOperation({ summary: 'Get available roles and permissions' })
-  async getRolesAndPermissions() {
-    return this.adminManagementService.getRolesAndPermissions();
   }
 
   @Post(':adminId/reset-password')
@@ -155,10 +147,40 @@ export class AdminManagementController {
     @Body('sendEmail') sendEmail: boolean = true,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminManagementService.resetAdminPassword(
+    return this.adminPasswordService.resetAdminPassword(
       adminId,
       sendEmail,
       currentAdmin,
     );
+  }
+
+  @Get(':adminId/sessions')
+  @RequirePermissions('admins.view')
+  @ApiOperation({ summary: 'Get admin active sessions' })
+  async getAdminSessions(@Param('adminId') adminId: string) {
+    return this.adminSessionService.getAdminSessions(adminId);
+  }
+
+  @Delete(':adminId/sessions')
+  @RequirePermissions('admins.edit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke all admin sessions' })
+  async revokeAdminSessions(
+    @Param('adminId') adminId: string,
+    @CurrentAdmin() currentAdmin: Admin,
+  ) {
+    return this.adminSessionService.revokeAllSessions(adminId, currentAdmin);
+  }
+
+  @Delete(':adminId/sessions/:sessionId')
+  @RequirePermissions('admins.edit')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Revoke specific admin session' })
+  async revokeAdminSession(
+    @Param('adminId') adminId: string,
+    @Param('sessionId') sessionId: string,
+    @CurrentAdmin() currentAdmin: Admin,
+  ) {
+    return this.adminSessionService.revokeSession(sessionId, currentAdmin);
   }
 }
