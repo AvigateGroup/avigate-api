@@ -34,9 +34,10 @@ import databaseConfig from './config/database.config';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: false,
         logging: false,
-        ssl: {
-          rejectUnauthorized: false,
-        },
+        // Conditionally enable SSL based on environment
+        ssl: configService.get('NODE_ENV') === 'production'
+          ? { rejectUnauthorized: false }
+          : false, // ← Changed this line
       }),
       inject: [ConfigService],
     }),
