@@ -1,23 +1,26 @@
 // src/modules/user/dto/login.dto.ts
-import { IsEmail, IsString, IsOptional } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsEmail, IsNotEmpty, IsString, IsOptional, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class LoginDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsEmail()
+  @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ example: 'SecurePass123!' })
+  @ApiProperty({ example: 'Password123!' })
   @IsString()
+  @IsNotEmpty()
+  @MinLength(6)
   password: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
+  @ApiPropertyOptional({ example: 'fcm_token_here' })
   @IsString()
+  @IsOptional()
   fcmToken?: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
+  @ApiPropertyOptional({ example: 'Mozilla/5.0...' })
   @IsString()
+  @IsOptional()
   deviceInfo?: string;
 }

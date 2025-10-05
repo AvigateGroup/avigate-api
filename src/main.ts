@@ -1,6 +1,5 @@
 // src/main.ts
 
-import { initializeDatadog } from './config/datadog.config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -12,7 +11,6 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { logger } from './utils/logger.util';
-import { initializeSentry } from './config/sentry.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -23,18 +21,14 @@ async function bootstrap() {
   const port = configService.get('PORT') || 3000;
   const apiPrefix = configService.get('API_PREFIX') || 'api/v1';
 
-initializeDatadog();
-initializeSentry(app);
-  app.useGlobalFilters(new SentryExceptionFilter());
-
   // Security
   app.use(helmet());
   app.use(compression());
   app.enableCors({
     origin: [
-      configService.get('FRONTEND_URL'),
-      configService.get('ADMIN_FRONTEND_URL'),
-    ],
+      configService.get('FRONTEND_URL') || 'http://localhost:3001',
+      configService.get('ADMIN_FRONTEND_URL') || 'http://localhost:3002',
+    ].filter(Boolean),
     credentials: true,
   });
 

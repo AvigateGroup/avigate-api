@@ -75,10 +75,10 @@ export class User {
   lastLoginAt: Date;
 
   @Column({ type: 'text', nullable: true, select: false })
-  refreshToken: string;
+  refreshToken: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  refreshTokenExpiresAt: Date;
+  refreshTokenExpiresAt: Date | null;
 
   @Column({ nullable: true, select: false })
   passwordResetToken: string;
