@@ -77,13 +77,13 @@ export class Admin {
   failedLoginAttempts: number;
 
   @Column({ type: 'timestamp', nullable: true })
-  lockedUntil: Date;
+  lockedUntil: Date | null;
 
   @Column({ type: 'text', nullable: true, select: false })
   refreshToken: string;
 
   @Column({ type: 'timestamp', nullable: true })
-  refreshTokenExpiresAt: Date;
+  refreshTokenExpiresAt: Date | null;
 
   // Password Reset Token Fields
   @Column({ type: 'varchar', nullable: true, select: false })

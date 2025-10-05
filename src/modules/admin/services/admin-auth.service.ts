@@ -75,7 +75,8 @@ export class AdminAuthService {
     admin.lastLoginIP = req.ip ?? '';
     admin.lastUserAgent = req.get('User-Agent') ?? '';
     admin.failedLoginAttempts = 0;
-    admin.lockedUntil =    admin.refreshToken = tokens.refreshToken;
+    admin.lockedUntil = null;
+    admin.refreshToken = tokens.refreshToken;
     admin.refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.adminRepository.save(admin);
 
@@ -94,7 +95,7 @@ export class AdminAuthService {
 
   async logout(admin: Admin) {
     admin.refreshToken = '';
-    admin.refreshTokenExpiresAt = undefined;
+    admin.refreshTokenExpiresAt = null;
     await this.adminRepository.save(admin);
 
     logger.info(`Admin logged out: ${admin.email}`);
@@ -119,7 +120,7 @@ export class AdminAuthService {
         throw new UnauthorizedException('Invalid refresh token');
       }
 
-      if (admin.refreshTokenExpiresAt < new Date()) {
+      if (!admin.refreshTokenExpiresAt || admin.refreshTokenExpiresAt < new Date()) {
         throw new UnauthorizedException('Refresh token expired');
       }
 
