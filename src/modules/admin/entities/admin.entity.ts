@@ -85,6 +85,13 @@ export class Admin {
   @Column({ type: 'timestamp', nullable: true })
   refreshTokenExpiresAt: Date;
 
+  // Password Reset Token Fields
+  @Column({ type: 'varchar', nullable: true, select: false })
+  resetToken: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  resetTokenExpiry: Date;
+
   @Column({ nullable: true, select: false })
   totpSecret: string;
 
@@ -156,7 +163,15 @@ export class Admin {
   }
 
   toJSON() {
-    const { passwordHash, totpSecret, totpBackupCodes, refreshToken, passwordHistory, ...admin } = this as any;
+    const { 
+      passwordHash, 
+      totpSecret, 
+      totpBackupCodes, 
+      refreshToken, 
+      passwordHistory,
+      resetToken,
+      ...admin 
+    } = this as any;
     return admin;
   }
 }
