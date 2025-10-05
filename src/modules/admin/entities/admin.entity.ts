@@ -115,7 +115,7 @@ export class Admin {
   lastModifiedBy: string;
 
   @Column('uuid', { nullable: true })
-  deletedBy: string;
+  deletedBy: string | null;
 
   @CreateDateColumn()
   createdAt: Date;
