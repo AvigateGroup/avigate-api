@@ -33,9 +33,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: request.url,
       method: request.method,
       message: typeof message === 'string' ? message : (message as any).message,
-      ...(process.env.NODE_ENV === 'development' && {
-        stack: exception.stack,
-      }),
     };
 
     logger.error('HTTP Exception:', {

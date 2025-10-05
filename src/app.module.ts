@@ -1,4 +1,4 @@
-// src/app.module.ts (UPDATED)
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -32,20 +32,22 @@ import databaseConfig from './config/database.config';
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') === 'development',
-        logging: configService.get('NODE_ENV') === 'development',
-        ssl: configService.get('NODE_ENV') === 'production' ? {
+        synchronize: false,
+        logging: false,
+        ssl: {
           rejectUnauthorized: false,
-        } : false,
+        },
       }),
       inject: [ConfigService],
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        ttl: configService.get('RATE_LIMIT_TTL') || 60,
-        limit: configService.get('RATE_LIMIT_MAX') || 100,
-      }),
+      useFactory: (configService: ConfigService) => ([
+        {
+          ttl: configService.get('RATE_LIMIT_TTL') || 60,
+          limit: configService.get('RATE_LIMIT_MAX') || 100,
+        },
+      ]),
       inject: [ConfigService],
     }),
     UserModule,
