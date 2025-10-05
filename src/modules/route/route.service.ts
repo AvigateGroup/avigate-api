@@ -1,8 +1,8 @@
 // src/modules/route/route.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Route, TransportMode } from './entities/route.entity';
+import { Repository } from 'typeorm';
+import { Route } from './entities/route.entity';
 import { RouteStep } from './entities/route-step.entity';
 import { FindRoutesDto } from './dto/find-routes.dto';
 

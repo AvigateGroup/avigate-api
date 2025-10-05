@@ -1,7 +1,7 @@
 // src/modules/route/dto/find-routes.dto.ts
 import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { TransportMode } from '../entities/route.entity';
+import { TransportMode } from '../enums/transport-mode.enum';
 
 export class FindRoutesDto {
   @ApiProperty()

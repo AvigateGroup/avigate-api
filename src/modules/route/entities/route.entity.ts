@@ -12,14 +12,7 @@ import {
 } from 'typeorm';
 import { Location } from '../../location/entities/location.entity';
 import { RouteStep } from './route-step.entity';
-
-export enum TransportMode {
-  BUS = 'bus',
-  TAXI = 'taxi',
-  KEKE = 'keke',
-  OKADA = 'okada',
-  WALK = 'walk',
-}
+import { TransportMode } from '../enums/transport-mode.enum';
 
 @Entity('routes')
 export class Route {

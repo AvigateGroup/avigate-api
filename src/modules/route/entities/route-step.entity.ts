@@ -9,7 +9,8 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { Route, TransportMode } from './route.entity';
+import { Route } from './route.entity';
+import { TransportMode } from '../enums/transport-mode.enum';
 import { Location } from '../../location/entities/location.entity';
 
 @Entity('route_steps')
