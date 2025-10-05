@@ -1,4 +1,4 @@
-// FILE 6: src/modules/auth/services/device.service.ts
+// src/modules/auth/services/device.service.ts
 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,7 +24,7 @@ export class DeviceService {
     const deviceData = parseDeviceInfo(req, deviceInfo);
     
     const device = this.deviceRepository.create({
-      userId, // ✅ Use userId instead of user
+      userId,
       fcmToken,
       deviceFingerprint: deviceData.fingerprint,
       deviceInfo: deviceData.deviceInfo,
@@ -32,9 +32,9 @@ export class DeviceService {
       platform: deviceData.platform,
       ipAddress: deviceData.ipAddress,
       isActive,
-    });
+    } as Partial<UserDevice>);
 
-    await this.deviceRepository.save(device);
+    return await this.deviceRepository.save(device);
   }
 
   async updateOrCreateDevice(
@@ -77,7 +77,7 @@ export class DeviceService {
     deviceData: any,
   ) {
     const device = this.deviceRepository.create({
-      userId, // ✅ Use userId instead of user
+      userId,
       fcmToken,
       deviceFingerprint: deviceData.fingerprint,
       deviceInfo: deviceData.deviceInfo,
@@ -85,7 +85,7 @@ export class DeviceService {
       platform: deviceData.platform,
       ipAddress: deviceData.ipAddress,
       isActive: true,
-    });
+    } as Partial<UserDevice>);
 
     await this.deviceRepository.save(device);
   }
