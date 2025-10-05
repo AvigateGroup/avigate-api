@@ -7,6 +7,7 @@ import { DirectionShare } from './entities/direction-share.entity';
 import { RouteContribution, ContributionStatus } from './entities/route-contribution.entity';
 import { SafetyReport } from './entities/safety-report.entity';
 import { CreatePostDto } from './dto/create-post.dto';
+import { CreateContributionDto } from './dto/create-contribution.dto';
 import { CreateDirectionShareDto } from './dto/create-direction-share.dto';
 import { ReputationService } from '../reputation/reputation.service';
 import * as crypto from 'crypto';
@@ -127,7 +128,7 @@ export class CommunityService {
     };
   }
 
-async submitContribution(contributionData: any, userId: string) {
+async submitContribution(contributionData: CreateContributionDto, userId: string) {
   const contribution = this.contributionRepository.create({
     ...contributionData,
     contributorId: userId,
@@ -136,7 +137,7 @@ async submitContribution(contributionData: any, userId: string) {
 
   const savedContribution = await this.contributionRepository.save(contribution);
 
-  // Award reputation points
+  // TypeScript now knows savedContribution is a RouteContribution with id
   await this.reputationService.awardRouteContributionPoints(
     userId,
     savedContribution.id,

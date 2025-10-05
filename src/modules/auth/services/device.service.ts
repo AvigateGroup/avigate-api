@@ -23,8 +23,8 @@ export class DeviceService {
   ) {
     const deviceData = parseDeviceInfo(req, deviceInfo);
     
-    await this.deviceRepository.save({
-      userId,
+    const device = this.deviceRepository.create({
+      userId, // ✅ Use userId instead of user
       fcmToken,
       deviceFingerprint: deviceData.fingerprint,
       deviceInfo: deviceData.deviceInfo,
@@ -33,6 +33,8 @@ export class DeviceService {
       ipAddress: deviceData.ipAddress,
       isActive,
     });
+
+    await this.deviceRepository.save(device);
   }
 
   async updateOrCreateDevice(
@@ -74,8 +76,8 @@ export class DeviceService {
     fcmToken: string,
     deviceData: any,
   ) {
-    await this.deviceRepository.save({
-      userId,
+    const device = this.deviceRepository.create({
+      userId, // ✅ Use userId instead of user
       fcmToken,
       deviceFingerprint: deviceData.fingerprint,
       deviceInfo: deviceData.deviceInfo,
@@ -84,5 +86,7 @@ export class DeviceService {
       ipAddress: deviceData.ipAddress,
       isActive: true,
     });
+
+    await this.deviceRepository.save(device);
   }
 }

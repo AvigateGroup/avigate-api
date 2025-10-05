@@ -33,14 +33,6 @@ export class CacheService {
     }
   }
 
-  async reset(): Promise<void> {
-    try {
-      await this.cacheManager.reset();
-    } catch (error) {
-      logger.error('Cache reset error:', error);
-    }
-  }
-
   // Helper method for cache-aside pattern
   async getOrSet<T>(
     key: string,
