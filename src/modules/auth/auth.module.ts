@@ -1,4 +1,8 @@
-// src/modules/auth/auth.module.ts
+
+// ============================================
+// FILE 8: src/modules/auth/auth.module.ts (UPDATED)
+// ============================================
+
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
@@ -12,6 +16,14 @@ import { User } from '../user/entities/user.entity';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { UserOTP } from '../user/entities/user-otp.entity';
 import { EmailModule } from '../email/email.module';
+
+// Import new services
+import { RegistrationService } from './services/registration.service';
+import { LoginService } from './services/login.service';
+import { VerificationService } from './services/verification.service';
+import { TokenService } from './services/token.service';
+import { DeviceService } from './services/device.service';
+import { OtpService } from './services/otp.service';
 
 @Module({
   imports: [
@@ -30,7 +42,17 @@ import { EmailModule } from '../email/email.module';
     EmailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, GoogleStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    GoogleStrategy,
+    RegistrationService,
+    LoginService,
+    VerificationService,
+    TokenService,
+    DeviceService,
+    OtpService,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}
