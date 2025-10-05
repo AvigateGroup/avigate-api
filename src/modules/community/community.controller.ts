@@ -17,10 +17,7 @@ export class CommunityController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create community post' })
-  async createPost(
-    @Body() createPostDto: CreatePostDto,
-    @CurrentUser() user: User,
-  ) {
+  async createPost(@Body() createPostDto: CreatePostDto, @CurrentUser() user: User) {
     return this.communityService.createPost(createPostDto, user.id);
   }
 
@@ -48,10 +45,7 @@ export class CommunityController {
 
   @Get('directions/share/:shareToken')
   @ApiOperation({ summary: 'Get shared directions' })
-  async getDirectionShare(
-    @Param('shareToken') shareToken: string,
-    @CurrentUser() user?: User,
-  ) {
+  async getDirectionShare(@Param('shareToken') shareToken: string, @CurrentUser() user?: User) {
     return this.communityService.getDirectionShare(shareToken, user?.id);
   }
 
@@ -59,10 +53,7 @@ export class CommunityController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Submit route contribution' })
-  async submitContribution(
-    @Body() contributionData: any,
-    @CurrentUser() user: User,
-  ) {
+  async submitContribution(@Body() contributionData: any, @CurrentUser() user: User) {
     return this.communityService.submitContribution(contributionData, user.id);
   }
 
@@ -80,10 +71,7 @@ export class CommunityController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Report safety concern' })
-  async reportSafetyConcern(
-    @Body() reportData: any,
-    @CurrentUser() user: User,
-  ) {
+  async reportSafetyConcern(@Body() reportData: any, @CurrentUser() user: User) {
     return this.communityService.reportSafetyConcern(reportData, user.id);
   }
 

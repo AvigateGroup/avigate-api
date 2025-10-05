@@ -15,13 +15,10 @@ export interface ParsedDeviceInfo {
 export function parseDeviceInfo(req: Request, deviceInfo?: string): ParsedDeviceInfo {
   const userAgent = req.get('User-Agent') || 'unknown';
   const ipAddress = (req.ip || req.connection.remoteAddress || 'unknown').replace('::ffff:', '');
-  
+
   // Generate fingerprint
   const fingerprintBase = `${userAgent}-${ipAddress}-${deviceInfo || ''}`;
-  const fingerprint = crypto
-    .createHash('sha256')
-    .update(fingerprintBase)
-    .digest('hex');
+  const fingerprint = crypto.createHash('sha256').update(fingerprintBase).digest('hex');
 
   // Detect device type
   let deviceType: ParsedDeviceInfo['deviceType'] = 'unknown';

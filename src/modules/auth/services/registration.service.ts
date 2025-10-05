@@ -25,7 +25,8 @@ export class RegistrationService {
   ) {}
 
   async register(registerDto: RegisterDto, req: Request) {
-    const { email, password, firstName, lastName, sex, phoneNumber, fcmToken, deviceInfo } = registerDto;
+    const { email, password, firstName, lastName, sex, phoneNumber, fcmToken, deviceInfo } =
+      registerDto;
 
     await this.validateNewUser(email, phoneNumber);
 
@@ -36,7 +37,7 @@ export class RegistrationService {
       password,
       firstName,
       lastName,
-      sex, 
+      sex,
       phoneNumber,
       isTestAccount,
     });
@@ -67,7 +68,7 @@ export class RegistrationService {
     password: string;
     firstName: string;
     lastName: string;
-    sex: UserSex; 
+    sex: UserSex;
     phoneNumber: string;
     isTestAccount: boolean;
   }): Promise<User> {

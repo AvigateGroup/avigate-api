@@ -73,7 +73,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   await app.listen(port);
-  
+
   logger.info(`🚀 Avigate API is running on: http://localhost:${port}/${apiPrefix}`);
   logger.info(`📚 API Documentation: http://localhost:${port}/api/docs`);
 }

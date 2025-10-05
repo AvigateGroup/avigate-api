@@ -35,10 +35,7 @@ export class FareController {
 
   @Get('history/:routeId')
   @ApiOperation({ summary: 'Get fare history' })
-  async getFareHistory(
-    @Param('routeId') routeId: string,
-    @Query('days') days?: number,
-  ) {
+  async getFareHistory(@Param('routeId') routeId: string, @Query('days') days?: number) {
     return this.fareService.getFareHistory(routeId, days);
   }
 }

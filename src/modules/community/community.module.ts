@@ -10,12 +10,7 @@ import { SafetyReport } from './entities/safety-report.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      CommunityPost,
-      DirectionShare,
-      RouteContribution,
-      SafetyReport,
-    ]),
+    TypeOrmModule.forFeature([CommunityPost, DirectionShare, RouteContribution, SafetyReport]),
   ],
   controllers: [CommunityController],
   providers: [CommunityService],

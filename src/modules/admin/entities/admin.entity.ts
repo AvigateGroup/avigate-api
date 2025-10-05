@@ -170,15 +170,15 @@ export class Admin {
   }
 
   toJSON() {
-    const { 
-      passwordHash, 
-      totpSecret, 
-      totpBackupCodes, 
-      refreshToken, 
+    const {
+      passwordHash,
+      totpSecret,
+      totpBackupCodes,
+      refreshToken,
       passwordHistory,
       resetToken,
       inviteToken,
-      ...admin 
+      ...admin
     } = this as any;
     return admin;
   }

@@ -30,8 +30,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   async handleConnection(client: Socket) {
     try {
-      const token = client.handshake.auth.token || client.handshake.headers.authorization?.split(' ')[1];
-      
+      const token =
+        client.handshake.auth.token || client.handshake.headers.authorization?.split(' ')[1];
+
       if (!token) {
         logger.warn('WebSocket connection rejected: No token provided');
         client.disconnect();
@@ -61,10 +62,10 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   handleDisconnect(client: Socket) {
     const userId = client.data.userId;
-    
+
     if (userId && this.connectedUsers.has(userId)) {
       this.connectedUsers.get(userId)?.delete(client.id);
-      
+
       const userSet = this.connectedUsers.get(userId);
       if (userSet && userSet.size === 0) {
         this.connectedUsers.delete(userId);
@@ -81,9 +82,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
   ) {
     const room = `location:${data.lat.toFixed(2)},${data.lng.toFixed(2)}`;
     client.join(room);
-    
+
     logger.debug(`Client ${client.id} subscribed to location updates: ${room}`);
-    
+
     return { success: true, room };
   }
 
@@ -94,9 +95,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
   ) {
     const room = `route:${data.routeId}`;
     client.join(room);
-    
+
     logger.debug(`Client ${client.id} subscribed to route updates: ${room}`);
-    
+
     return { success: true, room };
   }
 
@@ -106,7 +107,7 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { lat: number; lng: number },
   ) {
     const userId = client.data.userId;
-    
+
     // Broadcast to users who are tracking this user
     this.server.to(`tracking:${userId}`).emit('location:update', {
       userId,
@@ -124,9 +125,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { targetUserId: string },
   ) {
     client.join(`tracking:${data.targetUserId}`);
-    
+
     logger.debug(`Client ${client.id} started tracking user: ${data.targetUserId}`);
-    
+
     return { success: true };
   }
 
@@ -136,9 +137,9 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     @MessageBody() data: { targetUserId: string },
   ) {
     client.leave(`tracking:${data.targetUserId}`);
-    
+
     logger.debug(`Client ${client.id} stopped tracking user: ${data.targetUserId}`);
-    
+
     return { success: true };
   }
 

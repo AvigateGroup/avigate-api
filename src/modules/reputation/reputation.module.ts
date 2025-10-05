@@ -9,14 +9,7 @@ import { Badge } from './entities/badge.entity';
 import { User } from '../user/entities/user.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      ReputationTransaction,
-      UserBadge,
-      Badge,
-      User,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([ReputationTransaction, UserBadge, Badge, User])],
   controllers: [ReputationController],
   providers: [ReputationService],
   exports: [ReputationService],

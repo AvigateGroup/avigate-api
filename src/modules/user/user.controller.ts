@@ -22,10 +22,7 @@ export class UserController {
 
   @Put('profile')
   @ApiOperation({ summary: 'Update user profile' })
-  async updateProfile(
-    @CurrentUser() user: User,
-    @Body() updateProfileDto: UpdateProfileDto,
-  ) {
+  async updateProfile(@CurrentUser() user: User, @Body() updateProfileDto: UpdateProfileDto) {
     return this.userService.updateProfile(user, updateProfileDto);
   }
 
@@ -37,10 +34,7 @@ export class UserController {
 
   @Delete('devices/:deviceId')
   @ApiOperation({ summary: 'Deactivate device' })
-  async deactivateDevice(
-    @CurrentUser() user: User,
-    @Param('deviceId') deviceId: string,
-  ) {
+  async deactivateDevice(@CurrentUser() user: User, @Param('deviceId') deviceId: string) {
     return this.userService.deactivateDevice(user, deviceId);
   }
 

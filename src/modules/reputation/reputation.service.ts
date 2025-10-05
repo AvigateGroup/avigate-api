@@ -97,10 +97,7 @@ export class ReputationService {
       if (earnedBadgeIds.has(badge.id)) continue;
 
       // Check if user meets requirements
-      const meetsRequirements = await this.checkBadgeRequirements(
-        user,
-        badge.requirements,
-      );
+      const meetsRequirements = await this.checkBadgeRequirements(user, badge.requirements);
 
       if (meetsRequirements) {
         await this.awardBadge(user.id, badge.id);
@@ -108,10 +105,7 @@ export class ReputationService {
     }
   }
 
-  private async checkBadgeRequirements(
-    user: User,
-    requirements: any,
-  ): Promise<boolean> {
+  private async checkBadgeRequirements(user: User, requirements: any): Promise<boolean> {
     switch (requirements.type) {
       case 'reputation':
         return user.reputationScore >= requirements.value;

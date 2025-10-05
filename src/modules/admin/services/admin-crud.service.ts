@@ -1,8 +1,8 @@
 // src/modules/admin/services/admin-crud.service.ts
 
-import { 
-  Injectable, 
-  ConflictException, 
+import {
+  Injectable,
+  ConflictException,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -105,7 +105,7 @@ export class AdminCrudService {
     search?: string,
   ) {
     const skip = (page - 1) * limit;
-    
+
     const queryBuilder = this.adminRepository
       .createQueryBuilder('admin')
       .leftJoinAndSelect('admin.creator', 'creator')
@@ -124,7 +124,7 @@ export class AdminCrudService {
     if (search) {
       queryBuilder.andWhere(
         '(admin.firstName ILIKE :search OR admin.lastName ILIKE :search OR admin.email ILIKE :search)',
-        { search: `%${search}%` }
+        { search: `%${search}%` },
       );
     }
 
@@ -168,11 +168,7 @@ export class AdminCrudService {
     };
   }
 
-  async updateAdmin(
-    adminId: string,
-    updateAdminDto: UpdateAdminDto,
-    currentAdmin: Admin,
-  ) {
+  async updateAdmin(adminId: string, updateAdminDto: UpdateAdminDto, currentAdmin: Admin) {
     const admin = await this.adminRepository.findOne({ where: { id: adminId } });
 
     if (!admin) {
@@ -187,7 +183,11 @@ export class AdminCrudService {
     }
 
     // Prevent self-demotion
-    if (adminId === currentAdmin.id && updateAdminDto.role && updateAdminDto.role !== currentAdmin.role) {
+    if (
+      adminId === currentAdmin.id &&
+      updateAdminDto.role &&
+      updateAdminDto.role !== currentAdmin.role
+    ) {
       throw new BadRequestException('Cannot change your own role');
     }
 
@@ -240,50 +240,51 @@ export class AdminCrudService {
   }
 
   async restoreAdmin(adminId: string, currentAdmin: Admin) {
-  if (currentAdmin.role !== AdminRole.SUPER_ADMIN) {
-    throw new ForbiddenException('Only super admins can restore admins');
+    if (currentAdmin.role !== AdminRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super admins can restore admins');
+    }
+
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+      withDeleted: true,
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Admin not found');
+    }
+
+    if (!admin.deletedAt) {
+      throw new BadRequestException('Admin is not deleted');
+    }
+
+    // Use TypeORM's restore method
+    await this.adminRepository.restore(adminId);
+
+    // Fetch the restored admin
+    const restoredAdmin = await this.adminRepository.findOne({
+      where: { id: adminId },
+    });
+
+    if (!restoredAdmin) {
+      throw new NotFoundException('Failed to restore admin');
+    }
+
+    restoredAdmin.deletedBy = null;
+    restoredAdmin.isActive = true;
+    restoredAdmin.lastModifiedBy = currentAdmin.id;
+
+    await this.adminRepository.save(restoredAdmin);
+
+    return {
+      success: true,
+      message: 'Admin restored successfully',
+      data: { admin: this.sanitizeAdmin(restoredAdmin) },
+    };
   }
-
-  const admin = await this.adminRepository.findOne({
-    where: { id: adminId },
-    withDeleted: true,
-  });
-
-  if (!admin) {
-    throw new NotFoundException('Admin not found');
-  }
-
-  if (!admin.deletedAt) {
-    throw new BadRequestException('Admin is not deleted');
-  }
-
-  // Use TypeORM's restore method
-  await this.adminRepository.restore(adminId);
-
-  // Fetch the restored admin
-  const restoredAdmin = await this.adminRepository.findOne({
-    where: { id: adminId },
-  });
-
-  if (!restoredAdmin) {
-    throw new NotFoundException('Failed to restore admin');
-  }
-
-  restoredAdmin.deletedBy =null;
-  restoredAdmin.isActive = true;
-  restoredAdmin.lastModifiedBy = currentAdmin.id;
-  
-  await this.adminRepository.save(restoredAdmin);
-
-  return {
-    success: true,
-    message: 'Admin restored successfully',
-    data: { admin: this.sanitizeAdmin(restoredAdmin) },
-  };
-}
 
   private sanitizeAdmin(admin: Admin) {
-    const { passwordHash, totpSecret, totpBackupCodes, inviteToken, resetToken, ...sanitized } = admin;
+    const { passwordHash, totpSecret, totpBackupCodes, inviteToken, resetToken, ...sanitized } =
+      admin;
     return sanitized;
   }
 }

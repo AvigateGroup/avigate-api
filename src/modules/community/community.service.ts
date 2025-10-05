@@ -43,12 +43,7 @@ export class CommunityService {
     };
   }
 
-  async getPosts(
-    postType?: string,
-    locationId?: string,
-    page: number = 1,
-    limit: number = 20,
-  ) {
+  async getPosts(postType?: string, locationId?: string, page: number = 1, limit: number = 20) {
     const where: any = { isActive: true };
     if (postType) where.postType = postType;
     if (locationId) where.locationId = locationId;
@@ -74,10 +69,7 @@ export class CommunityService {
     };
   }
 
-  async createDirectionShare(
-    createDirectionShareDto: CreateDirectionShareDto,
-    userId: string,
-  ) {
+  async createDirectionShare(createDirectionShareDto: CreateDirectionShareDto, userId: string) {
     const shareToken = this.generateShareToken();
 
     const directionShare = this.directionShareRepository.create({
@@ -128,27 +120,24 @@ export class CommunityService {
     };
   }
 
-async submitContribution(contributionData: CreateContributionDto, userId: string) {
-  const contribution = this.contributionRepository.create({
-    ...contributionData,
-    contributorId: userId,
-    status: ContributionStatus.PENDING,
-  });
+  async submitContribution(contributionData: CreateContributionDto, userId: string) {
+    const contribution = this.contributionRepository.create({
+      ...contributionData,
+      contributorId: userId,
+      status: ContributionStatus.PENDING,
+    });
 
-  const savedContribution = await this.contributionRepository.save(contribution);
+    const savedContribution = await this.contributionRepository.save(contribution);
 
-  // TypeScript now knows savedContribution is a RouteContribution with id
-  await this.reputationService.awardRouteContributionPoints(
-    userId,
-    savedContribution.id,
-  );
+    // TypeScript now knows savedContribution is a RouteContribution with id
+    await this.reputationService.awardRouteContributionPoints(userId, savedContribution.id);
 
-  return {
-    success: true,
-    message: 'Contribution submitted. You earned 15 reputation points!',
-    data: { contribution: savedContribution },
-  };
-}
+    return {
+      success: true,
+      message: 'Contribution submitted. You earned 15 reputation points!',
+      data: { contribution: savedContribution },
+    };
+  }
 
   async getContributions(status?: ContributionStatus, page: number = 1, limit: number = 20) {
     const where: any = {};

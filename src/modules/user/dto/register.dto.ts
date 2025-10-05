@@ -1,5 +1,13 @@
 // src/modules/user/dto/register.dto.ts
-import { IsEmail, IsString, MinLength, MaxLength, IsEnum, Matches, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  MaxLength,
+  IsEnum,
+  Matches,
+  IsOptional,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserSex } from '../entities/user.entity';
 

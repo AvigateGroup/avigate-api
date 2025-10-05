@@ -8,10 +8,7 @@ import { RouteStep } from './entities/route-step.entity';
 import { LocationModule } from '../location/location.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Route, RouteStep]),
-    LocationModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Route, RouteStep]), LocationModule],
   controllers: [RouteController],
   providers: [RouteService],
   exports: [RouteService],

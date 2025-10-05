@@ -13,13 +13,9 @@ export class OtpService {
     private otpRepository: Repository<UserOTP>,
   ) {}
 
-  async generateAndSaveOTP(
-    userId: string,
-    otpType: OTPType,
-    ipAddress?: string,
-  ): Promise<string> {
+  async generateAndSaveOTP(userId: string, otpType: OTPType, ipAddress?: string): Promise<string> {
     const otpCode = this.generateOTP();
-    
+
     await this.otpRepository.save({
       userId,
       otpCode,

@@ -1,7 +1,7 @@
 // src/modules/admin/services/admin-status.service.ts
 
-import { 
-  Injectable, 
+import {
+  Injectable,
   NotFoundException,
   ForbiddenException,
   BadRequestException,
@@ -17,11 +17,7 @@ export class AdminStatusService {
     private adminRepository: Repository<Admin>,
   ) {}
 
-  async toggleAdminStatus(
-    adminId: string,
-    isActive: boolean,
-    currentAdmin: Admin,
-  ) {
+  async toggleAdminStatus(adminId: string, isActive: boolean, currentAdmin: Admin) {
     if (currentAdmin.role !== AdminRole.SUPER_ADMIN) {
       throw new ForbiddenException('Only super admins can change admin status');
     }
@@ -41,15 +37,15 @@ export class AdminStatusService {
     await this.adminRepository.save(admin);
 
     // Use the correct property names from the Admin entity
-    const { 
-      passwordHash, 
-      totpSecret, 
-      totpBackupCodes, 
+    const {
+      passwordHash,
+      totpSecret,
+      totpBackupCodes,
       inviteToken,
-      resetToken, 
+      resetToken,
       refreshToken,
       passwordHistory,
-      ...sanitizedAdmin 
+      ...sanitizedAdmin
     } = admin;
 
     return {

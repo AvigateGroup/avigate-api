@@ -42,12 +42,12 @@ import databaseConfig from './config/database.config';
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ([
+      useFactory: (configService: ConfigService) => [
         {
           ttl: configService.get('RATE_LIMIT_TTL') || 60,
           limit: configService.get('RATE_LIMIT_MAX') || 100,
         },
-      ]),
+      ],
       inject: [ConfigService],
     }),
     UserModule,

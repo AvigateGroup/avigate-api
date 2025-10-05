@@ -7,10 +7,7 @@ import { NotificationsController } from './notifications.controller';
 import { UserDevice } from '../user/entities/user-device.entity';
 
 @Module({
-  imports: [
-    ConfigModule,
-    TypeOrmModule.forFeature([UserDevice]),
-  ],
+  imports: [ConfigModule, TypeOrmModule.forFeature([UserDevice])],
   controllers: [NotificationsController],
   providers: [NotificationsService],
   exports: [NotificationsService],

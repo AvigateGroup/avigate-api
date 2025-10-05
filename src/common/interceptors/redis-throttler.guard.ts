@@ -12,15 +12,11 @@ export class RedisThrottlerGuard extends ThrottlerGuard {
     super(...args);
   }
 
-  async handleRequest(
-    context: any,
-    limit: number,
-    ttl: number,
-  ): Promise<boolean> {
+  async handleRequest(context: any, limit: number, ttl: number): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const key = this.generateKey(request);
 
-    const current = await this.cacheService.get<number>(key) || 0;
+    const current = (await this.cacheService.get<number>(key)) || 0;
 
     if (current >= limit) {
       throw new Error('Too many requests');

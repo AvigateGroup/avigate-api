@@ -36,9 +36,7 @@ export class HealthController {
   @HealthCheck()
   @ApiOperation({ summary: 'Readiness check' })
   ready() {
-    return this.health.check([
-      () => this.db.pingCheck('database'),
-    ]);
+    return this.health.check([() => this.db.pingCheck('database')]);
   }
 
   @Get('live')

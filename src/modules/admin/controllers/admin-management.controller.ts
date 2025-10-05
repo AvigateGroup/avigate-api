@@ -42,10 +42,7 @@ export class AdminManagementController {
   @Post('create')
   @RequirePermissions('admins.create')
   @ApiOperation({ summary: 'Create new admin (Super Admin only)' })
-  async createAdmin(
-    @Body() createAdminDto: CreateAdminDto,
-    @CurrentAdmin() currentAdmin: Admin,
-  ) {
+  async createAdmin(@Body() createAdminDto: CreateAdminDto, @CurrentAdmin() currentAdmin: Admin) {
     return this.adminCrudService.createAdmin(createAdminDto, currentAdmin);
   }
 
@@ -65,13 +62,7 @@ export class AdminManagementController {
     @Query('search') search?: string,
     @CurrentAdmin() currentAdmin?: Admin,
   ) {
-    return this.adminCrudService.getAdmins(
-      Number(page),
-      Number(limit),
-      role,
-      status,
-      search,
-    );
+    return this.adminCrudService.getAdmins(Number(page), Number(limit), role, status, search);
   }
 
   @Get('roles/permissions')
@@ -96,31 +87,21 @@ export class AdminManagementController {
     @Body() updateAdminDto: UpdateAdminDto,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminCrudService.updateAdmin(
-      adminId,
-      updateAdminDto,
-      currentAdmin,
-    );
+    return this.adminCrudService.updateAdmin(adminId, updateAdminDto, currentAdmin);
   }
 
   @Delete(':adminId')
   @RequirePermissions('admins.delete')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete admin (soft delete)' })
-  async deleteAdmin(
-    @Param('adminId') adminId: string,
-    @CurrentAdmin() currentAdmin: Admin,
-  ) {
+  async deleteAdmin(@Param('adminId') adminId: string, @CurrentAdmin() currentAdmin: Admin) {
     return this.adminCrudService.deleteAdmin(adminId, currentAdmin);
   }
 
   @Put(':adminId/restore')
   @RequirePermissions('admins.edit')
   @ApiOperation({ summary: 'Restore deleted admin' })
-  async restoreAdmin(
-    @Param('adminId') adminId: string,
-    @CurrentAdmin() currentAdmin: Admin,
-  ) {
+  async restoreAdmin(@Param('adminId') adminId: string, @CurrentAdmin() currentAdmin: Admin) {
     return this.adminCrudService.restoreAdmin(adminId, currentAdmin);
   }
 
@@ -132,11 +113,7 @@ export class AdminManagementController {
     @Body('isActive') isActive: boolean,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminStatusService.toggleAdminStatus(
-      adminId,
-      isActive,
-      currentAdmin,
-    );
+    return this.adminStatusService.toggleAdminStatus(adminId, isActive, currentAdmin);
   }
 
   @Post(':adminId/reset-password')
@@ -147,11 +124,7 @@ export class AdminManagementController {
     @Body('sendEmail') sendEmail: boolean = true,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminPasswordService.resetAdminPassword(
-      adminId,
-      sendEmail,
-      currentAdmin,
-    );
+    return this.adminPasswordService.resetAdminPassword(adminId, sendEmail, currentAdmin);
   }
 
   @Get(':adminId/sessions')

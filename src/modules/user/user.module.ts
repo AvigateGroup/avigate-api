@@ -9,10 +9,7 @@ import { UserOTP } from './entities/user-otp.entity';
 import { EmailModule } from '../email/email.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User, UserDevice, UserOTP]),
-    EmailModule,
-  ],
+  imports: [TypeOrmModule.forFeature([User, UserDevice, UserOTP]), EmailModule],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

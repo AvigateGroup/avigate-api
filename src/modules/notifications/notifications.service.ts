@@ -2,7 +2,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In  } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import * as admin from 'firebase-admin';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { logger } from '@/utils/logger.util';
@@ -42,9 +42,7 @@ export class NotificationsService implements OnModuleInit {
       select: ['fcmToken'],
     });
 
-    const tokens = devices
-      .map(d => d.fcmToken)
-      .filter(token => token !== null);
+    const tokens = devices.map(d => d.fcmToken).filter(token => token !== null);
 
     if (tokens.length === 0) {
       logger.warn(`No active devices found for user ${userId}`);
@@ -54,10 +52,7 @@ export class NotificationsService implements OnModuleInit {
     await this.sendToMultipleDevices(tokens, notification);
   }
 
-  async sendToMultipleDevices(
-    tokens: string[],
-    notification: NotificationPayload,
-  ): Promise<void> {
+  async sendToMultipleDevices(tokens: string[], notification: NotificationPayload): Promise<void> {
     if (tokens.length === 0) return;
 
     const message: admin.messaging.MulticastMessage = {
@@ -133,10 +128,7 @@ export class NotificationsService implements OnModuleInit {
       logger.info(`Notifications sent: ${successCount} successful, ${failureCount} failed`);
 
       if (invalidTokens.length > 0) {
-        await this.deviceRepository.update(
-          { fcmToken: In(invalidTokens) },
-          { fcmToken: null },
-        );
+        await this.deviceRepository.update({ fcmToken: In(invalidTokens) }, { fcmToken: null });
         logger.info(`Removed ${invalidTokens.length} invalid FCM tokens`);
       }
     } catch (error) {

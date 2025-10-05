@@ -7,14 +7,12 @@ import { AdminSessionManagerService } from './admin-session-manager.service';
 export class AdminSessionCleanupService {
   private readonly logger = new Logger(AdminSessionCleanupService.name);
 
-  constructor(
-    private adminSessionManager: AdminSessionManagerService,
-  ) {}
+  constructor(private adminSessionManager: AdminSessionManagerService) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleSessionCleanup() {
     this.logger.log('Starting expired admin session cleanup...');
-    
+
     try {
       const deletedCount = await this.adminSessionManager.cleanupExpiredSessions();
       this.logger.log(`Cleaned up ${deletedCount} expired admin sessions`);

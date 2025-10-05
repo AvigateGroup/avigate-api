@@ -23,17 +23,8 @@ export class AdminPermissionService {
 
   getRolePermissions(role: AdminRole): string[] {
     const permissions = {
-      [AdminRole.ANALYST]: [
-        'users.view',
-        'analytics.view',
-        'reports.generate',
-      ],
-      [AdminRole.MODERATOR]: [
-        'users.view',
-        'users.edit',
-        'content.moderate',
-        'analytics.view',
-      ],
+      [AdminRole.ANALYST]: ['users.view', 'analytics.view', 'reports.generate'],
+      [AdminRole.MODERATOR]: ['users.view', 'users.edit', 'content.moderate', 'analytics.view'],
       [AdminRole.ADMIN]: [
         'users.view',
         'users.create',
@@ -67,4 +58,3 @@ export class AdminPermissionService {
     ];
   }
 }
-

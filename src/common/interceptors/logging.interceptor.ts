@@ -1,10 +1,5 @@
 // src/common/interceptors/logging.interceptor.ts (continued)
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { logger } from '@/utils/logger.util';
@@ -46,13 +41,13 @@ export class LoggingInterceptor implements NestInterceptor {
     if (!body) return body;
     const sanitized = { ...body };
     const sensitiveFields = ['password', 'token', 'secret', 'fcmToken'];
-    
+
     sensitiveFields.forEach(field => {
       if (sanitized[field]) {
         sanitized[field] = '***REDACTED***';
       }
     });
-    
+
     return sanitized;
   }
 }

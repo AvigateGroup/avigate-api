@@ -1,11 +1,5 @@
 // src/modules/analytics/entities/search-log.entity.ts
-import {
-  Entity,
-  Column,
-  PrimaryGeneratedColumn,
-  CreateDateColumn,
-  Index,
-} from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('search_logs')
 export class SearchLog {

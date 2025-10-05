@@ -17,13 +17,10 @@ export class FareService {
     private fareHistoryRepository: Repository<FareHistory>,
     @InjectRepository(FareRule)
     private fareRuleRepository: Repository<FareRule>,
-    private reputationService: ReputationService, 
+    private reputationService: ReputationService,
   ) {}
 
-  async submitFareFeedback(
-    submitFareFeedbackDto: SubmitFareFeedbackDto,
-    userId: string,
-  ) {
+  async submitFareFeedback(submitFareFeedbackDto: SubmitFareFeedbackDto, userId: string) {
     const feedback = this.fareFeedbackRepository.create({
       ...submitFareFeedbackDto,
       userId,
@@ -33,10 +30,7 @@ export class FareService {
     await this.fareFeedbackRepository.save(feedback);
 
     // Award reputation points for contribution
-    await this.reputationService.awardFareFeedbackPoints(
-      userId,
-      feedback.id,
-    );
+    await this.reputationService.awardFareFeedbackPoints(userId, feedback.id);
 
     return {
       success: true,

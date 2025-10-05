@@ -1,9 +1,6 @@
 // src/modules/admin/services/admin-password.service.ts
 
-import { 
-  Injectable, 
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
@@ -19,11 +16,7 @@ export class AdminPasswordService {
     private adminEmailService: AdminEmailService,
   ) {}
 
-  async resetAdminPassword(
-    adminId: string,
-    sendEmail: boolean,
-    currentAdmin: Admin,
-  ) {
+  async resetAdminPassword(adminId: string, sendEmail: boolean, currentAdmin: Admin) {
     const admin = await this.adminRepository.findOne({ where: { id: adminId } });
 
     if (!admin) {
@@ -32,7 +25,7 @@ export class AdminPasswordService {
 
     const newPassword = this.generateSecurePassword(16);
     const passwordHash = await this.hashPassword(newPassword);
-    
+
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date();
     resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
@@ -42,7 +35,7 @@ export class AdminPasswordService {
     admin.resetToken = resetToken;
     admin.resetTokenExpiry = resetTokenExpiry;
     admin.lastModifiedBy = currentAdmin.id;
-    
+
     await this.adminRepository.save(admin);
 
     if (sendEmail) {
@@ -68,11 +61,11 @@ export class AdminPasswordService {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
     let password = '';
     const randomBytes = crypto.randomBytes(length);
-    
+
     for (let i = 0; i < length; i++) {
       password += chars[randomBytes[i] % chars.length];
     }
-    
+
     return password;
   }
 

@@ -130,10 +130,7 @@ export class UserManagementController {
   @Delete(':userId')
   @RequirePermissions('users.delete')
   @ApiOperation({ summary: 'Delete user account' })
-  async deleteUserAccount(
-    @Param('userId') userId: string,
-    @Body('reason') reason: string,
-  ) {
+  async deleteUserAccount(@Param('userId') userId: string, @Body('reason') reason: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
     if (!user) {

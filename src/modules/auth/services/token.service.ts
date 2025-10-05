@@ -21,7 +21,7 @@ export class TokenService {
 
   generateTokens(user: User) {
     const payload = { userId: user.id, email: user.email };
-    
+
     return {
       accessToken: this.jwtService.sign(payload),
       refreshToken: this.jwtService.sign(payload, {
@@ -102,20 +102,20 @@ export class TokenService {
   private async clearUserRefreshToken(userId: string) {
     await this.userRepository.update(
       { id: userId },
-      { 
+      {
         refreshToken: null,
         refreshTokenExpiresAt: null,
-      }
+      },
     );
   }
 
   private async deactivateDevice(userId: string, fcmToken: string) {
     await this.deviceRepository.update(
-      { 
+      {
         userId,
         fcmToken,
       },
-      { isActive: false }
+      { isActive: false },
     );
   }
 }

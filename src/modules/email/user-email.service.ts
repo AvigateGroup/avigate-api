@@ -210,14 +210,23 @@ export class UserEmailService {
         },
       ],
       subject: 'Verify Your Email - Avigate',
-      htmlbody: this.generateBaseEmailHTML('Verify Your Email', content, 'This is a security verification from Avigate.'),
+      htmlbody: this.generateBaseEmailHTML(
+        'Verify Your Email',
+        content,
+        'This is a security verification from Avigate.',
+      ),
     };
 
     await this.sendZeptoMailEmail(emailData, 'email_verification');
     logger.info(`Email verification OTP sent to ${email}`);
   }
 
-  async sendLoginOTP(email: string, firstName: string, otpCode: string, deviceInfo?: string): Promise<void> {
+  async sendLoginOTP(
+    email: string,
+    firstName: string,
+    otpCode: string,
+    deviceInfo?: string,
+  ): Promise<void> {
     logger.info('Preparing login OTP email', { email, firstName });
 
     const content = `
@@ -234,11 +243,15 @@ export class UserEmailService {
         <p style="margin: 8px 0 0 0; font-size: 14px; color: #6c757d;">Expires in 5 minutes</p>
       </div>
       
-      ${deviceInfo ? `
+      ${
+        deviceInfo
+          ? `
         <div style="background-color: #f8f9fa; border-radius: 4px; padding: 16px; margin: 16px 0;">
           <p style="margin: 0; font-size: 14px; color: #6c757d;"><strong>Device:</strong> ${deviceInfo}</p>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
       
       <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5; color: #6c757d;">
         If you didn't request this code, please secure your account immediately.
@@ -259,7 +272,11 @@ export class UserEmailService {
         },
       ],
       subject: 'Your Avigate Login Code',
-      htmlbody: this.generateBaseEmailHTML('Login Verification', content, 'This is a security verification from Avigate.'),
+      htmlbody: this.generateBaseEmailHTML(
+        'Login Verification',
+        content,
+        'This is a security verification from Avigate.',
+      ),
     };
 
     await this.sendZeptoMailEmail(emailData, 'login_otp');
@@ -313,14 +330,22 @@ export class UserEmailService {
         },
       ],
       subject: 'New Device Login - Avigate',
-      htmlbody: this.generateBaseEmailHTML('New Device Login', content, 'This is a security alert from Avigate.'),
+      htmlbody: this.generateBaseEmailHTML(
+        'New Device Login',
+        content,
+        'This is a security alert from Avigate.',
+      ),
     };
 
     await this.sendZeptoMailEmail(emailData, 'new_device_login');
     logger.info(`New device login notification sent to ${email}`);
   }
 
-  async sendPasswordChangeConfirmation(email: string, firstName: string, changeTime: string): Promise<void> {
+  async sendPasswordChangeConfirmation(
+    email: string,
+    firstName: string,
+    changeTime: string,
+  ): Promise<void> {
     logger.info('Preparing password change confirmation', { email, firstName });
 
     const content = `
@@ -355,14 +380,22 @@ export class UserEmailService {
         },
       ],
       subject: 'Password Changed - Avigate',
-      htmlbody: this.generateBaseEmailHTML('Password Changed', content, 'This is a security confirmation from Avigate.'),
+      htmlbody: this.generateBaseEmailHTML(
+        'Password Changed',
+        content,
+        'This is a security confirmation from Avigate.',
+      ),
     };
 
     await this.sendZeptoMailEmail(emailData, 'password_change');
     logger.info(`Password change confirmation sent to ${email}`);
   }
 
-  async sendAccountDeletionConfirmation(email: string, firstName: string, deletionTime: string): Promise<void> {
+  async sendAccountDeletionConfirmation(
+    email: string,
+    firstName: string,
+    deletionTime: string,
+  ): Promise<void> {
     logger.info('Preparing account deletion confirmation', { email, firstName });
 
     const content = `
@@ -397,7 +430,11 @@ export class UserEmailService {
         },
       ],
       subject: 'Account Deleted - Avigate',
-      htmlbody: this.generateBaseEmailHTML('Account Deleted', content, 'This is a final confirmation from Avigate.'),
+      htmlbody: this.generateBaseEmailHTML(
+        'Account Deleted',
+        content,
+        'This is a final confirmation from Avigate.',
+      ),
     };
 
     await this.sendZeptoMailEmail(emailData, 'account_deletion');

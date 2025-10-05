@@ -1,10 +1,6 @@
 // src/modules/admin/services/admin-session.service.ts
 
-import { 
-  Injectable, 
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin, AdminRole } from '../entities/admin.entity';
@@ -20,7 +16,7 @@ export class AdminSessionService {
 
   async getAdminSessions(adminId: string) {
     const admin = await this.adminRepository.findOne({ where: { id: adminId } });
-    
+
     if (!admin) {
       throw new NotFoundException('Admin not found');
     }
@@ -40,7 +36,7 @@ export class AdminSessionService {
 
     return {
       success: true,
-      data: { 
+      data: {
         sessions: formattedSessions,
         total: formattedSessions.length,
       },
@@ -49,7 +45,7 @@ export class AdminSessionService {
 
   async revokeAllSessions(adminId: string, currentAdmin: Admin) {
     const admin = await this.adminRepository.findOne({ where: { id: adminId } });
-    
+
     if (!admin) {
       throw new NotFoundException('Admin not found');
     }
@@ -68,21 +64,21 @@ export class AdminSessionService {
   }
 
   async revokeSession(sessionId: string, currentAdmin: Admin) {
-  const session = await this.adminSessionManager.getSession(sessionId);
-  
-  if (!session) {
-    throw new NotFoundException('Session not found');
+    const session = await this.adminSessionManager.getSession(sessionId);
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    if (currentAdmin.role !== AdminRole.SUPER_ADMIN && currentAdmin.id !== session.adminId) {
+      throw new ForbiddenException('Insufficient permissions to revoke this session');
+    }
+
+    await this.adminSessionManager.revokeSession(sessionId);
+
+    return {
+      success: true,
+      message: 'Session revoked successfully',
+    };
   }
-
-  if (currentAdmin.role !== AdminRole.SUPER_ADMIN && currentAdmin.id !== session.adminId) {
-    throw new ForbiddenException('Insufficient permissions to revoke this session');
-  }
-
-  await this.adminSessionManager.revokeSession(sessionId);
-
-  return {
-    success: true,
-    message: 'Session revoked successfully',
-  };
-}
 }

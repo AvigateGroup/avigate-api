@@ -22,7 +22,7 @@ export class DeviceService {
     isActive: boolean = false,
   ) {
     const deviceData = parseDeviceInfo(req, deviceInfo);
-    
+
     const device = this.deviceRepository.create({
       userId,
       fcmToken,
@@ -37,16 +37,11 @@ export class DeviceService {
     return await this.deviceRepository.save(device);
   }
 
-  async updateOrCreateDevice(
-    userId: string,
-    fcmToken: string,
-    req: Request,
-    deviceInfo?: string,
-  ) {
+  async updateOrCreateDevice(userId: string, fcmToken: string, req: Request, deviceInfo?: string) {
     const deviceData = parseDeviceInfo(req, deviceInfo);
 
     const existingDevice = await this.deviceRepository.findOne({
-      where: { 
+      where: {
         userId,
         deviceFingerprint: deviceData.fingerprint,
       },
@@ -59,11 +54,7 @@ export class DeviceService {
     }
   }
 
-  private async updateExistingDevice(
-    device: UserDevice,
-    fcmToken: string,
-    ipAddress: string,
-  ) {
+  private async updateExistingDevice(device: UserDevice, fcmToken: string, ipAddress: string) {
     device.fcmToken = fcmToken;
     device.ipAddress = ipAddress;
     device.isActive = true;
@@ -71,11 +62,7 @@ export class DeviceService {
     await this.deviceRepository.save(device);
   }
 
-  private async createNewDevice(
-    userId: string,
-    fcmToken: string,
-    deviceData: any,
-  ) {
+  private async createNewDevice(userId: string, fcmToken: string, deviceData: any) {
     const device = this.deviceRepository.create({
       userId,
       fcmToken,

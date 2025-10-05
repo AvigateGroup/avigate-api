@@ -18,10 +18,7 @@ export class RouteController {
 
   @Get('popular')
   @ApiOperation({ summary: 'Get popular routes' })
-  async getPopularRoutes(
-    @Query('city') city?: string,
-    @Query('limit') limit?: number,
-  ) {
+  async getPopularRoutes(@Query('city') city?: string, @Query('limit') limit?: number) {
     return this.routeService.getPopularRoutes(city, limit);
   }
 

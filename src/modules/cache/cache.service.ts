@@ -34,11 +34,7 @@ export class CacheService {
   }
 
   // Helper method for cache-aside pattern
-  async getOrSet<T>(
-    key: string,
-    factory: () => Promise<T>,
-    ttl?: number,
-  ): Promise<T> {
+  async getOrSet<T>(key: string, factory: () => Promise<T>, ttl?: number): Promise<T> {
     const cached = await this.get<T>(key);
     if (cached !== undefined) {
       return cached;

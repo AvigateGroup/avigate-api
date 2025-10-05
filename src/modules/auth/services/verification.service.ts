@@ -1,6 +1,5 @@
 //src/modules/auth/services/verification.service.ts
 
-
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
@@ -63,7 +62,7 @@ export class VerificationService {
 
   async resendVerification(email: string, req: Request) {
     const user = await this.userRepository.findOne({ where: { email } });
-    
+
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
@@ -110,19 +109,16 @@ export class VerificationService {
 
   private async verifyUserAndGenerateTokens(user: User) {
     user.isVerified = true;
-    
+
     const tokens = this.tokenService.generateTokens(user);
     user.refreshToken = tokens.refreshToken;
     user.refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    
+
     await this.userRepository.save(user);
   }
 
   private async activateUserDevices(userId: string) {
-    await this.deviceRepository.update(
-      { userId },
-      { isActive: true }
-    );
+    await this.deviceRepository.update({ userId }, { isActive: true });
   }
 
   private async checkRateLimit(userId: string) {

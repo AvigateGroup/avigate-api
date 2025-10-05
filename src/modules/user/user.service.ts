@@ -1,5 +1,10 @@
 // src/modules/user/user.service.ts
-import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -131,8 +136,8 @@ export class UserService {
     }
 
     // Skip password check for test accounts
-    const isTestAccount = user.isTestAccount || 
-      TEST_ACCOUNTS.hasOwnProperty(user.email.toLowerCase());
+    const isTestAccount =
+      user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(user.email.toLowerCase());
 
     if (!isTestAccount) {
       const isPasswordValid = await user.comparePassword(password);

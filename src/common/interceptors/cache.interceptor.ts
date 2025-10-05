@@ -1,10 +1,5 @@
 // src/common/interceptors/cache.interceptor.ts
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -18,23 +13,14 @@ export class CacheInterceptor implements NestInterceptor {
     private cacheService: CacheService,
   ) {}
 
-  async intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Promise<Observable<any>> {
-    const cacheKey = this.reflector.get<string>(
-      CACHE_KEY_METADATA,
-      context.getHandler(),
-    );
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+    const cacheKey = this.reflector.get<string>(CACHE_KEY_METADATA, context.getHandler());
 
     if (!cacheKey) {
       return next.handle();
     }
 
-    const ttl = this.reflector.get<number>(
-      CACHE_TTL_METADATA,
-      context.getHandler(),
-    );
+    const ttl = this.reflector.get<number>(CACHE_TTL_METADATA, context.getHandler());
 
     const request = context.switchToHttp().getRequest();
     const fullKey = `${cacheKey}:${JSON.stringify(request.params)}:${JSON.stringify(request.query)}`;
@@ -45,7 +31,7 @@ export class CacheInterceptor implements NestInterceptor {
     }
 
     return next.handle().pipe(
-      tap(async (response) => {
+      tap(async response => {
         await this.cacheService.set(fullKey, response, ttl);
       }),
     );

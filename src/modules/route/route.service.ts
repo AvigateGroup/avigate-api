@@ -83,10 +83,7 @@ export class RouteService {
       query.andWhere('startLocation.city = :city', { city });
     }
 
-    const routes = await query
-      .orderBy('route.popularityScore', 'DESC')
-      .take(limit)
-      .getMany();
+    const routes = await query.orderBy('route.popularityScore', 'DESC').take(limit).getMany();
 
     return {
       success: true,

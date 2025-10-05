@@ -58,7 +58,10 @@ export class UploadService {
     }
   }
 
-  async uploadMultipleFiles(files: Express.Multer.File[], folder: string = 'uploads'): Promise<string[]> {
+  async uploadMultipleFiles(
+    files: Express.Multer.File[],
+    folder: string = 'uploads',
+  ): Promise<string[]> {
     const uploadPromises = files.map(file => this.uploadFile(file, folder));
     return Promise.all(uploadPromises);
   }
@@ -81,12 +84,7 @@ export class UploadService {
   }
 
   private validateFile(file: Express.Multer.File): void {
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'image/webp',
-    ];
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
       throw new BadRequestException('Invalid file type. Only images are allowed.');

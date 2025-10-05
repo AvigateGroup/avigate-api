@@ -56,7 +56,16 @@ export class LoginService {
   private async findAndValidateUser(email: string, password: string): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { email },
-      select: ['id', 'email', 'passwordHash', 'firstName', 'lastName', 'isVerified', 'isActive', 'isTestAccount'],
+      select: [
+        'id',
+        'email',
+        'passwordHash',
+        'firstName',
+        'lastName',
+        'isVerified',
+        'isActive',
+        'isTestAccount',
+      ],
     });
 
     if (!user) {
@@ -95,7 +104,10 @@ export class LoginService {
     };
   }
 
-  private async updateUserLoginInfo(user: User, tokens: { accessToken: string; refreshToken: string }) {
+  private async updateUserLoginInfo(
+    user: User,
+    tokens: { accessToken: string; refreshToken: string },
+  ) {
     user.refreshToken = tokens.refreshToken;
     user.refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     user.lastLoginAt = new Date();

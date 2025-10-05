@@ -9,9 +9,7 @@ import { FareRule } from './entities/fare-rule.entity';
 import { ReputationModule } from '../reputation/reputation.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([FareFeedback, FareHistory, FareRule]),
-  ReputationModule,
-],
+  imports: [TypeOrmModule.forFeature([FareFeedback, FareHistory, FareRule]), ReputationModule],
   controllers: [FareController],
   providers: [FareService],
   exports: [FareService],

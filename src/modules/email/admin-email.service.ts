@@ -38,7 +38,10 @@ export class AdminEmailService {
     });
     this.fromEmail = this.configService.get<string>('ADMIN_FROM_EMAIL', 'notifications@avigate.co');
     this.fromName = 'Avigate Admin';
-    this.adminFrontendUrl = this.configService.get<string>('ADMIN_FRONTEND_URL', 'https://admin.avigate.co');
+    this.adminFrontendUrl = this.configService.get<string>(
+      'ADMIN_FRONTEND_URL',
+      'https://admin.avigate.co',
+    );
     this.logoUrl = 'https://avigate.co/images/avigate-logo-email.png';
   }
 
@@ -83,7 +86,12 @@ export class AdminEmailService {
     }
   }
 
-  private generateInvitationHTML(firstName: string, email: string, inviteUrl: string, tempPassword: string): string {
+  private generateInvitationHTML(
+    firstName: string,
+    email: string,
+    inviteUrl: string,
+    tempPassword: string,
+  ): string {
     return `
       <!DOCTYPE html>
       <html>
@@ -218,7 +226,11 @@ export class AdminEmailService {
     logger.info(`Admin invitation email sent to ${email}`);
   }
 
-  async sendPasswordResetEmail(email: string, firstName: string, resetToken: string): Promise<void> {
+  async sendPasswordResetEmail(
+    email: string,
+    firstName: string,
+    resetToken: string,
+  ): Promise<void> {
     const resetUrl = `${this.adminFrontendUrl}/admin/reset-password?token=${resetToken}`;
 
     logger.info('Preparing password reset email', { email, firstName });

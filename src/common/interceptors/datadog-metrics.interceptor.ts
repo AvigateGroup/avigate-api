@@ -22,7 +22,7 @@ export class DatadogMetricsInterceptor implements NestInterceptor {
       tap({
         next: () => {
           const duration = Date.now() - start;
-          
+
           // Custom metrics
           tracer.dogstatsd.increment('api.request.count', 1, [
             `method:${request.method}`,
@@ -35,7 +35,7 @@ export class DatadogMetricsInterceptor implements NestInterceptor {
             `endpoint:${request.route?.path || request.url}`,
           ]);
         },
-        error: (error) => {
+        error: error => {
           tracer.dogstatsd.increment('api.request.count', 1, [
             `method:${request.method}`,
             `endpoint:${request.route?.path || request.url}`,

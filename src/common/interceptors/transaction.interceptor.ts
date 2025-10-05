@@ -13,10 +13,7 @@ export class TransactionInterceptor implements NestInterceptor {
   ) {}
 
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
-    const isTransactional = this.reflector.get<boolean>(
-      TRANSACTIONAL_KEY,
-      context.getHandler(),
-    );
+    const isTransactional = this.reflector.get<boolean>(TRANSACTIONAL_KEY, context.getHandler());
 
     if (!isTransactional) {
       return next.handle();

@@ -14,10 +14,7 @@ export class LocationController {
 
   @Get('search')
   @ApiOperation({ summary: 'Search locations' })
-  async searchLocations(
-    @Query('q') query: string,
-    @Query('city') city?: string,
-  ) {
+  async searchLocations(@Query('q') query: string, @Query('city') city?: string) {
     return this.locationService.searchLocations(query, city);
   }
 
@@ -33,10 +30,7 @@ export class LocationController {
 
   @Get('popular')
   @ApiOperation({ summary: 'Get popular locations' })
-  async getPopularLocations(
-    @Query('city') city?: string,
-    @Query('limit') limit?: number,
-  ) {
+  async getPopularLocations(@Query('city') city?: string, @Query('limit') limit?: number) {
     return this.locationService.getPopularLocations(city, limit);
   }
 
@@ -50,10 +44,7 @@ export class LocationController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create new location' })
-  async createLocation(
-    @Body() createLocationDto: CreateLocationDto,
-    @CurrentUser() user: User,
-  ) {
+  async createLocation(@Body() createLocationDto: CreateLocationDto, @CurrentUser() user: User) {
     return this.locationService.createLocation(createLocationDto, user.id);
   }
 }

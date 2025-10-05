@@ -55,7 +55,7 @@ export class LocationService {
       .where('location.isActive = :isActive', { isActive: true })
       .andWhere(
         `(6371 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude)))) < :radius`,
-        { lat, lng, radius: radiusKm }
+        { lat, lng, radius: radiusKm },
       )
       .orderBy('location.popularityScore', 'DESC')
       .limit(50)

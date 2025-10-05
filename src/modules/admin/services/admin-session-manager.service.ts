@@ -82,7 +82,9 @@ export class AdminSessionManagerService {
   /**
    * Validate and refresh a session
    */
-  async refreshSession(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
+  async refreshSession(
+    refreshToken: string,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const session = await this.sessionRepository.findOne({
       where: { refreshToken, isActive: true },
       relations: ['admin'],
@@ -186,10 +188,7 @@ export class AdminSessionManagerService {
    * Revoke a specific session
    */
   async revokeSession(sessionId: string): Promise<void> {
-    await this.sessionRepository.update(
-      { id: sessionId },
-      { isActive: false },
-    );
+    await this.sessionRepository.update({ id: sessionId }, { isActive: false });
   }
 
   /**
