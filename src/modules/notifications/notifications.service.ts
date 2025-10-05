@@ -2,7 +2,7 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In  } from 'typeorm';
 import * as admin from 'firebase-admin';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { logger } from '@/utils/logger.util';
@@ -180,8 +180,4 @@ export class NotificationsService implements OnModuleInit {
       logger.error(`Unsubscribe from topic error for ${topic}:`, error);
     }
   }
-}
-
-function In(invalidTokens: string[]): string | import("typeorm").FindOperator<string> | undefined {
-    throw new Error('Function not implemented.');
 }

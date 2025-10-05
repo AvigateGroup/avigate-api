@@ -36,7 +36,7 @@ export class UserDevice {
   userId: string;
 
   @Column({ type: 'text', nullable: true })
-  fcmToken: string;
+  fcmToken: string | null;
 
   @Column()
   deviceFingerprint: string;
