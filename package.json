@@ -23,7 +23,8 @@
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate src/migrations/InitialMigration -d ormconfig.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d ormconfig.ts",
-    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts"
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts",
+    "seed": "ts-node -r tsconfig-paths/register src/scripts/seed-nigerian-transport.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
