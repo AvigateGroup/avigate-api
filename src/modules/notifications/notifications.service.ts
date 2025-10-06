@@ -1,9 +1,9 @@
-// src/modules/notifications/notifications.service.ts
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as admin from 'firebase-admin';
+import * as path from 'path';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { logger } from '@/utils/logger.util';
 
@@ -23,19 +23,30 @@ export class NotificationsService implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    const serviceAccount = {
-      projectId: this.configService.get('FIREBASE_PROJECT_ID'),
-      privateKey: this.configService.get('FIREBASE_PRIVATE_KEY')?.replace(/\\n/g, '\n'),
-      clientEmail: this.configService.get('FIREBASE_CLIENT_EMAIL'),
-    };
-
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as any),
-      });
+    try {
+      if (!admin.apps.length) {
+        const serviceAccountPath = this.configService.get('FIREBASE_SERVICE_ACCOUNT_PATH');
+        
+        if (serviceAccountPath) {
+          // Resolve the absolute path
+          const absolutePath = path.resolve(process.cwd(), serviceAccountPath);
+          const serviceAccount = require(absolutePath);
+          
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+          });
+          
+          logger.info('Firebase initialized successfully with service account file');
+        } else {
+          logger.warn('Firebase service account path not configured. Push notifications will be disabled.');
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to initialize Firebase:', error);
+      logger.warn('Push notifications will be disabled');
     }
   }
-
+  
   async sendToUser(userId: string, notification: NotificationPayload): Promise<void> {
     const devices = await this.deviceRepository.find({
       where: { userId, isActive: true },
