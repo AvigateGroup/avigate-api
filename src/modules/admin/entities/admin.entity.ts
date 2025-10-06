@@ -100,13 +100,13 @@ export class Admin {
   inviteTokenExpiry: Date;
 
   @Column({ nullable: true, select: false })
-  totpSecret: string;
+  totpSecret: string | null;
 
   @Column({ default: false })
   totpEnabled: boolean;
 
   @Column({ type: 'json', nullable: true, select: false })
-  totpBackupCodes: string[];
+  totpBackupCodes: string[] | null;
 
   @Column('uuid', { nullable: true })
   createdBy: string;

@@ -40,4 +40,42 @@ export class AdminAuthController {
   async getProfile(@CurrentAdmin() admin: Admin) {
     return { success: true, data: { admin } };
   }
+
+    @Post('totp/setup')
+    @UseGuards(AdminAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Generate TOTP secret for 2FA setup' })
+    async setupTOTP(@CurrentAdmin() admin: Admin) {
+    return this.adminAuthService.setupTOTP(admin);
+    }
+
+    @Post('totp/verify')
+    @UseGuards(AdminAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Verify and enable TOTP 2FA' })
+    async verifyTOTP(
+    @CurrentAdmin() admin: Admin,
+    @Body('totpToken') totpToken: string,
+    ) {
+    return this.adminAuthService.verifyAndEnableTOTP(admin, totpToken);
+    }
+
+    @Post('totp/disable')
+    @UseGuards(AdminAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Disable TOTP 2FA' })
+    async disableTOTP(
+    @CurrentAdmin() admin: Admin,
+    @Body('password') password: string,
+    ) {
+    return this.adminAuthService.disableTOTP(admin, password);
+    }
+
+    @Post('totp/backup-codes/regenerate')
+    @UseGuards(AdminAuthGuard)
+    @ApiBearerAuth()
+    @ApiOperation({ summary: 'Regenerate TOTP backup codes' })
+    async regenerateBackupCodes(@CurrentAdmin() admin: Admin) {
+    return this.adminAuthService.regenerateBackupCodes(admin);
+    }
 }

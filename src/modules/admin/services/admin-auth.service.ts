@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
 import { AdminLoginDto } from '../dto/admin-login.dto';
 import { Request } from 'express';
+import * as bcrypt from 'bcrypt';
 import { logger } from '@/utils/logger.util';
 
 const ALLOWED_EMAIL_DOMAIN = '@avigate.co';
@@ -20,51 +21,61 @@ export class AdminAuthService {
     private configService: ConfigService,
   ) {}
 
-  async login(loginDto: AdminLoginDto, req: Request) {
+    async login(loginDto: AdminLoginDto, req: Request) {
     const { email, password, totpToken, backupCode } = loginDto;
 
     // Validate email domain
     if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
-      throw new UnauthorizedException('Access restricted to authorized domains');
+        throw new UnauthorizedException('Access restricted to authorized domains');
     }
 
     // Find admin
     const admin = await this.adminRepository
-      .createQueryBuilder('admin')
-      .addSelect('admin.passwordHash')
-      .where('admin.email = :email', { email })
-      .getOne();
+        .createQueryBuilder('admin')
+        .addSelect(['admin.passwordHash', 'admin.totpSecret', 'admin.totpBackupCodes'])  // <-- Add totpBackupCodes here
+        .where('admin.email = :email', { email })
+        .getOne();
 
     if (!admin) {
-      throw new UnauthorizedException('Invalid credentials');
+        throw new UnauthorizedException('Invalid credentials');
     }
 
     // Check if locked
     if (admin.lockedUntil && admin.lockedUntil > new Date()) {
-      throw new UnauthorizedException('Account is temporarily locked');
+        throw new UnauthorizedException('Account is temporarily locked');
     }
 
     // Verify password
     const isPasswordValid = await admin.comparePassword(password);
     if (!isPasswordValid) {
-      await this.incrementFailedAttempts(admin);
-      throw new UnauthorizedException('Invalid credentials');
+        await this.incrementFailedAttempts(admin);
+        throw new UnauthorizedException('Invalid credentials');
     }
 
     // Check TOTP
     if (admin.totpEnabled) {
-      let totpValid = false;
+        let totpValid = false;
 
-      if (totpToken) {
+        if (totpToken) {
         totpValid = admin.verifyTOTP(totpToken);
-      } else if (backupCode) {
-        // Implement backup code verification
-        totpValid = false; // Placeholder
-      }
+        } else if (backupCode && admin.totpBackupCodes) {
+        // Verify backup code
+        for (const hashedCode of admin.totpBackupCodes) {
+            if (await bcrypt.compare(backupCode, hashedCode)) {
+            totpValid = true;
+            // Remove used backup code
+            admin.totpBackupCodes = admin.totpBackupCodes.filter(
+                code => code !== hashedCode
+            );
+            await this.adminRepository.save(admin);
+            break;
+            }
+        }
+        }
 
-      if (!totpValid) {
+        if (!totpValid) {
         throw new UnauthorizedException('Invalid TOTP token or backup code');
-      }
+        }
     }
 
     // Generate tokens
@@ -83,15 +94,15 @@ export class AdminAuthService {
     logger.info(`Admin logged in: ${email}`);
 
     return {
-      success: true,
-      message: 'Login successful',
-      data: {
+        success: true,
+        message: 'Login successful',
+        data: {
         admin,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
-      },
+        },
     };
-  }
+    }
 
   async logout(admin: Admin) {
     admin.refreshToken = '';
@@ -171,4 +182,127 @@ export class AdminAuthService {
 
     await this.adminRepository.save(admin);
   }
+
+async setupTOTP(admin: Admin) {
+  const adminWithSecret = await this.adminRepository
+    .createQueryBuilder('admin')
+    .addSelect('admin.totpSecret')
+    .where('admin.id = :id', { id: admin.id })
+    .getOne();
+
+  // ADD THIS NULL CHECK
+  if (!adminWithSecret) {
+    throw new UnauthorizedException('Admin not found');
+  }
+
+  const secret = adminWithSecret.generateTOTPSecret();
+  
+  // Generate backup codes
+  const backupCodes = this.generateBackupCodes();
+  const hashedBackupCodes = await Promise.all(
+    backupCodes.map(code => bcrypt.hash(code, 10))
+  );
+
+  adminWithSecret.totpBackupCodes = hashedBackupCodes;
+  await this.adminRepository.save(adminWithSecret);
+
+  return {
+    success: true,
+    message: 'TOTP secret generated. Scan QR code with your authenticator app.',
+    data: {
+      secret: secret.base32,
+      qrCode: secret.otpauth_url,
+      backupCodes, // Show these ONCE to the user
+    },
+  };
+}
+
+async verifyAndEnableTOTP(admin: Admin, totpToken: string) {
+  const adminWithSecret = await this.adminRepository
+    .createQueryBuilder('admin')
+    .addSelect('admin.totpSecret')
+    .where('admin.id = :id', { id: admin.id })
+    .getOne();
+
+  // ADD THIS NULL CHECK
+  if (!adminWithSecret) {
+    throw new UnauthorizedException('Admin not found');
+  }
+
+  if (!adminWithSecret.totpSecret) {
+    throw new UnauthorizedException('TOTP not set up. Call /totp/setup first.');
+  }
+
+  const isValid = adminWithSecret.verifyTOTP(totpToken);
+  
+  if (!isValid) {
+    throw new UnauthorizedException('Invalid TOTP token');
+  }
+
+  adminWithSecret.totpEnabled = true;
+  await this.adminRepository.save(adminWithSecret);
+
+  logger.info(`TOTP enabled for admin: ${admin.email}`);
+
+  return {
+    success: true,
+    message: 'TOTP 2FA enabled successfully',
+  };
+}
+
+async disableTOTP(admin: Admin, password: string) {
+  const adminWithSecret = await this.adminRepository
+    .createQueryBuilder('admin')
+    .addSelect(['admin.passwordHash', 'admin.totpSecret', 'admin.totpBackupCodes'])
+    .where('admin.id = :id', { id: admin.id })
+    .getOne();
+
+  // ADD THIS NULL CHECK
+  if (!adminWithSecret) {
+    throw new UnauthorizedException('Admin not found');
+  }
+
+  const isPasswordValid = await adminWithSecret.comparePassword(password);
+  if (!isPasswordValid) {
+    throw new UnauthorizedException('Invalid password');
+  }
+
+  adminWithSecret.totpEnabled = false;
+  adminWithSecret.totpSecret = null;
+  adminWithSecret.totpBackupCodes = null;
+  await this.adminRepository.save(adminWithSecret);
+
+  logger.info(`TOTP disabled for admin: ${admin.email}`);
+
+  return {
+    success: true,
+    message: 'TOTP 2FA disabled',
+  };
+}
+
+async regenerateBackupCodes(admin: Admin) {
+  const backupCodes = this.generateBackupCodes();
+  const hashedBackupCodes = await Promise.all(
+    backupCodes.map(code => bcrypt.hash(code, 10))
+  );
+
+  admin.totpBackupCodes = hashedBackupCodes;
+  await this.adminRepository.save(admin);
+
+  return {
+    success: true,
+    message: 'Backup codes regenerated',
+    data: { backupCodes },
+  };
+}
+
+private generateBackupCodes(count: number = 10): string[] {
+  const codes: string[] = [];
+  for (let i = 0; i < count; i++) {
+    codes.push(
+      Math.random().toString(36).substring(2, 10).toUpperCase()
+    );
+  }
+  return codes;
+}
 }
