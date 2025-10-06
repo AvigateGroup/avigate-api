@@ -28,6 +28,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
     "@datadog/datadog-api-client": "^1.45.0",
+    "@googlemaps/google-maps-services-js": "^3.4.2",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/bull": "^11.0.3",
     "@nestjs/cache-manager": "^3.0.1",
@@ -62,6 +63,7 @@
     "dd-trace": "^5.68.0",
     "express-rate-limit": "^7.1.5",
     "firebase-admin": "^13.5.0",
+    "geolib": "^3.3.4",
     "helmet": "^7.1.0",
     "ml-matrix": "^6.12.1",
     "multer": "^2.0.2",
