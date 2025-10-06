@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as admin from 'firebase-admin';
+import * as fs from 'fs';
 import * as path from 'path';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { logger } from '@/utils/logger.util';
@@ -30,7 +31,10 @@ export class NotificationsService implements OnModuleInit {
         if (serviceAccountPath) {
           // Resolve the absolute path
           const absolutePath = path.resolve(process.cwd(), serviceAccountPath);
-          const serviceAccount = require(absolutePath);
+          
+          // Read the file synchronously
+          const serviceAccountFile = fs.readFileSync(absolutePath, 'utf8');
+          const serviceAccount = JSON.parse(serviceAccountFile);
           
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
@@ -46,7 +50,7 @@ export class NotificationsService implements OnModuleInit {
       logger.warn('Push notifications will be disabled');
     }
   }
-  
+
   async sendToUser(userId: string, notification: NotificationPayload): Promise<void> {
     const devices = await this.deviceRepository.find({
       where: { userId, isActive: true },
@@ -92,41 +96,22 @@ export class NotificationsService implements OnModuleInit {
     };
 
     try {
-      // Fallback for Firebase Admin SDK versions without sendMulticast
       let successCount = 0;
       let failureCount = 0;
       const invalidTokens: string[] = [];
 
-      for (const [idx, token] of tokens.entries()) {
+      for (const token of tokens) {
         try {
           await admin.messaging().send({
             token,
-            notification: {
-              title: notification.title,
-              body: notification.body,
-              imageUrl: notification.imageUrl,
-            },
-            data: notification.data || {},
-            android: {
-              priority: 'high',
-              notification: {
-                sound: 'default',
-                channelId: 'avigate_alerts',
-              },
-            },
-            apns: {
-              payload: {
-                aps: {
-                  sound: 'default',
-                  badge: 1,
-                },
-              },
-            },
+            notification: message.notification,
+            data: message.data,
+            android: message.android,
+            apns: message.apns,
           });
           successCount++;
         } catch (error: any) {
           failureCount++;
-          // Check for invalid token error codes
           if (
             error.code === 'messaging/invalid-registration-token' ||
             error.code === 'messaging/registration-token-not-registered'
