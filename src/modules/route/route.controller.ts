@@ -1,9 +1,8 @@
 // src/modules/route/route.controller.ts
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RouteService } from './route.service';
 import { FindRoutesDto } from './dto/find-routes.dto';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 
 @ApiTags('routes')
 @Controller('routes')
