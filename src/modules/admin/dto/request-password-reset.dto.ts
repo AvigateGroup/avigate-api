@@ -1,5 +1,3 @@
-// ==================== PASSWORD DTOs ====================
-
 // src/modules/admin/dto/request-password-reset.dto.ts
 import { IsEmail } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
