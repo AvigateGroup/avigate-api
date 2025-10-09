@@ -1,19 +1,18 @@
 // src/modules/admin/services/admin-totp.service.ts
-'speakeasy';
-import * as QRCode from 'qrcode';
-import { logger } from '@/utils/logger.util';
 import {
   Injectable,
   UnauthorizedException,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { Admin } from '../entities/admin.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Admin } from '../entities/admin.entity';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import * as speakeasy from 'speakeasy';
+import * as QRCode from 'qrcode';
+import { logger } from '@/utils/logger.util';
 
 const BACKUP_CODE_COUNT = 10;
 const BACKUP_CODE_LENGTH = 8;
