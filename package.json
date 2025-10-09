@@ -21,9 +21,13 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "typeorm-ts-node-commonjs migration:generate src/migrations/InitialMigration -d ormconfig.ts",
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d ormconfig.ts",
+    "migration:create": "typeorm-ts-node-commonjs migration:create",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d ormconfig.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts",
+    "migration:show": "typeorm-ts-node-commonjs migration:show -d ormconfig.ts",
+    "schema:sync": "typeorm-ts-node-commonjs schema:sync -d ormconfig.ts",
+    "schema:drop": "typeorm-ts-node-commonjs schema:drop -d ormconfig.ts",
     "seed": "ts-node -r tsconfig-paths/register src/scripts/seed-nigerian-transport.ts"
   },
   "dependencies": {
