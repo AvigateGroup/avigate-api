@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 // Controllers
 import { AdminAuthController } from './controllers/admin-auth.controller';
@@ -11,14 +12,21 @@ import { AdminManagementController } from './controllers/admin-management.contro
 import { UserManagementController } from './controllers/user-management.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
 
-// Services
+// Services - Auth & Security
 import { AdminAuthService } from './services/admin-auth.service';
+import { AdminTotpService } from './services/admin-totp.service';
+import { AdminPasswordService } from './services/admin-password.service';
+import { AdminInvitationService } from './services/admin-invitation.service';
+
+// Services - Management
 import { AdminCrudService } from './services/admin-crud.service';
 import { AdminStatusService } from './services/admin-status.service';
-import { AdminPasswordService } from './services/admin-password.service';
 import { AdminPermissionService } from './services/admin-permission.service';
 import { AdminSessionService } from './services/admin-session.service';
 import { AdminSessionManagerService } from './services/admin-session-manager.service';
+import { AdminSessionCleanupService } from './services/admin-session-cleanup.service';
+
+// Services - Analytics
 import { AnalyticsService } from './services/analytics.service';
 
 // Strategies
@@ -36,7 +44,13 @@ import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Admin, AdminSession, User, UserDevice, UserOTP]),
+    TypeOrmModule.forFeature([
+      Admin,
+      AdminSession,
+      User,
+      UserDevice,
+      UserOTP,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -47,6 +61,7 @@ import { EmailModule } from '../email/email.module';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(), // For session cleanup cron job
     EmailModule,
   ],
   controllers: [
@@ -60,22 +75,28 @@ import { EmailModule } from '../email/email.module';
     AdminAuthService,
     AdminJwtStrategy,
 
+    // Security Services
+    AdminTotpService,
+    AdminPasswordService,
+    AdminInvitationService,
+
     // Admin Management Services
     AdminCrudService,
     AdminStatusService,
-    AdminPasswordService,
     AdminPermissionService,
     AdminSessionService,
     AdminSessionManagerService,
+    AdminSessionCleanupService,
 
     // Analytics
     AnalyticsService,
   ],
   exports: [
     AdminAuthService,
+    AdminTotpService,
+    AdminPasswordService,
     AdminSessionManagerService,
     AdminCrudService,
-    AdminPasswordService,
     AdminPermissionService,
   ],
 })
