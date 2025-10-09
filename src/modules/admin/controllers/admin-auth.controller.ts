@@ -56,6 +56,19 @@ export class AdminAuthController {
     return this.adminAuthService.login(loginDto, req, res);
   }
 
+  @Get('health')
+  async health() {
+    return {
+      status: 'ok',
+      services: {
+        adminAuthService: !!this.adminAuthService,
+        adminTotpService: !!this.adminTotpService,
+        adminPasswordService: !!this.adminPasswordService,
+        adminInvitationService: !!this.adminInvitationService,
+      }
+    };
+  }
+
   @Post('logout')
   @UseGuards(AdminAuthGuard)
   @ApiBearerAuth()
