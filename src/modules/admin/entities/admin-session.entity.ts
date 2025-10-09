@@ -43,10 +43,11 @@ export class AdminSession {
   @Column({ type: 'text', nullable: true })
   userAgent: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   deviceInfo: string;
 
-  @Column({ nullable: true })
+
+  @Column({ type: 'varchar', nullable: true })
   location: string | null;
 
   @Column({ default: true })

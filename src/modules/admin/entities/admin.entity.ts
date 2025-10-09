@@ -67,7 +67,7 @@ export class Admin {
   @Column({ type: 'timestamp', nullable: true })
   lastLoginAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   lastLoginIP: string;
 
   @Column({ type: 'text', nullable: true })
@@ -99,7 +99,7 @@ export class Admin {
   @Column({ type: 'timestamp', nullable: true })
   inviteTokenExpiry: Date | null;
 
-  @Column({ nullable: true, select: false })
+  @Column({ type: 'varchar', nullable: true, select: false })
   totpSecret: string | null;
 
   @Column({ default: false })
