@@ -87,17 +87,17 @@ export class Admin {
 
   // Password Reset Token Fields
   @Column({ type: 'varchar', nullable: true, select: false })
-  resetToken: string;
+  resetToken: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  resetTokenExpiry: Date;
+  resetTokenExpiry: Date | null;
 
   // Admin Invitation Token Fields
   @Column({ type: 'varchar', nullable: true, select: false })
-  inviteToken: string;
+  inviteToken: string | null;
 
   @Column({ type: 'timestamp', nullable: true })
-  inviteTokenExpiry: Date;
+  inviteTokenExpiry: Date | null;
 
   @Column({ nullable: true, select: false })
   totpSecret: string | null;
