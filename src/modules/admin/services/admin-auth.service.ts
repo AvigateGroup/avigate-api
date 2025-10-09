@@ -276,7 +276,6 @@ export class AdminAuthService {
       ipAddress: this.getClientIp(req),
       userAgent: req.get('User-Agent') || 'Unknown',
       deviceInfo: this.extractDeviceInfo(req),
-      location: null as string | null,
       isActive: true,
       lastActivityAt: new Date(),
     });

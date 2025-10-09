@@ -48,7 +48,7 @@ export class AdminSession {
 
 
   @Column({ type: 'varchar', nullable: true })
-  location: string | null;
+  location: string;
 
   @Column({ default: true })
   @Index()
