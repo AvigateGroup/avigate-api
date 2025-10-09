@@ -1,4 +1,4 @@
-// src/modules/email/services/admin-email.service.ts
+// src/modules/email/admin-email.service.ts
 
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -114,22 +114,29 @@ export class AdminEmailService {
             
             <p style="margin: 0 0 24px; color: #666; line-height: 1.6;">Hi ${firstName},</p>
             
-            <p style="margin: 0 0 32px; color: #666; line-height: 1.6;">You've been invited to access the Avigate Admin Portal. Use these credentials to get started:</p>
-            
-            <!-- Credentials -->
-            <div style="background: #f8f9fa; padding: 24px; border-radius: 6px; margin: 0 0 32px;">
-              <p style="margin: 0 0 8px; color: #333; font-size: 14px;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 0; color: #333; font-size: 14px;"><strong>Password:</strong> <code style="background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #495057;">${tempPassword}</code></p>
-            </div>
+            <p style="margin: 0 0 32px; color: #666; line-height: 1.6;">You've been invited to access the Avigate Admin Portal. Click the button below to accept your invitation and set up your account:</p>
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 0 0 32px;">
-              <a href="${inviteUrl}" style="display: inline-block; background: #86B300; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">Access Admin Portal</a>
+              <a href="${inviteUrl}" style="display: inline-block; background: #86B300; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">Accept Invitation</a>
+            </div>
+            
+            <!-- Credentials Info -->
+            <div style="background: #f8f9fa; padding: 24px; border-radius: 6px; margin: 0 0 32px;">
+              <p style="margin: 0 0 16px; color: #333; font-size: 14px; font-weight: 600;">Your Account Details:</p>
+              <p style="margin: 0 0 8px; color: #333; font-size: 14px;"><strong>Email:</strong> ${email}</p>
+              <p style="margin: 0; color: #333; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #495057;">${tempPassword}</code></p>
             </div>
             
             <!-- Important Note -->
             <div style="padding: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 0 0 24px;">
-              <p style="margin: 0; color: #856404; font-size: 14px;">Please change your password on first login. This invitation expires in 7 days.</p>
+              <p style="margin: 0 0 8px; color: #856404; font-size: 14px; font-weight: 600;">Important:</p>
+              <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 14px;">
+                <li>Click the button above to accept your invitation</li>
+                <li>You'll be asked to set a new secure password</li>
+                <li>This invitation expires in 7 days</li>
+                <li>Keep your temporary password safe until you complete setup</li>
+              </ul>
             </div>
             
             <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">Need help? Contact us at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a></p>
@@ -188,20 +195,24 @@ export class AdminEmailService {
           <!-- Footer -->
           <div style="padding: 24px 40px; background: #f8f9fa; border-top: 1px solid #eee; border-radius: 0 0 8px 8px;">
             <p style="margin: 0; color: #999; font-size: 12px; text-align: center;">© 2025 Avigate. This is an automated security message.</p>
-              </div>
+          </div>
         </div>
       </body>
       </html>
     `;
   }
 
+  /**
+   * Send admin invitation email with temporary password
+   * Admin will use the invitation link to set their own secure password
+   */
   async sendAdminInvitationEmail(
     email: string,
     firstName: string,
     tempPassword: string,
     inviteToken: string,
   ): Promise<void> {
-    const inviteUrl = `${this.adminFrontendUrl}/admin/accept-invitation?token=${inviteToken}`;
+    const inviteUrl = `${this.adminFrontendUrl}/accept-invitation?token=${inviteToken}`;
 
     logger.info('Preparing admin invitation email', { email, firstName });
 
@@ -226,12 +237,15 @@ export class AdminEmailService {
     logger.info(`Admin invitation email sent to ${email}`);
   }
 
+  /**
+   * Send password reset email with reset token
+   */
   async sendPasswordResetEmail(
     email: string,
     firstName: string,
     resetToken: string,
   ): Promise<void> {
-    const resetUrl = `${this.adminFrontendUrl}/admin/reset-password?token=${resetToken}`;
+    const resetUrl = `${this.adminFrontendUrl}/reset-password?token=${resetToken}`;
 
     logger.info('Preparing password reset email', { email, firstName });
 
@@ -254,5 +268,101 @@ export class AdminEmailService {
 
     await this.sendZeptoMailEmail(emailData, 'password_reset');
     logger.info(`Password reset email sent to ${email}`);
+  }
+
+  /**
+   * Send security alert email (optional - for unusual login activity)
+   */
+  async sendSecurityAlertEmail(
+    email: string,
+    firstName: string,
+    activityType: string,
+    details: {
+      ipAddress: string;
+      location?: string;
+      deviceInfo: string;
+      timestamp: Date;
+    },
+  ): Promise<void> {
+    const securityUrl = `${this.adminFrontendUrl}/security`;
+    
+    const htmlBody = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Security Alert</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8f9fa; color: #333;">
+        <div style="max-width: 560px; margin: 40px auto; background: white; border-radius: 8px;">
+          
+          <!-- Header -->
+          <div style="padding: 40px 40px 20px; text-align: center; border-bottom: 1px solid #eee;">
+            <img src="${this.logoUrl}" alt="Avigate" style="height: 50px;">
+          </div>
+          
+          <!-- Content -->
+          <div style="padding: 40px;">
+            <h2 style="margin: 0 0 24px; color: #dc3545; font-size: 24px; font-weight: 600;">🔒 Security Alert</h2>
+            
+            <p style="margin: 0 0 24px; color: #666; line-height: 1.6;">Hi ${firstName},</p>
+            
+            <p style="margin: 0 0 32px; color: #666; line-height: 1.6;">We detected ${activityType} on your admin account:</p>
+            
+            <!-- Activity Details -->
+            <div style="background: #f8f9fa; padding: 24px; border-radius: 6px; margin: 0 0 32px;">
+              <p style="margin: 0 0 8px; color: #333; font-size: 14px;"><strong>IP Address:</strong> ${details.ipAddress}</p>
+              ${details.location ? `<p style="margin: 0 0 8px; color: #333; font-size: 14px;"><strong>Location:</strong> ${details.location}</p>` : ''}
+              <p style="margin: 0 0 8px; color: #333; font-size: 14px;"><strong>Device:</strong> ${details.deviceInfo}</p>
+              <p style="margin: 0; color: #333; font-size: 14px;"><strong>Time:</strong> ${details.timestamp.toLocaleString()}</p>
+            </div>
+            
+            <!-- Warning -->
+            <div style="padding: 16px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 4px; margin: 0 0 32px;">
+              <p style="margin: 0 0 8px; color: #721c24; font-size: 14px; font-weight: 600;">If this wasn't you:</p>
+              <ul style="margin: 0; padding-left: 20px; color: #721c24; font-size: 14px;">
+                <li>Change your password immediately</li>
+                <li>Enable two-factor authentication if not already enabled</li>
+                <li>Review your active sessions and revoke any unknown ones</li>
+              </ul>
+            </div>
+            
+            <!-- CTA Button -->
+            <div style="text-align: center; margin: 0 0 24px;">
+              <a href="${securityUrl}" style="display: inline-block; background: #dc3545; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">Review Security Settings</a>
+            </div>
+            
+            <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">Need immediate help? Contact us at <a href="mailto:security@avigate.co" style="color: #dc3545; text-decoration: none;">security@avigate.co</a></p>
+          </div>
+          
+          <!-- Footer -->
+          <div style="padding: 24px 40px; background: #f8f9fa; border-top: 1px solid #eee; border-radius: 0 0 8px 8px;">
+            <p style="margin: 0; color: #999; font-size: 12px; text-align: center;">© 2025 Avigate. This is an automated security message.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const emailData: EmailData = {
+      from: {
+        address: this.fromEmail,
+        name: 'Avigate Security',
+      },
+      to: [
+        {
+          email_address: {
+            address: email,
+            name: firstName,
+          },
+        },
+      ],
+      subject: '🔒 Avigate Admin - Security Alert',
+      htmlbody: htmlBody,
+    };
+
+    await this.sendZeptoMailEmail(emailData, 'security_alert');
+    logger.info(`Security alert email sent to ${email}`);
   }
 }
