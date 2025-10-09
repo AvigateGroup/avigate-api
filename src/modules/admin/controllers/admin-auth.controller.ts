@@ -76,12 +76,9 @@ export class AdminAuthController {
     summary: 'Refresh access token',
     description: 'Uses refresh token from HTTP-only cookie',
   })
-  async refreshToken(
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async refreshToken(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies?.admin_refresh_token;
-    
+
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token not found');
     }
@@ -116,11 +113,7 @@ export class AdminAuthController {
     description: 'Public endpoint. Resets password using token from email.',
   })
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.adminPasswordService.resetPassword(
-      dto.token,
-      dto.newPassword,
-      dto.confirmPassword,
-    );
+    return this.adminPasswordService.resetPassword(dto.token, dto.newPassword, dto.confirmPassword);
   }
 
   @Post('password/change')
@@ -131,10 +124,7 @@ export class AdminAuthController {
     summary: 'Change password',
     description: 'Authenticated endpoint. Change your own password.',
   })
-  async changePassword(
-    @CurrentAdmin() admin: Admin,
-    @Body() dto: ChangePasswordDto,
-  ) {
+  async changePassword(@CurrentAdmin() admin: Admin, @Body() dto: ChangePasswordDto) {
     return this.adminPasswordService.changePassword(
       admin,
       dto.currentPassword,
@@ -177,10 +167,7 @@ export class AdminAuthController {
     summary: 'Enable TOTP (Step 2 of 2FA setup)',
     description: 'Verify TOTP token to enable 2FA',
   })
-  async enableTotp(
-    @CurrentAdmin() admin: Admin,
-    @Body() dto: VerifyTotpDto,
-  ) {
+  async enableTotp(@CurrentAdmin() admin: Admin, @Body() dto: VerifyTotpDto) {
     return this.adminTotpService.enableTotp(admin, dto.totpToken);
   }
 
@@ -192,15 +179,8 @@ export class AdminAuthController {
     summary: 'Disable TOTP 2FA',
     description: 'Requires password and TOTP token',
   })
-  async disableTotp(
-    @CurrentAdmin() admin: Admin,
-    @Body() dto: DisableTotpDto,
-  ) {
-    return this.adminTotpService.disableTotp(
-      admin,
-      dto.currentPassword,
-      dto.totpToken,
-    );
+  async disableTotp(@CurrentAdmin() admin: Admin, @Body() dto: DisableTotpDto) {
+    return this.adminTotpService.disableTotp(admin, dto.currentPassword, dto.totpToken);
   }
 
   @Get('totp/status')
@@ -222,14 +202,7 @@ export class AdminAuthController {
     summary: 'Regenerate backup codes',
     description: 'Requires password and TOTP token. Save new codes securely!',
   })
-  async regenerateBackupCodes(
-    @CurrentAdmin() admin: Admin,
-    @Body() dto: RegenerateBackupCodesDto,
-  ) {
-    return this.adminTotpService.regenerateBackupCodes(
-      admin,
-      dto.currentPassword,
-      dto.totpToken,
-    );
+  async regenerateBackupCodes(@CurrentAdmin() admin: Admin, @Body() dto: RegenerateBackupCodesDto) {
+    return this.adminTotpService.regenerateBackupCodes(admin, dto.currentPassword, dto.totpToken);
   }
 }

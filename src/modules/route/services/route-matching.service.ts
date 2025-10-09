@@ -37,7 +37,11 @@ export class RouteMatchingService {
   /**
    * Find nearest location to coordinates
    */
-  async findNearestLocation(lat: number, lng: number, radiusKm: number = 2): Promise<Location | null> {
+  async findNearestLocation(
+    lat: number,
+    lng: number,
+    radiusKm: number = 2,
+  ): Promise<Location | null> {
     // Simple bounding box search (you can optimize with PostGIS later)
     const latDelta = radiusKm / 111; // rough approximation
     const lngDelta = radiusKm / (111 * Math.cos((lat * Math.PI) / 180));
@@ -107,7 +111,13 @@ export class RouteMatchingService {
           endLocationId: endLocation.id,
           isActive: true,
         },
-        relations: ['steps', 'steps.fromLocation', 'steps.toLocation', 'startLocation', 'endLocation'],
+        relations: [
+          'steps',
+          'steps.fromLocation',
+          'steps.toLocation',
+          'startLocation',
+          'endLocation',
+        ],
         order: { popularityScore: 'DESC' },
         take: 3,
       });

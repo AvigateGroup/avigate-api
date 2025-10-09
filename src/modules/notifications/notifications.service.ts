@@ -27,22 +27,24 @@ export class NotificationsService implements OnModuleInit {
     try {
       if (!admin.apps.length) {
         const serviceAccountPath = this.configService.get('FIREBASE_SERVICE_ACCOUNT_PATH');
-        
+
         if (serviceAccountPath) {
           // Resolve the absolute path
           const absolutePath = path.resolve(process.cwd(), serviceAccountPath);
-          
+
           // Read the file synchronously
           const serviceAccountFile = fs.readFileSync(absolutePath, 'utf8');
           const serviceAccount = JSON.parse(serviceAccountFile);
-          
+
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
           });
-          
+
           logger.info('Firebase initialized successfully with service account file');
         } else {
-          logger.warn('Firebase service account path not configured. Push notifications will be disabled.');
+          logger.warn(
+            'Firebase service account path not configured. Push notifications will be disabled.',
+          );
         }
       }
     } catch (error) {

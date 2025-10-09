@@ -35,9 +35,7 @@ import databaseConfig from './config/database.config';
         synchronize: false,
         logging: false,
         // Conditionally enable SSL based on environment
-        ssl: configService.get('NODE_ENV') === 'production'
-          ? { rejectUnauthorized: false }
-          : false, // ← Changed this line
+        ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false, // ← Changed this line
       }),
       inject: [ConfigService],
     }),

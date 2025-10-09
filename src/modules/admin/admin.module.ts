@@ -44,13 +44,7 @@ import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Admin,
-      AdminSession,
-      User,
-      UserDevice,
-      UserOTP,
-    ]),
+    TypeOrmModule.forFeature([Admin, AdminSession, User, UserDevice, UserOTP]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({

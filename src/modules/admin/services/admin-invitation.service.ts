@@ -1,9 +1,5 @@
 // src/modules/admin/services/admin-invitation.service.ts
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
@@ -130,7 +126,7 @@ export class AdminInvitationService {
   private validatePasswordStrength(password: string): void {
     if (password.length < MIN_PASSWORD_LENGTH) {
       throw new BadRequestException(
-        `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`,
       );
     }
 

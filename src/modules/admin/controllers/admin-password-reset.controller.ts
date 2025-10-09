@@ -9,7 +9,6 @@ import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
 import { RequestPasswordResetDto } from '../dto/request-password-reset.dto';
 
-
 @ApiTags('admin')
 @Controller('admin/password')
 export class AdminPasswordResetController {
@@ -26,11 +25,7 @@ export class AdminPasswordResetController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reset password with token' })
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.passwordService.resetPassword(
-      dto.token,
-      dto.newPassword,
-      dto.confirmPassword,
-    );
+    return this.passwordService.resetPassword(dto.token, dto.newPassword, dto.confirmPassword);
   }
 
   @Post('change')
@@ -38,10 +33,7 @@ export class AdminPasswordResetController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Change password (authenticated)' })
-  async changePassword(
-    @CurrentAdmin() admin: Admin,
-    @Body() dto: ChangePasswordDto,
-  ) {
+  async changePassword(@CurrentAdmin() admin: Admin, @Body() dto: ChangePasswordDto) {
     return this.passwordService.changePassword(
       admin,
       dto.currentPassword,

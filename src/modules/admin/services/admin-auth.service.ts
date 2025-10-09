@@ -64,11 +64,9 @@ export class AdminAuthService {
 
     // Check if account is locked
     if (admin.lockedUntil && admin.lockedUntil > new Date()) {
-      const remainingMinutes = Math.ceil(
-        (admin.lockedUntil.getTime() - Date.now()) / 60000
-      );
+      const remainingMinutes = Math.ceil((admin.lockedUntil.getTime() - Date.now()) / 60000);
       throw new UnauthorizedException(
-        `Account is temporarily locked. Please try again in ${remainingMinutes} minutes.`
+        `Account is temporarily locked. Please try again in ${remainingMinutes} minutes.`,
       );
     }
 
@@ -93,9 +91,7 @@ export class AdminAuthService {
           if (await bcrypt.compare(backupCode.trim().toUpperCase(), hashedCode)) {
             totpValid = true;
             // Remove used backup code
-            admin.totpBackupCodes = admin.totpBackupCodes.filter(
-              (code) => code !== hashedCode
-            );
+            admin.totpBackupCodes = admin.totpBackupCodes.filter(code => code !== hashedCode);
             await this.adminRepository.save(admin);
             logger.info(`Backup code used for admin: ${email}`);
             break;
@@ -105,7 +101,7 @@ export class AdminAuthService {
 
       if (!totpValid) {
         throw new UnauthorizedException(
-          'Two-factor authentication required. Please provide a valid TOTP token or backup code.'
+          'Two-factor authentication required. Please provide a valid TOTP token or backup code.',
         );
       }
     }
@@ -146,10 +142,7 @@ export class AdminAuthService {
    */
   async logout(admin: Admin, sessionId: string, res: Response) {
     // Invalidate the current session
-    await this.sessionRepository.update(
-      { id: sessionId, adminId: admin.id },
-      { isActive: false }
-    );
+    await this.sessionRepository.update({ id: sessionId, adminId: admin.id }, { isActive: false });
 
     // Clear refresh token cookie
     this.clearRefreshTokenCookie(res);
@@ -324,7 +317,7 @@ export class AdminAuthService {
     if (admin.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
       admin.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
       logger.warn(
-        `Admin account locked due to failed login attempts: ${admin.email} (${admin.failedLoginAttempts} attempts)`
+        `Admin account locked due to failed login attempts: ${admin.email} (${admin.failedLoginAttempts} attempts)`,
       );
     }
 
@@ -370,7 +363,7 @@ export class AdminAuthService {
    */
   private extractDeviceInfo(req: Request): string {
     const userAgent = req.get('User-Agent') || '';
-    
+
     // Simple device detection (consider using a library like 'ua-parser-js' for production)
     if (/mobile/i.test(userAgent)) return 'Mobile';
     if (/tablet/i.test(userAgent)) return 'Tablet';

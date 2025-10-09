@@ -1,9 +1,5 @@
 // src/common/guards/admin-auth.guard.ts
-import {
-  Injectable,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -69,10 +65,7 @@ export class AdminAuthGuard extends AuthGuard('admin-jwt') {
       }
 
       // Update last activity
-      await this.sessionRepository.update(
-        { id: session.id },
-        { lastActivityAt: new Date() }
-      );
+      await this.sessionRepository.update({ id: session.id }, { lastActivityAt: new Date() });
 
       // Attach session ID to request
       request.sessionId = session.id;

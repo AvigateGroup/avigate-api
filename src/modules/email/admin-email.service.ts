@@ -285,7 +285,7 @@ export class AdminEmailService {
     },
   ): Promise<void> {
     const securityUrl = `${this.adminFrontendUrl}/security`;
-    
+
     const htmlBody = `
       <!DOCTYPE html>
       <html>

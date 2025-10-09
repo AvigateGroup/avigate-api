@@ -64,11 +64,7 @@ export class AdminPasswordService {
 
     // Send email
     try {
-      await this.adminEmailService.sendPasswordResetEmail(
-        admin.email,
-        admin.firstName,
-        resetToken
-      );
+      await this.adminEmailService.sendPasswordResetEmail(admin.email, admin.firstName, resetToken);
       logger.info(`Password reset requested for admin: ${admin.email}`);
     } catch (error) {
       logger.error(`Failed to send password reset email to ${admin.email}:`, error);
@@ -146,7 +142,7 @@ export class AdminPasswordService {
     admin: Admin,
     currentPassword: string,
     newPassword: string,
-    confirmPassword: string
+    confirmPassword: string,
   ) {
     // Validate passwords match
     if (newPassword !== confirmPassword) {
@@ -243,7 +239,7 @@ export class AdminPasswordService {
         await this.adminEmailService.sendPasswordResetEmail(
           admin.email,
           admin.firstName,
-          resetToken
+          resetToken,
         );
         logger.info(`Password reset email sent to admin: ${admin.email} by ${currentAdmin.email}`);
       } catch (error) {
@@ -270,7 +266,7 @@ export class AdminPasswordService {
   private validatePasswordStrength(password: string): void {
     if (password.length < MIN_PASSWORD_LENGTH) {
       throw new BadRequestException(
-        `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`
+        `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`,
       );
     }
 
@@ -318,7 +314,7 @@ export class AdminPasswordService {
       const isReused = await bcrypt.compare(newPassword, oldPasswordHash);
       if (isReused) {
         throw new BadRequestException(
-          `Password cannot be one of your last ${PASSWORD_HISTORY_LIMIT} passwords`
+          `Password cannot be one of your last ${PASSWORD_HISTORY_LIMIT} passwords`,
         );
       }
     }

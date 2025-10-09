@@ -54,7 +54,9 @@ export class TripService {
     });
 
     if (existingTrip) {
-      throw new BadRequestException('You already have an active trip. Please complete or cancel it first.');
+      throw new BadRequestException(
+        'You already have an active trip. Please complete or cancel it first.',
+      );
     }
 
     // Get route with steps
@@ -184,7 +186,9 @@ export class TripService {
     );
 
     // Check arrival at current step
-    if (this.geofencingService.hasArrived({ lat: location.lat, lng: location.lng }, stepDestination)) {
+    if (
+      this.geofencingService.hasArrived({ lat: location.lat, lng: location.lng }, stepDestination)
+    ) {
       currentStepCompleted = true;
 
       // Update step progress
@@ -225,7 +229,12 @@ export class TripService {
       }
     }
     // Check if approaching
-    else if (this.geofencingService.isApproaching({ lat: location.lat, lng: location.lng }, stepDestination)) {
+    else if (
+      this.geofencingService.isApproaching(
+        { lat: location.lat, lng: location.lng },
+        stepDestination,
+      )
+    ) {
       const notificationKey = `approaching_${currentStep.id}`;
       if (!trip.notificationsSent[notificationKey]) {
         const locationName = currentStep.toLocation?.name || 'your destination';
@@ -274,7 +283,13 @@ export class TripService {
         userId,
         status: TripStatus.IN_PROGRESS,
       },
-      relations: ['route', 'route.steps', 'route.steps.fromLocation', 'route.steps.toLocation', 'currentStep'],
+      relations: [
+        'route',
+        'route.steps',
+        'route.steps.fromLocation',
+        'route.steps.toLocation',
+        'currentStep',
+      ],
     });
   }
 

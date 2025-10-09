@@ -2,7 +2,12 @@
 'speakeasy';
 import * as QRCode from 'qrcode';
 import { logger } from '@/utils/logger.util';
-import { Injectable, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Admin } from '../entities/admin.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -48,9 +53,7 @@ export class AdminTotpService {
 
     // Generate backup codes
     const backupCodes = this.generateBackupCodes();
-    const hashedBackupCodes = await Promise.all(
-      backupCodes.map((code) => bcrypt.hash(code, 10))
-    );
+    const hashedBackupCodes = await Promise.all(backupCodes.map(code => bcrypt.hash(code, 10)));
 
     // Save secret (but don't enable yet)
     adminWithTotp.totpSecret = secret.base32;
@@ -64,7 +67,8 @@ export class AdminTotpService {
 
     return {
       success: true,
-      message: 'TOTP secret generated. Scan the QR code with your authenticator app and verify with a token to enable 2FA.',
+      message:
+        'TOTP secret generated. Scan the QR code with your authenticator app and verify with a token to enable 2FA.',
       data: {
         secret: secret.base32,
         qrCode: qrCodeDataUrl,
@@ -236,9 +240,7 @@ export class AdminTotpService {
 
     // Generate new backup codes
     const backupCodes = this.generateBackupCodes();
-    const hashedBackupCodes = await Promise.all(
-      backupCodes.map((code) => bcrypt.hash(code, 10))
-    );
+    const hashedBackupCodes = await Promise.all(backupCodes.map(code => bcrypt.hash(code, 10)));
 
     adminWithCredentials.totpBackupCodes = hashedBackupCodes;
     await this.adminRepository.save(adminWithCredentials);
@@ -261,7 +263,7 @@ export class AdminTotpService {
    */
   private generateBackupCodes(count: number = BACKUP_CODE_COUNT): string[] {
     const codes: string[] = [];
-    
+
     for (let i = 0; i < count; i++) {
       // Generate random alphanumeric code
       const code = crypto
@@ -269,10 +271,10 @@ export class AdminTotpService {
         .toString('hex')
         .substring(0, BACKUP_CODE_LENGTH)
         .toUpperCase();
-      
+
       codes.push(code);
     }
-    
+
     return codes;
   }
 }

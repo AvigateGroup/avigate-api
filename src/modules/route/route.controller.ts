@@ -26,62 +26,67 @@ export class RouteController {
   async findRoutes(@Body() findRoutesDto: FindRoutesDto) {
     return this.routeService.findRoutes(findRoutesDto);
   }
-@Post('search/smart')
-@ApiOperation({ summary: 'Smart route search with coordinates or addresses' })
-async smartRouteSearch(@Body() dto: SmartRouteSearchDto) {
-  let startLat: number, startLng: number, endLat: number, endLng: number;
+  @Post('search/smart')
+  @ApiOperation({ summary: 'Smart route search with coordinates or addresses' })
+  async smartRouteSearch(@Body() dto: SmartRouteSearchDto) {
+    let startLat: number, startLng: number, endLat: number, endLng: number;
 
-  // Geocode start if address provided
-  if (dto.startAddress) {
-    const coords = await this.routeMatchingService.geocodeAddress(dto.startAddress);
-    if (!coords) {
+    // Geocode start if address provided
+    if (dto.startAddress) {
+      const coords = await this.routeMatchingService.geocodeAddress(dto.startAddress);
+      if (!coords) {
+        return {
+          success: false,
+          message: 'Could not find start location',
+        };
+      }
+      startLat = coords.lat;
+      startLng = coords.lng;
+    } else if (dto.startLat !== undefined && dto.startLng !== undefined) {
+      // Add explicit checks and assignment
+      startLat = dto.startLat;
+      startLng = dto.startLng;
+    } else {
       return {
         success: false,
-        message: 'Could not find start location',
+        message: 'Start location is required (either address or coordinates)',
       };
     }
-    startLat = coords.lat;
-    startLng = coords.lng;
-  } else if (dto.startLat !== undefined && dto.startLng !== undefined) {
-    // Add explicit checks and assignment
-    startLat = dto.startLat;
-    startLng = dto.startLng;
-  } else {
-    return {
-      success: false,
-      message: 'Start location is required (either address or coordinates)',
-    };
-  }
 
-  // Geocode end if address provided
-  if (dto.endAddress) {
-    const coords = await this.routeMatchingService.geocodeAddress(dto.endAddress);
-    if (!coords) {
+    // Geocode end if address provided
+    if (dto.endAddress) {
+      const coords = await this.routeMatchingService.geocodeAddress(dto.endAddress);
+      if (!coords) {
+        return {
+          success: false,
+          message: 'Could not find end location',
+        };
+      }
+      endLat = coords.lat;
+      endLng = coords.lng;
+    } else if (dto.endLat !== undefined && dto.endLng !== undefined) {
+      // Add explicit checks and assignment
+      endLat = dto.endLat;
+      endLng = dto.endLng;
+    } else {
       return {
         success: false,
-        message: 'Could not find end location',
+        message: 'End location is required (either address or coordinates)',
       };
     }
-    endLat = coords.lat;
-    endLng = coords.lng;
-  } else if (dto.endLat !== undefined && dto.endLng !== undefined) {
-    // Add explicit checks and assignment
-    endLat = dto.endLat;
-    endLng = dto.endLng;
-  } else {
+
+    const result = await this.routeMatchingService.findSmartRoutes(
+      startLat,
+      startLng,
+      endLat,
+      endLng,
+    );
+
     return {
-      success: false,
-      message: 'End location is required (either address or coordinates)',
+      success: true,
+      data: result,
     };
   }
-
-  const result = await this.routeMatchingService.findSmartRoutes(startLat, startLng, endLat, endLng);
-
-  return {
-    success: true,
-    data: result,
-  };
-}
 
   @Get('popular')
   @ApiOperation({ summary: 'Get popular routes' })

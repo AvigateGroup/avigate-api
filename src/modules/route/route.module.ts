@@ -34,12 +34,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
     RouteMatchingService,
     TripGateway,
   ],
-  exports: [
-    RouteService,
-    TripService,
-    GoogleMapsService,
-    GeofencingService,
-    RouteMatchingService,
-  ],
+  exports: [RouteService, TripService, GoogleMapsService, GeofencingService, RouteMatchingService],
 })
 export class RouteModule {}

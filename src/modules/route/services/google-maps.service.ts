@@ -24,7 +24,7 @@ export class GoogleMapsService {
 
   constructor(private configService: ConfigService) {
     this.client = new Client({});
-    
+
     const apiKey = this.configService.get<string>('GOOGLE_MAPS_API_KEY');
     if (!apiKey) {
       throw new Error('GOOGLE_MAPS_API_KEY is not configured');
@@ -42,7 +42,12 @@ export class GoogleMapsService {
         params: {
           origin: `${origin.lat},${origin.lng}`,
           destination: `${destination.lat},${destination.lng}`,
-          mode: mode === 'transit' ? TravelMode.transit : mode === 'walking' ? TravelMode.walking : TravelMode.driving,
+          mode:
+            mode === 'transit'
+              ? TravelMode.transit
+              : mode === 'walking'
+                ? TravelMode.walking
+                : TravelMode.driving,
           key: this.apiKey,
           alternatives: false,
         },
