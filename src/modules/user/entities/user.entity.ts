@@ -10,7 +10,7 @@ import {
   BeforeInsert,
   BeforeUpdate,
 } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
 import { UserDevice } from './user-device.entity';
 import { UserOTP } from './user-otp.entity';
 
