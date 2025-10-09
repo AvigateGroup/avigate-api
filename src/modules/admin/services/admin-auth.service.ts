@@ -5,109 +5,154 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
+import { AdminSession } from '../entities/admin-session.entity';
 import { AdminLoginDto } from '../dto/admin-login.dto';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { logger } from '@/utils/logger.util';
 
 const ALLOWED_EMAIL_DOMAIN = '@avigate.co';
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MINUTES = 30;
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  role: string;
+  sessionId: string;
+}
 
 @Injectable()
 export class AdminAuthService {
   constructor(
     @InjectRepository(Admin)
     private adminRepository: Repository<Admin>,
+    @InjectRepository(AdminSession)
+    private sessionRepository: Repository<AdminSession>,
     private jwtService: JwtService,
     private configService: ConfigService,
   ) {}
 
-    async login(loginDto: AdminLoginDto, req: Request) {
+  /**
+   * Admin Login with TOTP/Backup Code Support
+   */
+  async login(loginDto: AdminLoginDto, req: Request, res: Response) {
     const { email, password, totpToken, backupCode } = loginDto;
 
     // Validate email domain
     if (!email.toLowerCase().endsWith(ALLOWED_EMAIL_DOMAIN)) {
-        throw new UnauthorizedException('Access restricted to authorized domains');
+      throw new UnauthorizedException('Access restricted to authorized domains');
     }
 
-    // Find admin
+    // Find admin with sensitive fields
     const admin = await this.adminRepository
-        .createQueryBuilder('admin')
-        .addSelect(['admin.passwordHash', 'admin.totpSecret', 'admin.totpBackupCodes'])  // <-- Add totpBackupCodes here
-        .where('admin.email = :email', { email })
-        .getOne();
+      .createQueryBuilder('admin')
+      .addSelect(['admin.passwordHash', 'admin.totpSecret', 'admin.totpBackupCodes'])
+      .where('admin.email = :email', { email: email.toLowerCase() })
+      .andWhere('admin.deletedAt IS NULL')
+      .getOne();
 
     if (!admin) {
-        throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check if locked
+    // Check if account is active
+    if (!admin.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    // Check if account is locked
     if (admin.lockedUntil && admin.lockedUntil > new Date()) {
-        throw new UnauthorizedException('Account is temporarily locked');
+      const remainingMinutes = Math.ceil(
+        (admin.lockedUntil.getTime() - Date.now()) / 60000
+      );
+      throw new UnauthorizedException(
+        `Account is temporarily locked. Please try again in ${remainingMinutes} minutes.`
+      );
     }
 
     // Verify password
     const isPasswordValid = await admin.comparePassword(password);
     if (!isPasswordValid) {
-        await this.incrementFailedAttempts(admin);
-        throw new UnauthorizedException('Invalid credentials');
+      await this.incrementFailedAttempts(admin);
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Check TOTP
+    // Check TOTP if enabled
     if (admin.totpEnabled) {
-        let totpValid = false;
+      let totpValid = false;
 
-        if (totpToken) {
+      // Verify TOTP token
+      if (totpToken) {
         totpValid = admin.verifyTOTP(totpToken);
-        } else if (backupCode && admin.totpBackupCodes) {
-        // Verify backup code
+      }
+      // Verify backup code
+      else if (backupCode && admin.totpBackupCodes && admin.totpBackupCodes.length > 0) {
         for (const hashedCode of admin.totpBackupCodes) {
-            if (await bcrypt.compare(backupCode, hashedCode)) {
+          if (await bcrypt.compare(backupCode.trim().toUpperCase(), hashedCode)) {
             totpValid = true;
             // Remove used backup code
             admin.totpBackupCodes = admin.totpBackupCodes.filter(
-                code => code !== hashedCode
+              (code) => code !== hashedCode
             );
             await this.adminRepository.save(admin);
+            logger.info(`Backup code used for admin: ${email}`);
             break;
-            }
+          }
         }
-        }
+      }
 
-        if (!totpValid) {
-        throw new UnauthorizedException('Invalid TOTP token or backup code');
-        }
+      if (!totpValid) {
+        throw new UnauthorizedException(
+          'Two-factor authentication required. Please provide a valid TOTP token or backup code.'
+        );
+      }
     }
 
-    // Generate tokens
-    const tokens = this.generateTokens(admin);
+    // Create session
+    const session = await this.createSession(admin, req);
 
-    // Update login info
+    // Generate JWT tokens
+    const { accessToken, refreshToken } = this.generateTokens(admin, session.id);
+
+    // Update admin login info
     admin.lastLoginAt = new Date();
-    admin.lastLoginIP = req.ip ?? '';
-    admin.lastUserAgent = req.get('User-Agent') ?? '';
+    admin.lastLoginIP = this.getClientIp(req);
+    admin.lastUserAgent = req.get('User-Agent') || 'Unknown';
     admin.failedLoginAttempts = 0;
     admin.lockedUntil = null;
-    admin.refreshToken = tokens.refreshToken;
-    admin.refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.adminRepository.save(admin);
 
-    logger.info(`Admin logged in: ${email}`);
+    // Set refresh token as HTTP-only cookie
+    this.setRefreshTokenCookie(res, refreshToken);
+
+    logger.info(`Admin logged in successfully: ${email}`);
 
     return {
-        success: true,
-        message: 'Login successful',
-        data: {
-        admin,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        },
+      success: true,
+      message: 'Login successful',
+      data: {
+        admin: this.sanitizeAdmin(admin),
+        accessToken,
+        expiresIn: 3600, // 1 hour in seconds
+        mustChangePassword: admin.mustChangePassword,
+      },
     };
-    }
+  }
 
-  async logout(admin: Admin) {
-    admin.refreshToken = '';
-    admin.refreshTokenExpiresAt = null;
-    await this.adminRepository.save(admin);
+  /**
+   * Admin Logout
+   */
+  async logout(admin: Admin, sessionId: string, res: Response) {
+    // Invalidate the current session
+    await this.sessionRepository.update(
+      { id: sessionId, adminId: admin.id },
+      { isActive: false }
+    );
+
+    // Clear refresh token cookie
+    this.clearRefreshTokenCookie(res);
 
     logger.info(`Admin logged out: ${admin.email}`);
 
@@ -117,35 +162,59 @@ export class AdminAuthService {
     };
   }
 
-  async refreshToken(refreshToken: string) {
+  /**
+   * Refresh Access Token
+   */
+  async refreshToken(refreshToken: string, req: Request, res: Response) {
     try {
-      const payload = this.jwtService.verify(refreshToken, {
+      // Verify refresh token
+      const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.configService.get('ADMIN_REFRESH_SECRET'),
       });
 
-      const admin = await this.adminRepository.findOne({
-        where: { id: payload.adminId, isActive: true },
+      // Find session
+      const session = await this.sessionRepository.findOne({
+        where: {
+          id: payload.sessionId,
+          adminId: payload.sub,
+          isActive: true,
+        },
+        relations: ['admin'],
       });
 
-      if (!admin || admin.refreshToken !== refreshToken) {
-        throw new UnauthorizedException('Invalid refresh token');
+      if (!session) {
+        throw new UnauthorizedException('Invalid session');
       }
 
-      if (!admin.refreshTokenExpiresAt || admin.refreshTokenExpiresAt < new Date()) {
-        throw new UnauthorizedException('Refresh token expired');
+      // Check if session is expired
+      if (new Date() > session.refreshTokenExpiresAt) {
+        await this.sessionRepository.update({ id: session.id }, { isActive: false });
+        throw new UnauthorizedException('Session expired. Please login again.');
       }
 
-      const tokens = this.generateTokens(admin);
+      // Check if admin is still active
+      if (!session.admin.isActive) {
+        await this.sessionRepository.update({ id: session.id }, { isActive: false });
+        throw new UnauthorizedException('Account is deactivated');
+      }
 
-      admin.refreshToken = tokens.refreshToken;
-      admin.refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      await this.adminRepository.save(admin);
+      // Generate new tokens
+      const tokens = this.generateTokens(session.admin, session.id);
+
+      // Update session
+      session.lastActivityAt = new Date();
+      session.expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      await this.sessionRepository.save(session);
+
+      // Set new refresh token cookie
+      this.setRefreshTokenCookie(res, tokens.refreshToken);
 
       return {
         success: true,
+        message: 'Token refreshed successfully',
         data: {
           accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
+          expiresIn: 3600,
         },
       };
     } catch (error) {
@@ -153,156 +222,177 @@ export class AdminAuthService {
     }
   }
 
-  private generateTokens(admin: Admin) {
-    const payload = { adminId: admin.id, email: admin.email, role: admin.role };
+  /**
+   * Get Current Admin Profile
+   */
+  async getProfile(admin: Admin) {
+    const fullAdmin = await this.adminRepository.findOne({
+      where: { id: admin.id },
+      select: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'role',
+        'permissions',
+        'isActive',
+        'totpEnabled',
+        'lastLoginAt',
+        'mustChangePassword',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+
+    if (!fullAdmin) {
+      throw new UnauthorizedException('Admin not found');
+    }
+
+    // Get backup codes count
+    const adminWithBackupCodes = await this.adminRepository
+      .createQueryBuilder('admin')
+      .addSelect('admin.totpBackupCodes')
+      .where('admin.id = :id', { id: admin.id })
+      .getOne();
+
+    const backupCodesCount = adminWithBackupCodes?.totpBackupCodes?.length || 0;
 
     return {
-      accessToken: this.jwtService.sign(payload),
-      refreshToken: this.jwtService.sign(payload, {
-        secret: this.configService.get('ADMIN_REFRESH_SECRET'),
-        expiresIn: this.configService.get('ADMIN_REFRESH_EXPIRATION', '7d'),
-      }),
+      success: true,
+      data: {
+        admin: {
+          ...this.sanitizeAdmin(fullAdmin),
+          backupCodesRemaining: backupCodesCount,
+        },
+      },
     };
   }
 
-  private async incrementFailedAttempts(admin: Admin) {
+  // ==================== PRIVATE HELPER METHODS ====================
+
+  /**
+   * Create Admin Session
+   */
+  private async createSession(admin: Admin, req: Request): Promise<AdminSession> {
+    const session = this.sessionRepository.create({
+      adminId: admin.id,
+      token: crypto.randomBytes(32).toString('hex'),
+      refreshToken: crypto.randomBytes(32).toString('hex'),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      ipAddress: this.getClientIp(req),
+      userAgent: req.get('User-Agent') || 'Unknown',
+      deviceInfo: this.extractDeviceInfo(req),
+      location: null as string | null,
+      isActive: true,
+      lastActivityAt: new Date(),
+    });
+
+    return this.sessionRepository.save(session);
+  }
+
+  /**
+   * Generate JWT Tokens
+   */
+  private generateTokens(admin: Admin, sessionId: string) {
+    const payload: JwtPayload = {
+      sub: admin.id,
+      email: admin.email,
+      role: admin.role,
+      sessionId,
+    };
+
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('ADMIN_JWT_SECRET'),
+      expiresIn: '1h',
+    });
+
+    const refreshToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('ADMIN_REFRESH_SECRET'),
+      expiresIn: '7d',
+    });
+
+    return { accessToken, refreshToken };
+  }
+
+  /**
+   * Increment Failed Login Attempts
+   */
+  private async incrementFailedAttempts(admin: Admin): Promise<void> {
     admin.failedLoginAttempts += 1;
 
-    let lockDuration = 30 * 60 * 1000; // 30 minutes
-
-    if (admin.failedLoginAttempts >= 15) {
-      lockDuration = 24 * 60 * 60 * 1000; // 24 hours
-    } else if (admin.failedLoginAttempts >= 10) {
-      lockDuration = 2 * 60 * 60 * 1000; // 2 hours
-    }
-
-    if (admin.failedLoginAttempts >= 5) {
-      admin.lockedUntil = new Date(Date.now() + lockDuration);
+    if (admin.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
+      admin.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MINUTES * 60 * 1000);
+      logger.warn(
+        `Admin account locked due to failed login attempts: ${admin.email} (${admin.failedLoginAttempts} attempts)`
+      );
     }
 
     await this.adminRepository.save(admin);
   }
 
-async setupTOTP(admin: Admin) {
-  const adminWithSecret = await this.adminRepository
-    .createQueryBuilder('admin')
-    .addSelect('admin.totpSecret')
-    .where('admin.id = :id', { id: admin.id })
-    .getOne();
-
-  // ADD THIS NULL CHECK
-  if (!adminWithSecret) {
-    throw new UnauthorizedException('Admin not found');
+  /**
+   * Set Refresh Token Cookie
+   */
+  private setRefreshTokenCookie(res: Response, refreshToken: string): void {
+    res.cookie('admin_refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: this.configService.get('NODE_ENV') === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/api/v1/admin/auth/refresh',
+    });
   }
 
-  const secret = adminWithSecret.generateTOTPSecret();
-  
-  // Generate backup codes
-  const backupCodes = this.generateBackupCodes();
-  const hashedBackupCodes = await Promise.all(
-    backupCodes.map(code => bcrypt.hash(code, 10))
-  );
-
-  adminWithSecret.totpBackupCodes = hashedBackupCodes;
-  await this.adminRepository.save(adminWithSecret);
-
-  return {
-    success: true,
-    message: 'TOTP secret generated. Scan QR code with your authenticator app.',
-    data: {
-      secret: secret.base32,
-      qrCode: secret.otpauth_url,
-      backupCodes, // Show these ONCE to the user
-    },
-  };
-}
-
-async verifyAndEnableTOTP(admin: Admin, totpToken: string) {
-  const adminWithSecret = await this.adminRepository
-    .createQueryBuilder('admin')
-    .addSelect('admin.totpSecret')
-    .where('admin.id = :id', { id: admin.id })
-    .getOne();
-
-  // ADD THIS NULL CHECK
-  if (!adminWithSecret) {
-    throw new UnauthorizedException('Admin not found');
+  /**
+   * Clear Refresh Token Cookie
+   */
+  private clearRefreshTokenCookie(res: Response): void {
+    res.clearCookie('admin_refresh_token', {
+      path: '/api/v1/admin/auth/refresh',
+    });
   }
 
-  if (!adminWithSecret.totpSecret) {
-    throw new UnauthorizedException('TOTP not set up. Call /totp/setup first.');
-  }
-
-  const isValid = adminWithSecret.verifyTOTP(totpToken);
-  
-  if (!isValid) {
-    throw new UnauthorizedException('Invalid TOTP token');
-  }
-
-  adminWithSecret.totpEnabled = true;
-  await this.adminRepository.save(adminWithSecret);
-
-  logger.info(`TOTP enabled for admin: ${admin.email}`);
-
-  return {
-    success: true,
-    message: 'TOTP 2FA enabled successfully',
-  };
-}
-
-async disableTOTP(admin: Admin, password: string) {
-  const adminWithSecret = await this.adminRepository
-    .createQueryBuilder('admin')
-    .addSelect(['admin.passwordHash', 'admin.totpSecret', 'admin.totpBackupCodes'])
-    .where('admin.id = :id', { id: admin.id })
-    .getOne();
-
-  // ADD THIS NULL CHECK
-  if (!adminWithSecret) {
-    throw new UnauthorizedException('Admin not found');
-  }
-
-  const isPasswordValid = await adminWithSecret.comparePassword(password);
-  if (!isPasswordValid) {
-    throw new UnauthorizedException('Invalid password');
-  }
-
-  adminWithSecret.totpEnabled = false;
-  adminWithSecret.totpSecret = null;
-  adminWithSecret.totpBackupCodes = null;
-  await this.adminRepository.save(adminWithSecret);
-
-  logger.info(`TOTP disabled for admin: ${admin.email}`);
-
-  return {
-    success: true,
-    message: 'TOTP 2FA disabled',
-  };
-}
-
-async regenerateBackupCodes(admin: Admin) {
-  const backupCodes = this.generateBackupCodes();
-  const hashedBackupCodes = await Promise.all(
-    backupCodes.map(code => bcrypt.hash(code, 10))
-  );
-
-  admin.totpBackupCodes = hashedBackupCodes;
-  await this.adminRepository.save(admin);
-
-  return {
-    success: true,
-    message: 'Backup codes regenerated',
-    data: { backupCodes },
-  };
-}
-
-private generateBackupCodes(count: number = 10): string[] {
-  const codes: string[] = [];
-  for (let i = 0; i < count; i++) {
-    codes.push(
-      Math.random().toString(36).substring(2, 10).toUpperCase()
+  /**
+   * Get Client IP Address
+   */
+  private getClientIp(req: Request): string {
+    return (
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.ip ||
+      req.socket.remoteAddress ||
+      'Unknown'
     );
   }
-  return codes;
-}
+
+  /**
+   * Extract Device Info from User Agent
+   */
+  private extractDeviceInfo(req: Request): string {
+    const userAgent = req.get('User-Agent') || '';
+    
+    // Simple device detection (consider using a library like 'ua-parser-js' for production)
+    if (/mobile/i.test(userAgent)) return 'Mobile';
+    if (/tablet/i.test(userAgent)) return 'Tablet';
+    return 'Desktop';
+  }
+
+  /**
+   * Sanitize Admin Object (Remove Sensitive Fields)
+   */
+  private sanitizeAdmin(admin: Admin) {
+    const {
+      passwordHash,
+      totpSecret,
+      totpBackupCodes,
+      refreshToken,
+      passwordHistory,
+      resetToken,
+      inviteToken,
+      failedLoginAttempts,
+      lockedUntil,
+      ...sanitized
+    } = admin as any;
+    return sanitized;
+  }
 }

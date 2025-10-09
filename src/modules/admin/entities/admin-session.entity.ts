@@ -47,7 +47,7 @@ export class AdminSession {
   deviceInfo: string;
 
   @Column({ nullable: true })
-  location: string;
+  location: string | null;
 
   @Column({ default: true })
   @Index()
