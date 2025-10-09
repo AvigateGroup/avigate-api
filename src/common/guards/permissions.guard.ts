@@ -1,6 +1,12 @@
 // src/common/guards/permissions.guard.ts
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { Admin, AdminRole } from '@/modules/admin/entities/admin.entity';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator';
 
 @Injectable()
@@ -8,27 +14,29 @@ export class PermissionsGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(PERMISSIONS_KEY, [
-      context.getHandler(),
-      context.getClass(),
-    ]);
+    const requiredPermissions = this.reflector.getAllAndOverride<string[]>(
+      PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
 
-    if (!requiredPermissions) {
+    if (!requiredPermissions || requiredPermissions.length === 0) {
       return true;
     }
 
-    const { admin } = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest();
+    const admin: Admin = request.user;
 
     if (!admin) {
-      throw new ForbiddenException('Admin authentication required');
+      throw new ForbiddenException('Admin not found');
     }
 
-    // Super admin has all permissions
-    if (admin.role === 'super_admin') {
+    // Super admins have all permissions
+    if (admin.role === AdminRole.SUPER_ADMIN) {
       return true;
     }
 
-    const hasPermission = requiredPermissions.some(permission =>
+    // Check if admin has required permissions
+    const hasPermission = requiredPermissions.every((permission) =>
       admin.permissions?.includes(permission),
     );
 
