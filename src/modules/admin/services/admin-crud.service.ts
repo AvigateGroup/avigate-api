@@ -108,19 +108,21 @@ export class AdminCrudService {
 
     const queryBuilder = this.adminRepository
       .createQueryBuilder('admin')
-      .leftJoinAndSelect('admin.creator', 'creator')
-      .leftJoinAndSelect('admin.lastModifier', 'lastModifier');
+      .where('admin.deletedAt IS NULL'); // Only get non-deleted admins
 
+    // Filter by role
     if (role) {
       queryBuilder.andWhere('admin.role = :role', { role });
     }
 
+    // Filter by status
     if (status === 'active') {
       queryBuilder.andWhere('admin.isActive = :isActive', { isActive: true });
     } else if (status === 'inactive') {
       queryBuilder.andWhere('admin.isActive = :isActive', { isActive: false });
     }
 
+    // Search filter
     if (search) {
       queryBuilder.andWhere(
         '(admin.firstName ILIKE :search OR admin.lastName ILIKE :search OR admin.email ILIKE :search)',
@@ -128,14 +130,17 @@ export class AdminCrudService {
       );
     }
 
+    // Get total count
     const total = await queryBuilder.getCount();
 
+    // Get paginated results
     const admins = await queryBuilder
       .skip(skip)
       .take(limit)
       .orderBy('admin.createdAt', 'DESC')
       .getMany();
 
+    // Sanitize admins
     const sanitizedAdmins = admins.map(admin => this.sanitizeAdmin(admin));
 
     return {
@@ -155,7 +160,6 @@ export class AdminCrudService {
   async getAdminById(adminId: string) {
     const admin = await this.adminRepository.findOne({
       where: { id: adminId },
-      relations: ['creator', 'lastModifier'],
     });
 
     if (!admin) {
@@ -283,8 +287,8 @@ export class AdminCrudService {
   }
 
   private sanitizeAdmin(admin: Admin) {
-    const { passwordHash, totpSecret, totpBackupCodes, inviteToken, resetToken, ...sanitized } =
-      admin;
+    const { passwordHash, totpSecret, totpBackupCodes, inviteToken, resetToken, refreshToken, passwordHistory, ...sanitized } =
+      admin as any;
     return sanitized;
   }
 }
