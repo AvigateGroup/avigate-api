@@ -13,9 +13,9 @@ import { Admin, AdminRole } from '../entities/admin.entity';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { UpdateAdminDto } from '../dto/update-admin.dto';
 import { AdminEmailService } from '@/modules/email/admin-email.service';
-import { AdminPasswordService } from './admin-password.service';
 import { AdminPermissionService } from './admin-permission.service';
 import * as crypto from 'crypto';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class AdminCrudService {
@@ -23,7 +23,6 @@ export class AdminCrudService {
     @InjectRepository(Admin)
     private adminRepository: Repository<Admin>,
     private adminEmailService: AdminEmailService,
-    private adminPasswordService: AdminPasswordService,
     private adminPermissionService: AdminPermissionService,
   ) {}
 
@@ -46,10 +45,6 @@ export class AdminCrudService {
       throw new ConflictException('Admin with this email already exists');
     }
 
-    // Generate temporary password
-    const tempPassword = this.adminPasswordService.generateSecurePassword(16);
-    const passwordHash = await this.adminPasswordService.hashPassword(tempPassword);
-
     // Get default permissions for role
     const permissions = this.adminPermissionService.getRolePermissions(role);
 
@@ -58,15 +53,19 @@ export class AdminCrudService {
     const inviteTokenExpiry = new Date();
     inviteTokenExpiry.setDate(inviteTokenExpiry.getDate() + 7); // 7 days expiry
 
+    // Create a placeholder password hash (can never be used for login)
+    // This will be replaced when the admin accepts the invitation
+    const placeholderHash = await bcrypt.hash(crypto.randomBytes(64).toString('hex'), 12);
+
     // Create admin
     const admin = this.adminRepository.create({
       email,
       firstName,
       lastName,
-      passwordHash,
+      passwordHash: placeholderHash, // Placeholder - will be replaced on invitation acceptance
       role,
       permissions,
-      isActive: true,
+      isActive: false, // Inactive until invitation accepted
       mustChangePassword: true,
       inviteToken,
       inviteTokenExpiry,
@@ -76,16 +75,16 @@ export class AdminCrudService {
 
     await this.adminRepository.save(admin);
 
-    // Send invitation email
+    // Send invitation email (no temporary password)
     try {
       await this.adminEmailService.sendAdminInvitationEmail(
         email,
         firstName,
-        tempPassword,
         inviteToken,
       );
     } catch (error) {
       console.error('Failed to send invitation email:', error);
+      // Don't fail admin creation if email fails
     }
 
     const { passwordHash: _, ...adminData } = admin;
@@ -93,7 +92,10 @@ export class AdminCrudService {
     return {
       success: true,
       message: 'Admin created successfully. Invitation email sent.',
-      data: { admin: adminData, tempPassword },
+      data: { 
+        admin: adminData,
+        invitationToken: inviteToken, // Return token for testing/debugging
+      },
     };
   }
 

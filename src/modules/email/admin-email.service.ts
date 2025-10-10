@@ -90,7 +90,6 @@ export class AdminEmailService {
     firstName: string,
     email: string,
     inviteUrl: string,
-    tempPassword: string,
   ): string {
     return `
       <!DOCTYPE html>
@@ -110,32 +109,30 @@ export class AdminEmailService {
           
           <!-- Content -->
           <div style="padding: 40px;">
-            <h2 style="margin: 0 0 24px; color: #333; font-size: 24px; font-weight: 600;">Admin Access Invitation</h2>
+            <h2 style="margin: 0 0 24px; color: #333; font-size: 24px; font-weight: 600;">Welcome to Avigate Admin</h2>
             
             <p style="margin: 0 0 24px; color: #666; line-height: 1.6;">Hi ${firstName},</p>
             
-            <p style="margin: 0 0 32px; color: #666; line-height: 1.6;">You've been invited to access the Avigate Admin Portal. Click the button below to accept your invitation and set up your account:</p>
+            <p style="margin: 0 0 32px; color: #666; line-height: 1.6;">You've been invited to join the Avigate Admin Portal. Click the button below to create your account and set your password:</p>
             
             <!-- CTA Button -->
             <div style="text-align: center; margin: 0 0 32px;">
               <a href="${inviteUrl}" style="display: inline-block; background: #86B300; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-weight: 600; font-size: 16px;">Accept Invitation</a>
             </div>
             
-            <!-- Credentials Info -->
+            <!-- Account Info -->
             <div style="background: #f8f9fa; padding: 24px; border-radius: 6px; margin: 0 0 32px;">
-              <p style="margin: 0 0 16px; color: #333; font-size: 14px; font-weight: 600;">Your Account Details:</p>
-              <p style="margin: 0 0 8px; color: #333; font-size: 14px;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 0; color: #333; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-family: monospace; color: #495057;">${tempPassword}</code></p>
+              <p style="margin: 0 0 8px; color: #333; font-size: 14px; font-weight: 600;">Your Account Email:</p>
+              <p style="margin: 0; color: #333; font-size: 14px;">${email}</p>
             </div>
             
             <!-- Important Note -->
             <div style="padding: 16px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px; margin: 0 0 24px;">
               <p style="margin: 0 0 8px; color: #856404; font-size: 14px; font-weight: 600;">Important:</p>
               <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 14px;">
-                <li>Click the button above to accept your invitation</li>
-                <li>You'll be asked to set a new secure password</li>
                 <li>This invitation expires in 7 days</li>
-                <li>Keep your temporary password safe until you complete setup</li>
+                <li>You'll create your own secure password during setup</li>
+                <li>Once activated, you can log in immediately</li>
               </ul>
             </div>
             
@@ -203,13 +200,12 @@ export class AdminEmailService {
   }
 
   /**
-   * Send admin invitation email with temporary password
-   * Admin will use the invitation link to set their own secure password
+   * Send admin invitation email
+   * NO temporary password - admin will set their own password
    */
   async sendAdminInvitationEmail(
     email: string,
     firstName: string,
-    tempPassword: string,
     inviteToken: string,
   ): Promise<void> {
     const inviteUrl = `${this.adminFrontendUrl}/accept-invitation?token=${inviteToken}`;
@@ -229,8 +225,8 @@ export class AdminEmailService {
           },
         },
       ],
-      subject: 'Welcome to Avigate Admin - Complete Your Account Setup',
-      htmlbody: this.generateInvitationHTML(firstName, email, inviteUrl, tempPassword),
+      subject: 'Welcome to Avigate Admin - Set Up Your Account',
+      htmlbody: this.generateInvitationHTML(firstName, email, inviteUrl),
     };
 
     await this.sendZeptoMailEmail(emailData, 'admin_invitation');

@@ -1,11 +1,10 @@
 // src/modules/admin/services/admin-invitation.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Admin } from '../entities/admin.entity';
 import { AcceptInvitationDto } from '../dto/accept-invitation.dto';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
 import { logger } from '@/utils/logger.util';
 
 const MIN_PASSWORD_LENGTH = 12;
@@ -19,6 +18,7 @@ export class AdminInvitationService {
 
   /**
    * Accept Admin Invitation (Public endpoint)
+   * This is where the admin sets their FIRST and ONLY real password
    */
   async acceptInvitation(acceptInvitationDto: AcceptInvitationDto) {
     const { token, newPassword, confirmPassword } = acceptInvitationDto;
@@ -34,7 +34,7 @@ export class AdminInvitationService {
     // Find admin by invitation token
     const admin = await this.adminRepository
       .createQueryBuilder('admin')
-      .addSelect('admin.inviteToken')
+      .addSelect(['admin.inviteToken', 'admin.passwordHash'])
       .where('admin.inviteToken = :token', { token })
       .andWhere('admin.inviteTokenExpiry > :now', { now: new Date() })
       .getOne();
@@ -43,32 +43,25 @@ export class AdminInvitationService {
       throw new BadRequestException('Invalid or expired invitation token');
     }
 
-    // Check if invitation already accepted
-    if (!admin.mustChangePassword && admin.passwordChangedAt) {
-      throw new BadRequestException('Invitation has already been accepted');
-    }
-
-    // Hash password
+    // Hash the new password - THIS IS THE FIRST REAL PASSWORD
     const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    // Update admin
+    // Update admin - activate account and set password
     admin.passwordHash = passwordHash;
     admin.passwordChangedAt = new Date();
     admin.mustChangePassword = false;
     admin.inviteToken = null;
     admin.inviteTokenExpiry = null;
-    admin.isActive = true;
-
-    // Initialize password history
-    admin.passwordHistory = [passwordHash];
+    admin.isActive = true; // Activate account now
+    admin.passwordHistory = [passwordHash]; // Initialize password history
 
     await this.adminRepository.save(admin);
 
-    logger.info(`Admin invitation accepted: ${admin.email}`);
+    logger.info(`Admin invitation accepted and account activated: ${admin.email}`);
 
     return {
       success: true,
-      message: 'Invitation accepted successfully. You can now log in with your new password.',
+      message: 'Invitation accepted successfully. You can now log in with your password.',
       data: {
         email: admin.email,
         firstName: admin.firstName,
@@ -76,49 +69,6 @@ export class AdminInvitationService {
       },
     };
   }
-
-  /**
-   * Resend Invitation (Super Admin only)
-   */
-  async resendInvitation(adminId: string, currentAdmin: Admin) {
-    const admin = await this.adminRepository.findOne({
-      where: { id: adminId },
-    });
-
-    if (!admin) {
-      throw new NotFoundException('Admin not found');
-    }
-
-    // Check if admin has already accepted invitation
-    if (!admin.mustChangePassword && admin.passwordChangedAt) {
-      throw new BadRequestException('Admin has already accepted the invitation');
-    }
-
-    // Generate new invitation token
-    const inviteToken = crypto.randomBytes(32).toString('hex');
-    const inviteTokenExpiry = new Date();
-    inviteTokenExpiry.setDate(inviteTokenExpiry.getDate() + 7); // 7 days
-
-    admin.inviteToken = inviteToken;
-    admin.inviteTokenExpiry = inviteTokenExpiry;
-    admin.lastModifiedBy = currentAdmin.id;
-
-    await this.adminRepository.save(admin);
-
-    // Note: Email sending would be handled by the calling service
-    logger.info(`Invitation resent for admin: ${admin.email} by ${currentAdmin.email}`);
-
-    return {
-      success: true,
-      message: 'Invitation resent successfully',
-      data: {
-        inviteToken,
-        email: admin.email,
-      },
-    };
-  }
-
-  // ==================== PRIVATE HELPER METHODS ====================
 
   /**
    * Validate Password Strength
@@ -130,22 +80,18 @@ export class AdminInvitationService {
       );
     }
 
-    // Check for uppercase
     if (!/[A-Z]/.test(password)) {
       throw new BadRequestException('Password must contain at least one uppercase letter');
     }
 
-    // Check for lowercase
     if (!/[a-z]/.test(password)) {
       throw new BadRequestException('Password must contain at least one lowercase letter');
     }
 
-    // Check for number
     if (!/[0-9]/.test(password)) {
       throw new BadRequestException('Password must contain at least one number');
     }
 
-    // Check for special character
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
       throw new BadRequestException('Password must contain at least one special character');
     }
