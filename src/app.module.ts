@@ -16,6 +16,19 @@ import { EmailModule } from './modules/email/email.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import databaseConfig from './config/database.config';
 
+// Import all entities explicitly
+import { Admin } from './modules/admin/entities/admin.entity';
+import { AdminSession } from './modules/admin/entities/admin-session.entity';
+import { User } from './modules/user/entities/user.entity';
+import { UserDevice } from './modules/user/entities/user-device.entity';
+import { UserOTP } from './modules/user/entities/user-otp.entity';
+import { Location } from './modules/location/entities/location.entity';
+import { Landmark } from './modules/location/entities/landmark.entity';
+import { Route } from './modules/route/entities/route.entity';
+import { RouteStep } from './modules/route/entities/route-step.entity';
+import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
+// Add any other entities you have
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -31,11 +44,25 @@ import databaseConfig from './config/database.config';
         username: configService.get('DB_USER'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        
+        // FIXED: Explicitly list all entities instead of using glob pattern
+        entities: [
+          Admin,
+          AdminSession,
+          User,
+          UserDevice,
+          UserOTP,
+          Location,
+          Landmark,
+          Route,
+          RouteStep,
+          FareFeedback,
+          // Add any other entities here
+        ],
+        
         synchronize: false,
-        logging: false,
-        // Conditionally enable SSL based on environment
-        ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false, // ← Changed this line
+        logging: configService.get('NODE_ENV') === 'development',
+        ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
       }),
       inject: [ConfigService],
     }),
