@@ -81,9 +81,6 @@ async createAdmin(createAdminDto: CreateAdminDto, currentAdmin: Admin) {
     inviteTokenExpiry,
     createdBy: currentAdmin.id,
     lastModifiedBy: currentAdmin.id,
-    totpEnabled: false,
-    totpSecret: null,
-    totpBackupCodes: null,
   });
 
   await this.adminRepository.save(admin);
