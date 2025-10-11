@@ -1,6 +1,6 @@
 // src/modules/admin/controllers/user-management.controller.ts
 import { Controller, Get, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AdminAuthGuard } from '@/common/guards/admin-auth.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { RequirePermissions } from '@/common/decorators/permissions.decorator';
@@ -29,6 +29,13 @@ export class UserManagementController {
   @Get()
   @RequirePermissions('users.view')
   @ApiOperation({ summary: 'Get all users with filters' })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 20 })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'isVerified', required: false, type: String, enum: ['true', 'false'] })
+  @ApiQuery({ name: 'isActive', required: false, type: String, enum: ['true', 'false'] })
+  @ApiQuery({ name: 'sortBy', required: false, type: String, example: 'createdAt' })
+  @ApiQuery({ name: 'sortOrder', required: false, enum: ['asc', 'desc'] })
   async getAllUsers(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
