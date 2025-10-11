@@ -86,11 +86,7 @@ export class AdminEmailService {
     }
   }
 
-  private generateInvitationHTML(
-    firstName: string,
-    email: string,
-    inviteUrl: string,
-  ): string {
+  private generateInvitationHTML(firstName: string, email: string, inviteUrl: string): string {
     return `
       <!DOCTYPE html>
       <html>

@@ -44,7 +44,7 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
         username: configService.get('DB_USER'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
-        
+
         // FIXED: Explicitly list all entities instead of using glob pattern
         entities: [
           Admin,
@@ -59,7 +59,7 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
           FareFeedback,
           // Add any other entities here
         ],
-        
+
         synchronize: false,
         logging: configService.get('NODE_ENV') === 'development',
         ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,

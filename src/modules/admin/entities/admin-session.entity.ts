@@ -46,7 +46,6 @@ export class AdminSession {
   @Column({ type: 'varchar', nullable: true })
   deviceInfo: string;
 
-
   @Column({ type: 'varchar', nullable: true })
   location: string;
 

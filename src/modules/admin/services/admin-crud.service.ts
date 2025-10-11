@@ -26,91 +26,86 @@ export class AdminCrudService {
     private adminPermissionService: AdminPermissionService,
   ) {}
 
+  async createAdmin(createAdminDto: CreateAdminDto, currentAdmin: Admin) {
+    const { email, firstName, lastName, role = AdminRole.ADMIN } = createAdminDto;
 
-async createAdmin(createAdminDto: CreateAdminDto, currentAdmin: Admin) {
-  const { email, firstName, lastName, role = AdminRole.ADMIN } = createAdminDto;
-
-  // Only super admins can create admins
-  if (currentAdmin.role !== AdminRole.SUPER_ADMIN) {
-    throw new ForbiddenException('Only super administrators can create admin accounts');
-  }
-
-  // Validate email domain
-  if (!email.toLowerCase().endsWith('@avigate.co')) {
-    throw new ConflictException('Email must be from @avigate.co domain');
-  }
-
-  // Check if admin exists (including soft-deleted)
-  const existingAdmin = await this.adminRepository.findOne({ 
-    where: { email },
-    withDeleted: true, // ← ADD THIS LINE
-  });
-  
-  if (existingAdmin) {
-    // If soft-deleted, suggest restoration instead
-    if (existingAdmin.deletedAt) {
-      throw new ConflictException(
-        'An admin with this email was previously deleted. Please restore the existing admin instead of creating a new one.'
-      );
+    // Only super admins can create admins
+    if (currentAdmin.role !== AdminRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Only super administrators can create admin accounts');
     }
-    throw new ConflictException('Admin with this email already exists');
-  }
 
-  // Get default permissions for role
-  const permissions = this.adminPermissionService.getRolePermissions(role);
+    // Validate email domain
+    if (!email.toLowerCase().endsWith('@avigate.co')) {
+      throw new ConflictException('Email must be from @avigate.co domain');
+    }
 
-  // Generate invitation token
-  const inviteToken = crypto.randomBytes(32).toString('hex');
-  const inviteTokenExpiry = new Date();
-  inviteTokenExpiry.setDate(inviteTokenExpiry.getDate() + 7); // 7 days expiry
+    // Check if admin exists (including soft-deleted)
+    const existingAdmin = await this.adminRepository.findOne({
+      where: { email },
+      withDeleted: true, // ← ADD THIS LINE
+    });
 
-  // Create a placeholder password hash (can never be used for login)
-  const placeholderHash = await bcrypt.hash(crypto.randomBytes(64).toString('hex'), 12);
+    if (existingAdmin) {
+      // If soft-deleted, suggest restoration instead
+      if (existingAdmin.deletedAt) {
+        throw new ConflictException(
+          'An admin with this email was previously deleted. Please restore the existing admin instead of creating a new one.',
+        );
+      }
+      throw new ConflictException('Admin with this email already exists');
+    }
 
-  // Create admin
-  const admin = this.adminRepository.create({
-    email,
-    firstName,
-    lastName,
-    passwordHash: placeholderHash,
-    role,
-    permissions,
-    isActive: false, 
-    mustChangePassword: true,
-    inviteToken,
-    inviteTokenExpiry,
-    createdBy: currentAdmin.id,
-    lastModifiedBy: currentAdmin.id,
-    totpEnabled: false,
-    totpSecret: null,
-    totpBackupCodes: null,
-  });
+    // Get default permissions for role
+    const permissions = this.adminPermissionService.getRolePermissions(role);
 
-  await this.adminRepository.save(admin);
+    // Generate invitation token
+    const inviteToken = crypto.randomBytes(32).toString('hex');
+    const inviteTokenExpiry = new Date();
+    inviteTokenExpiry.setDate(inviteTokenExpiry.getDate() + 7); // 7 days expiry
 
-  // Send invitation email (no temporary password)
-  try {
-    await this.adminEmailService.sendAdminInvitationEmail(
+    // Create a placeholder password hash (can never be used for login)
+    const placeholderHash = await bcrypt.hash(crypto.randomBytes(64).toString('hex'), 12);
+
+    // Create admin
+    const admin = this.adminRepository.create({
       email,
       firstName,
+      lastName,
+      passwordHash: placeholderHash,
+      role,
+      permissions,
+      isActive: false,
+      mustChangePassword: true,
       inviteToken,
-    );
-  } catch (error) {
-    console.error('Failed to send invitation email:', error);
-    // Don't fail admin creation if email fails
+      inviteTokenExpiry,
+      createdBy: currentAdmin.id,
+      lastModifiedBy: currentAdmin.id,
+      totpEnabled: false,
+      totpSecret: null,
+      totpBackupCodes: null,
+    });
+
+    await this.adminRepository.save(admin);
+
+    // Send invitation email (no temporary password)
+    try {
+      await this.adminEmailService.sendAdminInvitationEmail(email, firstName, inviteToken);
+    } catch (error) {
+      console.error('Failed to send invitation email:', error);
+      // Don't fail admin creation if email fails
+    }
+
+    const { passwordHash: _, ...adminData } = admin;
+
+    return {
+      success: true,
+      message: 'Admin created successfully. Invitation email sent.',
+      data: {
+        admin: adminData,
+        invitationToken: inviteToken,
+      },
+    };
   }
-
-  const { passwordHash: _, ...adminData } = admin;
-
-  return {
-    success: true,
-    message: 'Admin created successfully. Invitation email sent.',
-    data: { 
-      admin: adminData,
-      invitationToken: inviteToken,
-    },
-  };
-}
 
   async getAdmins(
     page: number = 1,
@@ -302,8 +297,16 @@ async createAdmin(createAdminDto: CreateAdminDto, currentAdmin: Admin) {
   }
 
   private sanitizeAdmin(admin: Admin) {
-    const { passwordHash, totpSecret, totpBackupCodes, inviteToken, resetToken, refreshToken, passwordHistory, ...sanitized } =
-      admin as any;
+    const {
+      passwordHash,
+      totpSecret,
+      totpBackupCodes,
+      inviteToken,
+      resetToken,
+      refreshToken,
+      passwordHistory,
+      ...sanitized
+    } = admin as any;
     return sanitized;
   }
 }

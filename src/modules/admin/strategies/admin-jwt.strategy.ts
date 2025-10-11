@@ -22,7 +22,6 @@ export class AdminJwtStrategy extends PassportStrategy(Strategy, 'admin-jwt') {
   }
 
   async validate(payload: any) {
-    
     const admin = await this.adminRepository.findOne({
       where: { id: payload.sub, isActive: true },
       select: ['id', 'email', 'firstName', 'lastName', 'role', 'permissions', 'isActive'],

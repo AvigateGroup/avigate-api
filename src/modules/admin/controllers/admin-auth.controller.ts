@@ -65,7 +65,7 @@ export class AdminAuthController {
         adminTotpService: !!this.adminTotpService,
         adminPasswordService: !!this.adminPasswordService,
         adminInvitationService: !!this.adminInvitationService,
-      }
+      },
     };
   }
 

@@ -114,7 +114,11 @@ export class AdminManagementController {
     @Body() toggleStatusDto: ToggleStatusDto,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminStatusService.toggleAdminStatus(adminId, toggleStatusDto.isActive, currentAdmin);
+    return this.adminStatusService.toggleAdminStatus(
+      adminId,
+      toggleStatusDto.isActive,
+      currentAdmin,
+    );
   }
 
   @Post(':adminId/reset-password')
