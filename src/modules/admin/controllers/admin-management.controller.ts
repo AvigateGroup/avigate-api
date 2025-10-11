@@ -25,6 +25,7 @@ import { AdminPermissionService } from '../services/admin-permission.service';
 import { AdminSessionService } from '../services/admin-session.service';
 import { CreateAdminDto } from '../dto/create-admin.dto';
 import { UpdateAdminDto } from '../dto/update-admin.dto';
+import { ToggleStatusDto } from '../dto/toggle-status.dto';
 
 @ApiTags('admin')
 @Controller('admin/management')
@@ -110,10 +111,10 @@ export class AdminManagementController {
   @ApiOperation({ summary: 'Activate/Deactivate admin' })
   async toggleAdminStatus(
     @Param('adminId') adminId: string,
-    @Body('isActive') isActive: boolean,
+    @Body() toggleStatusDto: ToggleStatusDto,
     @CurrentAdmin() currentAdmin: Admin,
   ) {
-    return this.adminStatusService.toggleAdminStatus(adminId, isActive, currentAdmin);
+    return this.adminStatusService.toggleAdminStatus(adminId, toggleStatusDto.isActive, currentAdmin);
   }
 
   @Post(':adminId/reset-password')
