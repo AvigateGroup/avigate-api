@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from '../user/dto/register.dto';
 import { LoginDto } from '../user/dto/login.dto';
 import { VerifyEmailDto } from '../user/dto/verify-email.dto';
+import { RefreshTokenDto } from '../user/dto/refresh-token.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from '../user/entities/user.entity';
@@ -41,8 +42,8 @@ export class AuthController {
 
   @Post('refresh-token')
   @ApiOperation({ summary: 'Refresh access token' })
-  async refreshToken(@Body('refreshToken') refreshToken: string) {
-    return this.authService.refreshToken(refreshToken);
+  async refreshToken(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshToken(refreshTokenDto.refreshToken);
   }
 
   @Post('logout')
