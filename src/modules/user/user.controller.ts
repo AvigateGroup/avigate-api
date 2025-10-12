@@ -3,7 +3,7 @@ import { Controller, Get, Put, Delete, Body, UseGuards, Param } from '@nestjs/co
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import { DeleteAccountDto } from './dto/delete-account.dto'; 
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from './entities/user.entity';
@@ -47,10 +47,7 @@ export class UserController {
 
   @Delete('account')
   @ApiOperation({ summary: 'Delete user account' })
-  async deleteAccount(
-    @CurrentUser() user: User,
-    @Body() deleteAccountDto: DeleteAccountDto, 
-  ) {
+  async deleteAccount(@CurrentUser() user: User, @Body() deleteAccountDto: DeleteAccountDto) {
     return this.userService.deleteAccount(
       user,
       deleteAccountDto.password,
