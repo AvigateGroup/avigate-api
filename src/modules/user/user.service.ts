@@ -128,46 +128,56 @@ export class UserService {
     };
   }
 
-  async deleteAccount(user: User, password: string, confirmDelete: string) {
-    if (confirmDelete !== 'DELETE_MY_ACCOUNT') {
-      throw new BadRequestException(
-        'Please confirm account deletion by sending "DELETE_MY_ACCOUNT"',
-      );
-    }
-
-    // Skip password check for test accounts
-    const isTestAccount =
-      user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(user.email.toLowerCase());
-
-    if (!isTestAccount) {
-      const isPasswordValid = await user.comparePassword(password);
-      if (!isPasswordValid) {
-        throw new BadRequestException('Password is incorrect');
-      }
-    }
-
-    const userEmail = user.email;
-    const userFirstName = user.firstName;
-
-    // Delete related data
-    await this.deviceRepository.delete({ userId: user.id });
-    await this.otpRepository.delete({ userId: user.id });
-
-    // Delete user
-    await this.userRepository.remove(user);
-
-    // Send confirmation email
-    if (!isTestAccount) {
-      await this.userEmailService.sendAccountDeletionConfirmation(
-        userEmail,
-        userFirstName,
-        new Date().toLocaleString(),
-      );
-    }
-
-    return {
-      success: true,
-      message: 'Account deleted successfully',
-    };
+ async deleteAccount(user: User, password: string, confirmDelete: string) {
+  if (confirmDelete !== 'DELETE_MY_ACCOUNT') {
+    throw new BadRequestException(
+      'Please confirm account deletion by sending "DELETE_MY_ACCOUNT"',
+    );
   }
+
+  // Skip password check for test accounts
+  const isTestAccount =
+    user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(user.email.toLowerCase());
+
+  if (!isTestAccount) {
+    // Fetch user with password hash for verification
+    const userWithPassword = await this.userRepository.findOne({
+      where: { id: user.id },
+      select: ['id', 'email', 'firstName', 'passwordHash', 'isTestAccount'],
+    });
+
+    if (!userWithPassword || !userWithPassword.passwordHash) {
+      throw new BadRequestException('Unable to verify password');
+    }
+
+    const isPasswordValid = await userWithPassword.comparePassword(password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Password is incorrect');
+    }
+  }
+
+  const userEmail = user.email;
+  const userFirstName = user.firstName;
+
+  // Delete related data
+  await this.deviceRepository.delete({ userId: user.id });
+  await this.otpRepository.delete({ userId: user.id });
+
+  // Delete user
+  await this.userRepository.remove(user);
+
+  // Send confirmation email
+  if (!isTestAccount) {
+    await this.userEmailService.sendAccountDeletionConfirmation(
+      userEmail,
+      userFirstName,
+      new Date().toLocaleString(),
+    );
+  }
+
+  return {
+    success: true,
+    message: 'Account deleted successfully',
+  };
+}
 }
