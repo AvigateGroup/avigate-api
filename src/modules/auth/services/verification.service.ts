@@ -1,4 +1,4 @@
-//src/modules/auth/services/verification.service.ts
+// src/modules/auth/services/verification.service.ts
 
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,6 +11,7 @@ import { VerifyEmailDto } from '../../user/dto/verify-email.dto';
 import { UserEmailService } from '../../email/user-email.service';
 import { TokenService } from './token.service';
 import { OtpService } from './otp.service';
+import { TEST_ACCOUNTS, TEST_SETTINGS } from '@/config/test-accounts.config';
 
 @Injectable()
 export class VerificationService {
@@ -38,12 +39,24 @@ export class VerificationService {
       throw new BadRequestException('Email already verified');
     }
 
-    const otp = await this.findValidOTP(user.id, otpCode);
-    if (!otp) {
-      throw new UnauthorizedException('Invalid or expired OTP');
+    // Check if this is a test account with bypass enabled
+    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+    const bypassOTP = isTestAccount && TEST_SETTINGS.bypassOTPVerification;
+
+    // For test accounts with bypass, accept any 6-digit code
+    if (!bypassOTP) {
+      const otp = await this.findValidOTP(user.id, otpCode);
+      if (!otp) {
+        throw new UnauthorizedException('Invalid or expired OTP');
+      }
+      await this.markOTPAsUsed(otp);
+    } else {
+      // For test accounts with bypass, just verify the format
+      if (!/^\d{6}$/.test(otpCode)) {
+        throw new UnauthorizedException('Invalid OTP format');
+      }
     }
 
-    await this.markOTPAsUsed(otp);
     await this.verifyUserAndGenerateTokens(user);
     await this.activateUserDevices(user.id);
 
@@ -56,6 +69,7 @@ export class VerificationService {
         user,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        isTestAccount,
       },
     };
   }
@@ -71,7 +85,13 @@ export class VerificationService {
       throw new BadRequestException('Email already verified');
     }
 
-    await this.checkRateLimit(user.id);
+    // Check if this is a test account
+    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+
+    // Skip rate limit for test accounts
+    if (!isTestAccount || !TEST_SETTINGS.skipSecurityChecks) {
+      await this.checkRateLimit(user.id);
+    }
 
     const otpCode = await this.otpService.generateAndSaveOTP(
       user.id,
@@ -86,6 +106,7 @@ export class VerificationService {
       message: 'Verification code sent successfully',
       data: {
         email: user.email,
+        isTestAccount,
       },
     };
   }

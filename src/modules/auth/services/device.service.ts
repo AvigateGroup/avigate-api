@@ -5,75 +5,61 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
 import { UserDevice } from '../../user/entities/user-device.entity';
-import { parseDeviceInfo } from '@/utils/device.util';
+import { UserEmailService } from '../../email/user-email.service';
+import { User } from '../../user/entities/user.entity';
+import { logger } from '@/utils/logger.util';
 
 @Injectable()
 export class DeviceService {
   constructor(
     @InjectRepository(UserDevice)
     private deviceRepository: Repository<UserDevice>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    private userEmailService: UserEmailService,
   ) {}
 
-  async registerDevice(
+  async updateOrCreateDevice(
     userId: string,
     fcmToken: string,
     req: Request,
     deviceInfo?: string,
-    isActive: boolean = false,
+    skipNotification: boolean = false,
   ) {
-    const deviceData = parseDeviceInfo(req, deviceInfo);
-
-    const device = this.deviceRepository.create({
-      userId,
-      fcmToken,
-      deviceFingerprint: deviceData.fingerprint,
-      deviceInfo: deviceData.deviceInfo,
-      deviceType: deviceData.deviceType,
-      platform: deviceData.platform,
-      ipAddress: deviceData.ipAddress,
-      isActive,
-    } as Partial<UserDevice>);
-
-    return await this.deviceRepository.save(device);
-  }
-
-  async updateOrCreateDevice(userId: string, fcmToken: string, req: Request, deviceInfo?: string) {
-    const deviceData = parseDeviceInfo(req, deviceInfo);
-
     const existingDevice = await this.deviceRepository.findOne({
-      where: {
-        userId,
-        deviceFingerprint: deviceData.fingerprint,
-      },
+      where: { userId, fcmToken },
     });
 
-    if (existingDevice) {
-      await this.updateExistingDevice(existingDevice, fcmToken, deviceData.ipAddress);
-    } else {
-      await this.createNewDevice(userId, fcmToken, deviceData);
-    }
-  }
-
-  private async updateExistingDevice(device: UserDevice, fcmToken: string, ipAddress: string) {
-    device.fcmToken = fcmToken;
-    device.ipAddress = ipAddress;
-    device.isActive = true;
-    device.lastActiveAt = new Date();
-    await this.deviceRepository.save(device);
-  }
-
-  private async createNewDevice(userId: string, fcmToken: string, deviceData: any) {
-    const device = this.deviceRepository.create({
+    const deviceData = {
       userId,
       fcmToken,
-      deviceFingerprint: deviceData.fingerprint,
-      deviceInfo: deviceData.deviceInfo,
-      deviceType: deviceData.deviceType,
-      platform: deviceData.platform,
-      ipAddress: deviceData.ipAddress,
+      deviceInfo: deviceInfo || req.headers['user-agent'] || 'Unknown',
+      ipAddress: req.ip,
       isActive: true,
-    } as Partial<UserDevice>);
+      lastActiveAt: new Date(),
+    };
 
-    await this.deviceRepository.save(device);
+    if (existingDevice) {
+      await this.deviceRepository.update(existingDevice.id, deviceData);
+      logger.info('Device updated', { userId, deviceId: existingDevice.id });
+    } else {
+      const newDevice = this.deviceRepository.create(deviceData);
+      await this.deviceRepository.save(newDevice);
+
+      // Send new device notification (skip for test accounts if specified)
+      if (!skipNotification) {
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (user) {
+          await this.userEmailService.sendNewDeviceLoginNotification(
+            user.email,
+            user.firstName,
+            deviceData.deviceInfo,
+            req.ip,
+          );
+        }
+      }
+
+      logger.info('New device created', { userId, deviceId: newDevice.id });
+    }
   }
 }

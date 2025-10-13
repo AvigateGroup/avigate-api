@@ -1,151 +1,131 @@
+// src/modules/auth/services/registration.service.ts
+
 import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
-import { User, UserSex } from '../../user/entities/user.entity';
-import { UserOTP, OTPType } from '../../user/entities/user-otp.entity';
+import { User, AuthProvider } from '../../user/entities/user.entity';
 import { RegisterDto } from '../../user/dto/register.dto';
 import { UserEmailService } from '../../email/user-email.service';
-import { TokenService } from './token.service';
 import { DeviceService } from './device.service';
 import { OtpService } from './otp.service';
-import { TEST_ACCOUNTS } from '@/config/test-accounts.config';
+import { OTPType } from '../../user/entities/user-otp.entity';
+import { TEST_ACCOUNTS, TEST_SETTINGS } from '@/config/test-accounts.config';
+import { logger } from '@/utils/logger.util';
 
 @Injectable()
 export class RegistrationService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
-    @InjectRepository(UserOTP)
-    private otpRepository: Repository<UserOTP>,
     private userEmailService: UserEmailService,
-    private tokenService: TokenService,
     private deviceService: DeviceService,
     private otpService: OtpService,
   ) {}
 
   async register(registerDto: RegisterDto, req: Request) {
-    const { email, password, firstName, lastName, sex, phoneNumber, fcmToken, deviceInfo } =
-      registerDto;
-
-    await this.validateNewUser(email, phoneNumber);
-
-    const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
-
-    const user = await this.createUser({
+    const {
       email,
       password,
       firstName,
       lastName,
       sex,
       phoneNumber,
-      isTestAccount,
-    });
+      country,
+      language,
+      fcmToken,
+      deviceInfo,
+    } = registerDto;
 
-    if (isTestAccount) {
-      return this.handleTestAccountRegistration(user, req, fcmToken, deviceInfo);
-    }
-
-    return this.handleNormalRegistration(user, req, fcmToken, deviceInfo);
-  }
-
-  private async validateNewUser(email: string, phoneNumber: string) {
-    const existingUser = await this.userRepository.findOne({
-      where: [{ email }, { phoneNumber }],
-    });
-
+    // Check if email already exists
+    const existingUser = await this.userRepository.findOne({ where: { email } });
     if (existingUser) {
-      throw new ConflictException(
-        existingUser.email === email
-          ? 'User with this email already exists'
-          : 'User with this phone number already exists',
-      );
+      throw new ConflictException('Email already exists');
     }
-  }
 
-  private async createUser(data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    sex: UserSex;
-    phoneNumber: string;
-    isTestAccount: boolean;
-  }): Promise<User> {
+    // Check if phone number already exists (if provided)
+    if (phoneNumber) {
+      const existingPhone = await this.userRepository.findOne({ where: { phoneNumber } });
+      if (existingPhone) {
+        throw new ConflictException('Phone number already exists');
+      }
+    }
+
+    // Check if this is a test account
+    const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+    const testAccountConfig = isTestAccount ? TEST_ACCOUNTS[email.toLowerCase()] : null;
+
+    // Create user
     const user = this.userRepository.create({
-      email: data.email,
-      passwordHash: data.password,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      sex: data.sex,
-      phoneNumber: data.phoneNumber,
-      preferredLanguage: 'English',
-      isVerified: data.isTestAccount,
-      isTestAccount: data.isTestAccount,
-      reputationScore: 100,
-      totalContributions: 0,
-      isActive: true,
+      email,
+      passwordHash: password,
+      firstName,
+      lastName,
+      sex,
+      phoneNumber,
+      country: country || 'Nigeria',
+      language: language || 'English',
+      authProvider: AuthProvider.LOCAL,
+      isTestAccount,
+      isVerified: isTestAccount && TEST_SETTINGS.bypassEmailVerification,
+      phoneNumberCaptured: !!phoneNumber,
     });
 
-    return this.userRepository.save(user);
-  }
+    // Add Google ID if it's a test account with Google OAuth
+    if (isTestAccount && testAccountConfig?.googleId) {
+      user.googleId = testAccountConfig.googleId;
+    }
 
-  private async handleTestAccountRegistration(
-    user: User,
-    req: Request,
-    fcmToken?: string,
-    deviceInfo?: string,
-  ) {
-    const tokens = this.tokenService.generateTokens(user);
-
-    user.refreshToken = tokens.refreshToken;
-    user.refreshTokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await this.userRepository.save(user);
 
+    // Create device if FCM token provided
     if (fcmToken) {
-      await this.deviceService.registerDevice(user.id, fcmToken, req, deviceInfo, true);
+      await this.deviceService.updateOrCreateDevice(
+        user.id,
+        fcmToken,
+        req,
+        deviceInfo,
+        TEST_SETTINGS.bypassDeviceVerification && isTestAccount,
+      );
     }
+
+    // Generate and send OTP (skip for test accounts if bypass is enabled)
+    if (!isTestAccount || !TEST_SETTINGS.bypassOTPVerification) {
+      const otpCode = await this.otpService.generateAndSaveOTP(
+        user.id,
+        OTPType.EMAIL_VERIFICATION,
+        req.ip,
+      );
+
+      await this.userEmailService.sendWelcomeEmail(user.email, user.firstName, otpCode);
+
+      logger.info('User registered successfully', { userId: user.id, email: user.email });
+
+      return {
+        success: true,
+        message: 'Registration successful. Please check your email for verification code.',
+        data: {
+          userId: user.id,
+          email: user.email,
+          requiresVerification: true,
+        },
+      };
+    }
+
+    // For test accounts with bypass enabled
+    logger.info('Test account registered with verification bypass', {
+      userId: user.id,
+      email: user.email,
+    });
 
     return {
       success: true,
-      message: 'Test account registration successful',
-      data: {
-        user,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        isTestAccount: true,
-      },
-    };
-  }
-
-  private async handleNormalRegistration(
-    user: User,
-    req: Request,
-    fcmToken?: string,
-    deviceInfo?: string,
-  ) {
-    const otpCode = await this.otpService.generateAndSaveOTP(
-      user.id,
-      OTPType.EMAIL_VERIFICATION,
-      req.ip,
-    );
-
-    if (fcmToken) {
-      await this.deviceService.registerDevice(user.id, fcmToken, req, deviceInfo, false);
-    }
-
-    await this.userEmailService.sendWelcomeEmail(user.email, user.firstName, otpCode);
-
-    return {
-      success: true,
-      message: 'Registration successful. Please verify your email to continue.',
+      message: 'Test account registered successfully',
       data: {
         userId: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        isVerified: user.isVerified,
-        requiresVerification: true,
+        requiresVerification: false,
+        isTestAccount: true,
       },
     };
   }

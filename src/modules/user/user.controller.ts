@@ -1,6 +1,19 @@
 // src/modules/user/user.controller.ts
-import { Controller, Get, Put, Delete, Body, UseGuards, Param } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+
+import {
+  Controller,
+  Get,
+  Put,
+  Delete,
+  Post,
+  Body,
+  UseGuards,
+  Param,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
@@ -25,6 +38,17 @@ export class UserController {
   @ApiOperation({ summary: 'Update user profile' })
   async updateProfile(@CurrentUser() user: User, @Body() updateProfileDto: UpdateProfileDto) {
     return this.userService.updateProfile(user, updateProfileDto);
+  }
+
+  @Post('profile/picture')
+  @ApiOperation({ summary: 'Upload profile picture' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadProfilePicture(
+    @CurrentUser() user: User,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.userService.uploadProfilePicture(user, file);
   }
 
   @Get('devices')
