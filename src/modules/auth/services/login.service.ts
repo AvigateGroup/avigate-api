@@ -1,4 +1,4 @@
-//src/modules/auth/services/login.service.ts
+// src/modules/auth/services/login.service.ts
 
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,6 +11,8 @@ import { TokenService } from './token.service';
 import { DeviceService } from './device.service';
 import { OtpService } from './otp.service';
 import { OTPType } from '../../user/entities/user-otp.entity';
+import { TEST_ACCOUNTS, TEST_SETTINGS } from '@/config/test-accounts.config';
+import { logger } from '@/utils/logger.util';
 
 @Injectable()
 export class LoginService {
@@ -28,8 +30,14 @@ export class LoginService {
 
     const user = await this.findAndValidateUser(email, password);
 
-    if (!user.isTestAccount && !user.isVerified) {
-      return this.handleUnverifiedUser(user, req);
+    // Check if this is a test account
+    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+
+    // Handle unverified users (skip for test accounts if bypass is enabled)
+    if (!isTestAccount || !TEST_SETTINGS.bypassEmailVerification) {
+      if (!user.isVerified) {
+        return this.handleUnverifiedUser(user, req);
+      }
     }
 
     const tokens = this.tokenService.generateTokens(user);
@@ -37,10 +45,22 @@ export class LoginService {
     await this.updateUserLoginInfo(user, tokens);
 
     if (fcmToken) {
-      await this.deviceService.updateOrCreateDevice(user.id, fcmToken, req, deviceInfo);
+      await this.deviceService.updateOrCreateDevice(
+        user.id,
+        fcmToken,
+        req,
+        deviceInfo,
+        TEST_SETTINGS.bypassDeviceVerification && isTestAccount,
+      );
     }
 
     const fullUser = await this.userRepository.findOne({ where: { id: user.id } });
+
+    logger.info('Login successful', {
+      userId: user.id,
+      email: user.email,
+      isTestAccount,
+    });
 
     return {
       success: true,
@@ -49,6 +69,7 @@ export class LoginService {
         user: fullUser,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
+        isTestAccount,
       },
     };
   }
@@ -76,6 +97,18 @@ export class LoginService {
       throw new UnauthorizedException('Account is deactivated');
     }
 
+    // Check if this is a test account
+    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+    
+    // For test accounts, also check against configured test password
+    if (isTestAccount && TEST_ACCOUNTS[email.toLowerCase()]) {
+      const testConfig = TEST_ACCOUNTS[email.toLowerCase()];
+      if (password === testConfig.password) {
+        return user;
+      }
+    }
+
+    // Regular password validation
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
