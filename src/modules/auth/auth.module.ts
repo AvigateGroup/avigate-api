@@ -22,6 +22,8 @@ import { UserOTP } from '../user/entities/user-otp.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { UserEmailService } from '../email/user-email.service';
+import { UserUpdatesEmailService } from '../email/user-updates-email.service'; 
+
 
 @Module({
   imports: [
@@ -54,6 +56,7 @@ import { UserEmailService } from '../email/user-email.service';
     JwtStrategy,
     GoogleStrategy,
     UserEmailService,
+    UserUpdatesEmailService, 
   ],
   exports: [AuthService, JwtStrategy, PassportModule, JwtModule,],
 })
