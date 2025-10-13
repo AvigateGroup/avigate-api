@@ -8,6 +8,7 @@ import { User } from './entities/user.entity';
 import { UserDevice } from './entities/user-device.entity';
 import { UserOTP } from './entities/user-otp.entity';
 import { UserEmailService } from '../email/user-email.service';
+import { UserUpdatesEmailService } from '../email/user-updates-email.service';
 import { UploadModule } from '../upload/upload.module';
 
 @Module({
@@ -16,7 +17,11 @@ import { UploadModule } from '../upload/upload.module';
     UploadModule,
   ],
   controllers: [UserController],
-  providers: [UserService, UserEmailService],
+  providers: [
+    UserService, 
+    UserEmailService,
+    UserUpdatesEmailService,
+  ],
   exports: [UserService],
 })
 export class UserModule {}
