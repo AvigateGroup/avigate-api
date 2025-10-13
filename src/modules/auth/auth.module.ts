@@ -55,6 +55,6 @@ import { UserEmailService } from '../email/user-email.service';
     GoogleStrategy,
     UserEmailService,
   ],
-  exports: [AuthService, JwtStrategy, PassportModule],
+  exports: [AuthService, JwtStrategy, PassportModule, JwtModule,],
 })
 export class AuthModule {}
