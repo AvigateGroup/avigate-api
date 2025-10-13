@@ -1,57 +1,57 @@
 // src/modules/user/dto/register.dto.ts
-import {
-  IsEmail,
-  IsString,
-  MinLength,
-  MaxLength,
-  IsEnum,
-  Matches,
-  IsOptional,
-} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserSex } from '../entities/user.entity';
 
 export class RegisterDto {
   @ApiProperty({ example: 'user@example.com' })
   @IsEmail()
+  @IsNotEmpty()
   email: string;
-
-  @ApiProperty({ example: 'SecurePass123!' })
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  password: string;
 
   @ApiProperty({ example: 'John' })
   @IsString()
-  @MinLength(2)
-  @MaxLength(50)
+  @IsNotEmpty()
   firstName: string;
 
   @ApiProperty({ example: 'Doe' })
   @IsString()
-  @MinLength(2)
-  @MaxLength(50)
+  @IsNotEmpty()
   lastName: string;
 
-  @ApiProperty({ enum: UserSex, example: UserSex.MALE })
+  @ApiProperty({ example: 'male', enum: UserSex, required: false })
   @IsEnum(UserSex)
-  sex: UserSex;
-
-  @ApiProperty({ example: '+2348012345678' })
-  @IsString()
-  @Matches(/^(\+234|234|0)(70|80|81|90|91)[0-9]{8}$/, {
-    message: 'Please provide a valid Nigerian phone number',
-  })
-  phoneNumber: string;
-
-  @ApiProperty({ required: false })
   @IsOptional()
+  sex?: UserSex;
+
+  @ApiProperty({ example: '+2348012345678', required: false })
   @IsString()
+  @IsOptional()
+  phoneNumber?: string;
+
+  @ApiProperty({ example: 'Nigeria', required: false })
+  @IsString()
+  @IsOptional()
+  country?: string;
+
+  @ApiProperty({ example: 'English', required: false })
+  @IsString()
+  @IsOptional()
+  language?: string;
+
+  @ApiProperty({ example: 'password123' })
+  @IsString()
+  @IsNotEmpty()
+  @MinLength(8)
+  password: string;
+
+  @ApiProperty({ example: 'fcm-token-here', required: false })
+  @IsString()
+  @IsOptional()
   fcmToken?: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
+  @ApiProperty({ example: 'iPhone 12, iOS 15', required: false })
   @IsString()
+  @IsOptional()
   deviceInfo?: string;
 }

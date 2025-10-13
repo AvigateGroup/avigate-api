@@ -19,6 +19,11 @@ export enum UserSex {
   FEMALE = 'female',
 }
 
+export enum AuthProvider {
+  LOCAL = 'local',
+  GOOGLE = 'google',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -37,17 +42,31 @@ export class User {
   @Column({
     type: 'enum',
     enum: UserSex,
+    nullable: true,
   })
   @Index()
   sex: UserSex;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   @Index()
   phoneNumber: string;
+
+  @Column({ default: 'Nigeria' })
+  country: string;
+
+  @Column({ default: 'English' })
+  language: string;
 
   @Column({ nullable: true, unique: true })
   @Index()
   googleId: string;
+
+  @Column({
+    type: 'enum',
+    enum: AuthProvider,
+    default: AuthProvider.LOCAL,
+  })
+  authProvider: AuthProvider;
 
   @Column({ nullable: true, select: false })
   passwordHash: string;
@@ -69,6 +88,9 @@ export class User {
   @Column({ default: false })
   @Index()
   isTestAccount: boolean;
+
+  @Column({ default: false })
+  phoneNumberCaptured: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
   @Index()
