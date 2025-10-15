@@ -44,10 +44,7 @@ export class UserController {
   @ApiOperation({ summary: 'Upload profile picture' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadProfilePicture(
-    @CurrentUser() user: User,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
+  async uploadProfilePicture(@CurrentUser() user: User, @UploadedFile() file: Express.Multer.File) {
     return this.userService.uploadProfilePicture(user, file);
   }
 

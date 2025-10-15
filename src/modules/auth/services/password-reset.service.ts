@@ -9,7 +9,7 @@ import { UserOTP, OTPType } from '../../user/entities/user-otp.entity';
 import { ForgotPasswordDto } from '../../user/dto/forgot-password.dto';
 import { ResetPasswordDto } from '../../user/dto/reset-password.dto';
 import { UserEmailService } from '../../email/user-email.service';
-import { UserUpdatesEmailService } from '../../email/user-updates-email.service';  
+import { UserUpdatesEmailService } from '../../email/user-updates-email.service';
 import { OtpService } from './otp.service';
 import { logger } from '@/utils/logger.util';
 

@@ -29,64 +29,59 @@ export class OtpLoginService {
   ) {}
 
   async requestLoginOtp(requestLoginOtpDto: RequestLoginOtpDto, req: Request) {
-  try {
-    
-    const { email } = requestLoginOtpDto;
+    try {
+      const { email } = requestLoginOtpDto;
 
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account is deactivated');
-    }
-
-    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
-
-    // Check verification requirement (skip for test accounts if bypass is enabled)
-    if (!isTestAccount || !TEST_SETTINGS.bypassEmailVerification) {
-      if (!user.isVerified) {
-        throw new BadRequestException('Please verify your email first');
+      const user = await this.userRepository.findOne({ where: { email } });
+      if (!user) {
+        throw new UnauthorizedException('User not found');
       }
+
+      if (!user.isActive) {
+        throw new UnauthorizedException('Account is deactivated');
+      }
+
+      const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+
+      // Check verification requirement (skip for test accounts if bypass is enabled)
+      if (!isTestAccount || !TEST_SETTINGS.bypassEmailVerification) {
+        if (!user.isVerified) {
+          throw new BadRequestException('Please verify your email first');
+        }
+      }
+
+      // Check rate limit (skip for test accounts if security checks are bypassed)
+      if (!isTestAccount || !TEST_SETTINGS.skipSecurityChecks) {
+        await this.checkRateLimit(user.id);
+      }
+
+      // Generate OTP
+      const otpCode = await this.otpService.generateAndSaveOTP(user.id, OTPType.LOGIN, req.ip);
+
+      // Send OTP email
+      const deviceInfo = req.headers['user-agent'] || 'Unknown device';
+
+      await this.userEmailService.sendLoginOTP(user.email, user.firstName, otpCode, deviceInfo);
+
+      logger.info('Login OTP sent', { userId: user.id, email: user.email, isTestAccount });
+
+      return {
+        success: true,
+        message: 'Login code sent to your email',
+        data: {
+          email: user.email,
+          isTestAccount,
+        },
+      };
+    } catch (error) {
+      console.error('ERROR in requestLoginOtp:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      });
+      throw error;
     }
-
-    // Check rate limit (skip for test accounts if security checks are bypassed)
-    if (!isTestAccount || !TEST_SETTINGS.skipSecurityChecks) {
-      await this.checkRateLimit(user.id);
-    }
-
-    // Generate OTP
-    const otpCode = await this.otpService.generateAndSaveOTP(
-      user.id,
-      OTPType.LOGIN,
-      req.ip,
-    );
-
-    // Send OTP email
-    const deviceInfo = req.headers['user-agent'] || 'Unknown device';
-    
-    await this.userEmailService.sendLoginOTP(user.email, user.firstName, otpCode, deviceInfo);
-
-    logger.info('Login OTP sent', { userId: user.id, email: user.email, isTestAccount });
-
-    return {
-      success: true,
-      message: 'Login code sent to your email',
-      data: {
-        email: user.email,
-        isTestAccount,
-      },
-    };
-  } catch (error) {
-    console.error('ERROR in requestLoginOtp:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-    });
-    throw error;
   }
-}
 
   async verifyLoginOtp(verifyLoginOtpDto: VerifyLoginOtpDto, req: Request) {
     const { email, otpCode, fcmToken, deviceInfo } = verifyLoginOtpDto;

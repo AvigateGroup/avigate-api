@@ -12,16 +12,9 @@ import { UserUpdatesEmailService } from '../email/user-updates-email.service';
 import { UploadModule } from '../upload/upload.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User, UserDevice, UserOTP]),
-    UploadModule,
-  ],
+  imports: [TypeOrmModule.forFeature([User, UserDevice, UserOTP]), UploadModule],
   controllers: [UserController],
-  providers: [
-    UserService, 
-    UserEmailService,
-    UserUpdatesEmailService,
-  ],
+  providers: [UserService, UserEmailService, UserUpdatesEmailService],
   exports: [UserService],
 })
 export class UserModule {}

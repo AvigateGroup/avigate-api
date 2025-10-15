@@ -199,7 +199,11 @@ export class UserUpdatesEmailService {
     newEmail: string,
     firstName: string,
   ): Promise<void> {
-    logger.info('Preparing email change notification for old email', { oldEmail, newEmail, firstName });
+    logger.info('Preparing email change notification for old email', {
+      oldEmail,
+      newEmail,
+      firstName,
+    });
 
     const content = `
       <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #d63384;">Email Address Changed</h1>
@@ -256,7 +260,11 @@ export class UserUpdatesEmailService {
     oldEmail: string,
     firstName: string,
   ): Promise<void> {
-    logger.info('Preparing email change confirmation for new email', { newEmail, oldEmail, firstName });
+    logger.info('Preparing email change confirmation for new email', {
+      newEmail,
+      oldEmail,
+      firstName,
+    });
 
     const content = `
       <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #198754;">Email Updated Successfully</h1>

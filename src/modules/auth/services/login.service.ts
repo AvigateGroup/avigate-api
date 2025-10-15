@@ -99,7 +99,7 @@ export class LoginService {
 
     // Check if this is a test account
     const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
-    
+
     // For test accounts, also check against configured test password
     if (isTestAccount && TEST_ACCOUNTS[email.toLowerCase()]) {
       const testConfig = TEST_ACCOUNTS[email.toLowerCase()];

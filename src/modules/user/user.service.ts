@@ -1,4 +1,4 @@
-// src/modules/user/user.service.ts 
+// src/modules/user/user.service.ts
 
 import {
   Injectable,
@@ -13,7 +13,7 @@ import { UserDevice } from './entities/user-device.entity';
 import { UserOTP } from './entities/user-otp.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserEmailService } from '../email/user-email.service';
-import { UserUpdatesEmailService } from '../email/user-updates-email.service';  
+import { UserUpdatesEmailService } from '../email/user-updates-email.service';
 import { UploadService } from '../upload/upload.service';
 import { TEST_ACCOUNTS } from '@/config/test-accounts.config';
 import { logger } from '@/utils/logger.util';
@@ -40,7 +40,8 @@ export class UserService {
   }
 
   async updateProfile(user: User, updateProfileDto: UpdateProfileDto) {
-    const { firstName, lastName, email, sex, phoneNumber, country, language, profilePicture } = updateProfileDto;
+    const { firstName, lastName, email, sex, phoneNumber, country, language, profilePicture } =
+      updateProfileDto;
     const updatedFields: string[] = [];
     const oldEmail = user.email;
 
@@ -79,27 +80,27 @@ export class UserService {
       user.firstName = firstName;
       updatedFields.push('firstName');
     }
-    
+
     if (lastName && lastName !== user.lastName) {
       user.lastName = lastName;
       updatedFields.push('lastName');
     }
-    
+
     if (sex && sex !== user.sex) {
       user.sex = sex;
       updatedFields.push('sex');
     }
-    
+
     if (country && country !== user.country) {
       user.country = country;
       updatedFields.push('country');
     }
-    
+
     if (language && language !== user.language) {
       user.language = language;
       updatedFields.push('language');
     }
-    
+
     if (profilePicture && profilePicture !== user.profilePicture) {
       user.profilePicture = profilePicture;
       updatedFields.push('profilePicture');
@@ -109,17 +110,18 @@ export class UserService {
 
     // Send email notifications if fields were updated
     if (updatedFields.length > 0) {
-      if (emailChanged && email) {  // Add email check here
+      if (emailChanged && email) {
+        // Add email check here
         // Send to old email
         await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
           oldEmail,
-          email,  // TypeScript now knows email is string, not undefined
+          email, // TypeScript now knows email is string, not undefined
           firstName || user.firstName,
         );
-        
+
         // Send to new email
         await this.UserUpdatesEmailService.sendEmailChangeConfirmationToNewEmail(
-          email,  // TypeScript now knows email is string, not undefined
+          email, // TypeScript now knows email is string, not undefined
           oldEmail,
           firstName || user.firstName,
         );
@@ -137,8 +139,8 @@ export class UserService {
 
     return {
       success: true,
-      message: emailChanged 
-        ? 'Profile updated successfully. Please verify your new email address.' 
+      message: emailChanged
+        ? 'Profile updated successfully. Please verify your new email address.'
         : 'Profile updated successfully',
       data: { user },
     };
@@ -165,11 +167,9 @@ export class UserService {
     await this.userRepository.save(user);
 
     // Send notification
-    await this.UserUpdatesEmailService.sendProfileUpdateNotification(
-      user.email,
-      user.firstName,
-      ['profilePicture'],
-    );
+    await this.UserUpdatesEmailService.sendProfileUpdateNotification(user.email, user.firstName, [
+      'profilePicture',
+    ]);
 
     logger.info('Profile picture uploaded successfully', { userId: user.id, fileUrl });
 

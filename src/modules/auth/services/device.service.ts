@@ -36,7 +36,7 @@ export class DeviceService {
       fcmToken,
       userAgent,
       deviceInfoString,
-      ipAddress
+      ipAddress,
     );
 
     const existingDevice = await this.deviceRepository.findOne({
@@ -85,7 +85,7 @@ export class DeviceService {
     fcmToken: string,
     userAgent: string,
     deviceInfo: string,
-    ipAddress: string
+    ipAddress: string,
   ): string {
     const data = `${fcmToken}-${userAgent}-${deviceInfo}-${ipAddress}`;
     return crypto.createHash('sha256').update(data).digest('hex');

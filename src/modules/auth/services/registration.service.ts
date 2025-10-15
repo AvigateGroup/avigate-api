@@ -26,7 +26,7 @@ export class RegistrationService {
   ) {}
 
   async register(registerDto: RegisterDto, req: Request) {
-    try {  
+    try {
       const {
         email,
         password,
@@ -98,7 +98,6 @@ export class RegistrationService {
 
       // Generate and send OTP (skip for test accounts if bypass is enabled)
       if (!isTestAccount || !TEST_SETTINGS.bypassOTPVerification) {
-
         const otpCode = await this.otpService.generateAndSaveOTP(
           user.id,
           OTPType.EMAIL_VERIFICATION,
@@ -141,20 +140,20 @@ export class RegistrationService {
       console.error('Error type:', error.constructor.name);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
-      
+
       if (error.code) {
         console.error('Database error code:', error.code);
       }
       if (error.detail) {
         console.error('Database error detail:', error.detail);
       }
-      
+
       logger.error('Registration failed', {
         email: registerDto.email,
         error: error.message,
         errorCode: error.code,
       });
-      
+
       throw error;
     }
   }

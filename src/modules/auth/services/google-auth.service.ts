@@ -21,7 +21,19 @@ export class GoogleAuthService {
   ) {}
 
   async googleAuth(googleAuthDto: GoogleAuthDto, req: Request) {
-    const { email, googleId, firstName, lastName, profilePicture, phoneNumber, sex, country, language, fcmToken, deviceInfo } = googleAuthDto;
+    const {
+      email,
+      googleId,
+      firstName,
+      lastName,
+      profilePicture,
+      phoneNumber,
+      sex,
+      country,
+      language,
+      fcmToken,
+      deviceInfo,
+    } = googleAuthDto;
 
     // Check if user exists with this email
     let user = await this.userRepository.findOne({ where: { email } });
@@ -60,7 +72,6 @@ export class GoogleAuthService {
 
       // Update last login
       user.lastLoginAt = new Date();
-
     } else {
       // Create new user
       user = this.userRepository.create({
@@ -97,7 +108,9 @@ export class GoogleAuthService {
 
     return {
       success: true,
-      message: user.phoneNumberCaptured ? 'Login successful' : 'Registration successful. Please complete your profile.',
+      message: user.phoneNumberCaptured
+        ? 'Login successful'
+        : 'Registration successful. Please complete your profile.',
       data: {
         user: fullUser,
         accessToken: tokens.accessToken,
@@ -118,7 +131,7 @@ export class GoogleAuthService {
 
     user.phoneNumber = phoneNumber;
     user.phoneNumberCaptured = true;
-    
+
     if (sex) {
       user.sex = sex;
     }

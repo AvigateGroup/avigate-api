@@ -222,15 +222,15 @@ export class UserEmailService {
   }
 
   async sendLoginOTP(
-  email: string,
-  firstName: string,
-  otpCode: string,
-  deviceInfo?: string,
-): Promise<void> {
-  try {
-    logger.info('Preparing login OTP email', { email, firstName });
+    email: string,
+    firstName: string,
+    otpCode: string,
+    deviceInfo?: string,
+  ): Promise<void> {
+    try {
+      logger.info('Preparing login OTP email', { email, firstName });
 
-    const content = `
+      const content = `
       <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #333;">Login Verification</h1>
       
       <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
@@ -259,43 +259,43 @@ export class UserEmailService {
       </p>
     `;
 
-    const emailData: EmailData = {
-      from: {
-        address: this.fromEmail,
-        name: this.fromName,
-      },
-      to: [
-        {
-          email_address: {
-            address: email,
-            name: firstName,
-          },
+      const emailData: EmailData = {
+        from: {
+          address: this.fromEmail,
+          name: this.fromName,
         },
-      ],
-      subject: 'Your Avigate Login Code',
-      htmlbody: this.generateBaseEmailHTML(
-        'Login Verification',
-        content,
-        'This is a security verification from Avigate.',
-      ),
-    };
+        to: [
+          {
+            email_address: {
+              address: email,
+              name: firstName,
+            },
+          },
+        ],
+        subject: 'Your Avigate Login Code',
+        htmlbody: this.generateBaseEmailHTML(
+          'Login Verification',
+          content,
+          'This is a security verification from Avigate.',
+        ),
+      };
 
-    await this.sendZeptoMailEmail(emailData, 'login_otp');
-    
-    logger.info(`Login OTP sent to ${email}`);
-  } catch (error) {
-    console.error('ERROR in sendLoginOTP:', {
-      message: error.message,
-      stack: error.stack,
-      email,
-    });
-    logger.error('Failed to send login OTP', {
-      email,
-      error: error.message,
-    });
-    throw error;
+      await this.sendZeptoMailEmail(emailData, 'login_otp');
+
+      logger.info(`Login OTP sent to ${email}`);
+    } catch (error) {
+      console.error('ERROR in sendLoginOTP:', {
+        message: error.message,
+        stack: error.stack,
+        email,
+      });
+      logger.error('Failed to send login OTP', {
+        email,
+        error: error.message,
+      });
+      throw error;
+    }
   }
-}
 
   async sendNewDeviceLoginNotification(
     email: string,
