@@ -29,6 +29,8 @@ export class OtpLoginService {
   ) {}
 
   async requestLoginOtp(requestLoginOtpDto: RequestLoginOtpDto, req: Request) {
+  try {
+    
     const { email } = requestLoginOtpDto;
 
     const user = await this.userRepository.findOne({ where: { email } });
@@ -63,6 +65,7 @@ export class OtpLoginService {
 
     // Send OTP email
     const deviceInfo = req.headers['user-agent'] || 'Unknown device';
+    
     await this.userEmailService.sendLoginOTP(user.email, user.firstName, otpCode, deviceInfo);
 
     logger.info('Login OTP sent', { userId: user.id, email: user.email, isTestAccount });
@@ -75,7 +78,15 @@ export class OtpLoginService {
         isTestAccount,
       },
     };
+  } catch (error) {
+    console.error('ERROR in requestLoginOtp:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    throw error;
   }
+}
 
   async verifyLoginOtp(verifyLoginOtpDto: VerifyLoginOtpDto, req: Request) {
     const { email, otpCode, fcmToken, deviceInfo } = verifyLoginOtpDto;
