@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
+import * as crypto from 'crypto';
 import { UserDevice } from '../../user/entities/user-device.entity';
 import { UserEmailService } from '../../email/user-email.service';
 import { User } from '../../user/entities/user.entity';
@@ -26,6 +27,18 @@ export class DeviceService {
     deviceInfo?: string,
     skipNotification: boolean = false,
   ) {
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    const ipAddress = req.ip || '::1';
+    const deviceInfoString = deviceInfo || userAgent;
+
+    // CRITICAL FIX: Generate device fingerprint
+    const deviceFingerprint = this.generateDeviceFingerprint(
+      fcmToken,
+      userAgent,
+      deviceInfoString,
+      ipAddress
+    );
+
     const existingDevice = await this.deviceRepository.findOne({
       where: { userId, fcmToken },
     });
@@ -33,8 +46,9 @@ export class DeviceService {
     const deviceData = {
       userId,
       fcmToken,
-      deviceInfo: deviceInfo || req.headers['user-agent'] || 'Unknown',
-      ipAddress: req.ip,
+      deviceFingerprint, // NOW INCLUDED!
+      deviceInfo: deviceInfoString,
+      ipAddress,
       isActive: true,
       lastActiveAt: new Date(),
     };
@@ -54,12 +68,26 @@ export class DeviceService {
             user.email,
             user.firstName,
             deviceData.deviceInfo,
-            req.ip,
+            ipAddress,
           );
         }
       }
 
       logger.info('New device created', { userId, deviceId: newDevice.id });
     }
+  }
+
+  /**
+   * Generate a unique device fingerprint based on device characteristics
+   * This creates a hash from FCM token, user agent, device info, and IP
+   */
+  private generateDeviceFingerprint(
+    fcmToken: string,
+    userAgent: string,
+    deviceInfo: string,
+    ipAddress: string
+  ): string {
+    const data = `${fcmToken}-${userAgent}-${deviceInfo}-${ipAddress}`;
+    return crypto.createHash('sha256').update(data).digest('hex');
   }
 }
