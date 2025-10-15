@@ -26,10 +26,7 @@ export class RegistrationService {
   ) {}
 
   async register(registerDto: RegisterDto, req: Request) {
-    try {
-      console.log('=== REGISTRATION START ===');
-      console.log('Registration email:', registerDto.email);
-      
+    try {  
       const {
         email,
         password,
@@ -62,10 +59,8 @@ export class RegistrationService {
       const testAccountConfig = isTestAccount ? TEST_ACCOUNTS[email.toLowerCase()] : null;
 
       // CRITICAL FIX: Hash the password before saving
-      console.log('Hashing password...');
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
-      console.log('Password hashed successfully');
 
       // Create user with HASHED password
       const user = this.userRepository.create({
@@ -88,13 +83,10 @@ export class RegistrationService {
         user.googleId = testAccountConfig.googleId;
       }
 
-      console.log('Saving user to database...');
       await this.userRepository.save(user);
-      console.log('User saved successfully with ID:', user.id);
 
       // Create device if FCM token provided
       if (fcmToken) {
-        console.log('Creating/updating device...');
         await this.deviceService.updateOrCreateDevice(
           user.id,
           fcmToken,
@@ -106,14 +98,13 @@ export class RegistrationService {
 
       // Generate and send OTP (skip for test accounts if bypass is enabled)
       if (!isTestAccount || !TEST_SETTINGS.bypassOTPVerification) {
-        console.log('Generating OTP...');
+
         const otpCode = await this.otpService.generateAndSaveOTP(
           user.id,
           OTPType.EMAIL_VERIFICATION,
           req.ip,
         );
 
-        console.log('Sending welcome email...');
         await this.userEmailService.sendWelcomeEmail(user.email, user.firstName, otpCode);
 
         logger.info('User registered successfully', { userId: user.id, email: user.email });
