@@ -1,6 +1,7 @@
 // src/modules/user/dto/reset-password.dto.ts
 import { IsEmail, IsNotEmpty, IsString, MinLength, Length } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { Match } from '@/common/decorators/match.decorator';
 
 export class ResetPasswordDto {
   @ApiProperty({ example: 'user@example.com' })
@@ -19,4 +20,10 @@ export class ResetPasswordDto {
   @IsNotEmpty()
   @MinLength(8)
   newPassword: string;
+
+  @ApiProperty({ example: 'newpassword123' })
+  @IsString()
+  @IsNotEmpty()
+  @Match('newPassword', { message: 'Passwords do not match' })
+  confirmPassword: string;
 }
