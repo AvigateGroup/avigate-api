@@ -222,11 +222,12 @@ export class UserEmailService {
   }
 
   async sendLoginOTP(
-    email: string,
-    firstName: string,
-    otpCode: string,
-    deviceInfo?: string,
-  ): Promise<void> {
+  email: string,
+  firstName: string,
+  otpCode: string,
+  deviceInfo?: string,
+): Promise<void> {
+  try {
     logger.info('Preparing login OTP email', { email, firstName });
 
     const content = `
@@ -280,8 +281,21 @@ export class UserEmailService {
     };
 
     await this.sendZeptoMailEmail(emailData, 'login_otp');
+    
     logger.info(`Login OTP sent to ${email}`);
+  } catch (error) {
+    console.error('ERROR in sendLoginOTP:', {
+      message: error.message,
+      stack: error.stack,
+      email,
+    });
+    logger.error('Failed to send login OTP', {
+      email,
+      error: error.message,
+    });
+    throw error;
   }
+}
 
   async sendNewDeviceLoginNotification(
     email: string,
