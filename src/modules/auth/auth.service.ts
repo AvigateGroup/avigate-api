@@ -1,4 +1,4 @@
-// src/modules/auth/auth.service.ts (REPLACE ENTIRE FILE)
+// src/modules/auth/auth.service.ts 
 
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
