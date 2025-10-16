@@ -13,13 +13,14 @@ import {
   UploadedFile,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody  } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from './entities/user.entity';
+import { UploadFileDto } from '../user/dto/upload-file.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -43,6 +44,7 @@ export class UserController {
   @Post('profile/picture')
   @ApiOperation({ summary: 'Upload profile picture' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadFileDto })
   @UseInterceptors(FileInterceptor('file'))
   async uploadProfilePicture(@CurrentUser() user: User, @UploadedFile() file: Express.Multer.File) {
     return this.userService.uploadProfilePicture(user, file);
