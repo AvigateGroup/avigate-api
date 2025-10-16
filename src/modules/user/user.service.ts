@@ -1,5 +1,7 @@
 // src/modules/user/user.service.ts
 
+// src/modules/user/user.service.ts
+
 import {
   Injectable,
   NotFoundException,
@@ -15,6 +17,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserEmailService } from '../email/user-email.service';
 import { UserUpdatesEmailService } from '../email/user-updates-email.service';
 import { UploadService } from '../upload/upload.service';
+import { VerificationService } from '../auth/services/verification.service';
 import { TEST_ACCOUNTS } from '@/config/test-accounts.config';
 import { logger } from '@/utils/logger.util';
 
@@ -30,6 +33,7 @@ export class UserService {
     private userEmailService: UserEmailService,
     private UserUpdatesEmailService: UserUpdatesEmailService,
     private uploadService: UploadService,
+    private verificationService: VerificationService, // Add this
   ) {}
 
   async getProfile(user: User) {
@@ -99,31 +103,51 @@ export class UserService {
     user.language = language;
     updatedFields.push('language');
   }
+
   await this.userRepository.save(user);
 
   // Send email notifications if fields were updated
   if (updatedFields.length > 0) {
     if (emailChanged && email) {
-      // Send to old email
-      await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
-        oldEmail,
-        email,
-        firstName || user.firstName,
-      );
+      try {
+        // Send notification to old email
+        await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
+          oldEmail,
+          email,
+          firstName || user.firstName,
+        );
 
-      // Send to new email
-      await this.UserUpdatesEmailService.sendEmailChangeConfirmationToNewEmail(
-        email,
-        oldEmail,
-        firstName || user.firstName,
-      );
+        // Generate and send verification OTP to new email
+        await this.verificationService.generateAndSendVerificationOtp(user, true);
+
+        logger.info('Email verification OTP sent after email change', {
+          userId: user.id,
+          oldEmail,
+          newEmail: email,
+        });
+      } catch (error) {
+        logger.error('Failed to send email change notifications', {
+          userId: user.id,
+          error: error.message,
+        });
+        // Don't throw error - profile was already updated
+        // User can use resend verification if needed
+      }
     } else if (updatedFields.length > 0) {
-      // Send general profile update notification
-      await this.UserUpdatesEmailService.sendProfileUpdateNotification(
-        user.email,
-        user.firstName,
-        updatedFields,
-      );
+      try {
+        // Send general profile update notification
+        await this.UserUpdatesEmailService.sendProfileUpdateNotification(
+          user.email,
+          user.firstName,
+          updatedFields,
+        );
+      } catch (error) {
+        logger.error('Failed to send profile update notification', {
+          userId: user.id,
+          error: error.message,
+        });
+        // Don't throw error - profile was already updated
+      }
     }
   }
 
@@ -132,7 +156,7 @@ export class UserService {
   return {
     success: true,
     message: emailChanged
-      ? 'Profile updated successfully. Please verify your new email address.'
+      ? 'Profile updated successfully. A verification code has been sent to your new email address.'
       : 'Profile updated successfully',
     data: { user },
   };
