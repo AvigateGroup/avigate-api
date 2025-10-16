@@ -312,6 +312,77 @@ export class UserUpdatesEmailService {
     logger.info(`Email change confirmation sent to new email: ${newEmail}`);
   }
 
+  /**
+   * NEW METHOD: Send email verification OTP when email is changed
+   */
+  async sendEmailVerificationOTP(
+    email: string,
+    firstName: string,
+    otpCode: string,
+    isEmailChange: boolean = false,
+  ): Promise<void> {
+    logger.info('Preparing email verification OTP', { email, firstName, isEmailChange });
+
+    const reasonText = isEmailChange
+      ? 'Your email address has been updated. Please verify your new email address to continue using all features.'
+      : 'Please verify your email address to continue using all features.';
+
+    const content = `
+      <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #86B300;">Verify Your Email</h1>
+      
+      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
+      
+      <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #555;">
+        ${reasonText}
+      </p>
+      
+      <div style="background-color: #f8f9fa; border: 2px solid #86B300; border-radius: 8px; padding: 24px; text-align: center; margin: 24px 0;">
+        <p style="margin: 0 0 12px 0; font-size: 14px; color: #6c757d; font-weight: 600;">YOUR VERIFICATION CODE</p>
+        <div style="font-size: 36px; font-weight: bold; color: #86B300; letter-spacing: 6px; margin: 0;">${otpCode}</div>
+        <p style="margin: 12px 0 0 0; font-size: 14px; color: #6c757d;">This code expires in 10 minutes</p>
+      </div>
+      
+      <div style="background-color: #e7f3ff; border-left: 4px solid #0d6efd; padding: 16px; margin: 24px 0; border-radius: 4px;">
+        <p style="margin: 0 0 8px 0; font-size: 14px; color: #084298; font-weight: 600;">How to verify:</p>
+        <ol style="margin: 8px 0 0 0; padding-left: 20px; font-size: 14px; color: #084298; line-height: 1.6;">
+          <li>Go to the Avigate app or website</li>
+          <li>Navigate to email verification</li>
+          <li>Enter the code above</li>
+        </ol>
+      </div>
+      
+      <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5; color: #6c757d;">
+        If you didn't request this verification code, please ignore this email or contact our support team at <a href="mailto:hello@avigate.co" style="color: #86B300; text-decoration: none;">hello@avigate.co</a>.
+      </p>
+    `;
+
+    const emailData: EmailData = {
+      from: {
+        address: this.fromEmail,
+        name: this.fromName,
+      },
+      to: [
+        {
+          email_address: {
+            address: email,
+            name: firstName,
+          },
+        },
+      ],
+      subject: isEmailChange
+        ? 'Verify Your New Email Address - Avigate'
+        : 'Verify Your Email - Avigate',
+      htmlbody: this.generateBaseEmailHTML(
+        'Verify Your Email',
+        content,
+        'This verification code was requested from your Avigate account.',
+      ),
+    };
+
+    await this.sendZeptoMailEmail(emailData, 'email_verification');
+    logger.info(`Email verification OTP sent to ${email}`);
+  }
+
   async sendPasswordResetOTP(email: string, firstName: string, otpCode: string): Promise<void> {
     logger.info('Preparing password reset OTP', { email, firstName });
 
