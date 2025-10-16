@@ -1,6 +1,6 @@
 // src/modules/auth/auth.module.ts
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -23,6 +23,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { UserEmailService } from '../email/user-email.service';
 import { UserUpdatesEmailService } from '../email/user-updates-email.service';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { UserUpdatesEmailService } from '../email/user-updates-email.service';
       inject: [ConfigService],
     }),
     ConfigModule,
+    forwardRef(() => UserModule),
   ],
   controllers: [AuthController],
   providers: [
@@ -57,6 +59,14 @@ import { UserUpdatesEmailService } from '../email/user-updates-email.service';
     UserEmailService,
     UserUpdatesEmailService,
   ],
-  exports: [AuthService, JwtStrategy, PassportModule, JwtModule],
+  exports: [
+    AuthService, 
+    JwtStrategy, 
+    PassportModule, 
+    JwtModule,
+    VerificationService, 
+    TokenService, 
+    OtpService,
+  ],
 })
 export class AuthModule {}
