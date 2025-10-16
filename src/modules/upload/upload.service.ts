@@ -17,7 +17,6 @@ export class UploadService {
     const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
     const bucketName = this.configService.get<string>('AWS_S3_BUCKET');
 
-    // Validate required configuration
     if (!region || !accessKeyId || !secretAccessKey || !bucketName) {
       throw new Error('Missing required AWS configuration');
     }
@@ -45,7 +44,7 @@ export class UploadService {
           Key: fileName,
           Body: file.buffer,
           ContentType: file.mimetype,
-          ACL: 'public-read',
+          // ACL removed - use bucket policy instead
         }),
       );
 
