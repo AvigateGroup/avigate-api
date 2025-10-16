@@ -9,9 +9,11 @@ import { UserDevice } from '../../user/entities/user-device.entity';
 import { UserOTP, OTPType } from '../../user/entities/user-otp.entity';
 import { VerifyEmailDto } from '../../user/dto/verify-email.dto';
 import { UserEmailService } from '../../email/user-email.service';
+import { UserUpdatesEmailService } from '../../email/user-updates-email.service';
 import { TokenService } from './token.service';
 import { OtpService } from './otp.service';
 import { TEST_ACCOUNTS, TEST_SETTINGS } from '@/config/test-accounts.config';
+import { logger } from '@/utils/logger.util';
 
 @Injectable()
 export class VerificationService {
@@ -23,6 +25,7 @@ export class VerificationService {
     @InjectRepository(UserOTP)
     private otpRepository: Repository<UserOTP>,
     private userEmailService: UserEmailService,
+    private userUpdatesEmailService: UserUpdatesEmailService,
     private tokenService: TokenService,
     private otpService: OtpService,
   ) {}
@@ -110,6 +113,46 @@ export class VerificationService {
       },
     };
   }
+
+ /**
+ * Generate and send verification OTP for email changes or re-verification
+ */
+async generateAndSendVerificationOtp(user: User, isEmailChange: boolean = false): Promise<void> {
+  const isTestAccount =
+    user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(user.email.toLowerCase());
+
+  if (!isTestAccount || !TEST_SETTINGS.skipSecurityChecks) {
+    try {
+      await this.checkRateLimit(user.id);
+    } catch (error) {
+      logger.warn('Rate limit check failed for email verification OTP', {
+        userId: user.id,
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  const otpCode = await this.otpService.generateAndSaveOTP(
+    user.id,
+    OTPType.EMAIL_VERIFICATION,
+    'system-generated',
+  );
+
+  // Send verification email using the UserUpdatesEmailService
+  await this.userUpdatesEmailService.sendEmailVerificationOTP(
+    user.email,
+    user.firstName,
+    otpCode,
+    isEmailChange,
+  );
+
+  logger.info('Verification OTP sent successfully', {
+    userId: user.id,
+    email: user.email,
+    isEmailChange,
+  });
+}
 
   private async findValidOTP(userId: string, otpCode: string) {
     return this.otpRepository.findOne({
