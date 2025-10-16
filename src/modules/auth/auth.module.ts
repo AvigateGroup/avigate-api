@@ -60,12 +60,12 @@ import { UserModule } from '../user/user.module';
     UserUpdatesEmailService,
   ],
   exports: [
-    AuthService, 
-    JwtStrategy, 
-    PassportModule, 
+    AuthService,
+    JwtStrategy,
+    PassportModule,
     JwtModule,
-    VerificationService, 
-    TokenService, 
+    VerificationService,
+    TokenService,
     OtpService,
   ],
 })

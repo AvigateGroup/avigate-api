@@ -14,7 +14,7 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, UserDevice, UserOTP]), 
+    TypeOrmModule.forFeature([User, UserDevice, UserOTP]),
     UploadModule,
     forwardRef(() => AuthModule), // Import AuthModule to get access to VerificationService
   ],

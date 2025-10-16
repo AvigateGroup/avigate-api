@@ -42,123 +42,123 @@ export class UserService {
   }
 
   async updateProfile(user: User, updateProfileDto: UpdateProfileDto) {
-  const { firstName, lastName, email, sex, phoneNumber, country, language } = updateProfileDto;
-  const updatedFields: string[] = [];
-  const oldEmail = user.email;
+    const { firstName, lastName, email, sex, phoneNumber, country, language } = updateProfileDto;
+    const updatedFields: string[] = [];
+    const oldEmail = user.email;
 
-  // Track email change
-  let emailChanged = false;
+    // Track email change
+    let emailChanged = false;
 
-  // Check phone number uniqueness
-  if (phoneNumber && phoneNumber !== user.phoneNumber) {
-    const existingUser = await this.userRepository.findOne({
-      where: { phoneNumber },
-    });
-    if (existingUser && existingUser.id !== user.id) {
-      throw new ConflictException('Phone number is already in use');
-    }
-    user.phoneNumber = phoneNumber;
-    user.phoneNumberCaptured = true;
-    updatedFields.push('phoneNumber');
-  }
-
-  // Check email uniqueness
-  if (email && email !== user.email) {
-    const existingUser = await this.userRepository.findOne({
-      where: { email },
-    });
-    if (existingUser && existingUser.id !== user.id) {
-      throw new ConflictException('Email is already in use');
-    }
-    user.email = email;
-    user.isVerified = false; // Require re-verification
-    emailChanged = true;
-    updatedFields.push('email');
-  }
-
-  // Update other fields
-  if (firstName && firstName !== user.firstName) {
-    user.firstName = firstName;
-    updatedFields.push('firstName');
-  }
-
-  if (lastName && lastName !== user.lastName) {
-    user.lastName = lastName;
-    updatedFields.push('lastName');
-  }
-
-  if (sex && sex !== user.sex) {
-    user.sex = sex;
-    updatedFields.push('sex');
-  }
-
-  if (country && country !== user.country) {
-    user.country = country;
-    updatedFields.push('country');
-  }
-
-  if (language && language !== user.language) {
-    user.language = language;
-    updatedFields.push('language');
-  }
-
-  await this.userRepository.save(user);
-
-  // Send email notifications if fields were updated
-  if (updatedFields.length > 0) {
-    if (emailChanged && email) {
-      try {
-        // Send notification to old email
-        await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
-          oldEmail,
-          email,
-          firstName || user.firstName,
-        );
-
-        // Generate and send verification OTP to new email
-        await this.verificationService.generateAndSendVerificationOtp(user, true);
-
-        logger.info('Email verification OTP sent after email change', {
-          userId: user.id,
-          oldEmail,
-          newEmail: email,
-        });
-      } catch (error) {
-        logger.error('Failed to send email change notifications', {
-          userId: user.id,
-          error: error.message,
-        });
-        // Don't throw error - profile was already updated
-        // User can use resend verification if needed
+    // Check phone number uniqueness
+    if (phoneNumber && phoneNumber !== user.phoneNumber) {
+      const existingUser = await this.userRepository.findOne({
+        where: { phoneNumber },
+      });
+      if (existingUser && existingUser.id !== user.id) {
+        throw new ConflictException('Phone number is already in use');
       }
-    } else if (updatedFields.length > 0) {
-      try {
-        // Send general profile update notification
-        await this.UserUpdatesEmailService.sendProfileUpdateNotification(
-          user.email,
-          user.firstName,
-          updatedFields,
-        );
-      } catch (error) {
-        logger.error('Failed to send profile update notification', {
-          userId: user.id,
-          error: error.message,
-        });
-        // Don't throw error - profile was already updated
+      user.phoneNumber = phoneNumber;
+      user.phoneNumberCaptured = true;
+      updatedFields.push('phoneNumber');
+    }
+
+    // Check email uniqueness
+    if (email && email !== user.email) {
+      const existingUser = await this.userRepository.findOne({
+        where: { email },
+      });
+      if (existingUser && existingUser.id !== user.id) {
+        throw new ConflictException('Email is already in use');
+      }
+      user.email = email;
+      user.isVerified = false; // Require re-verification
+      emailChanged = true;
+      updatedFields.push('email');
+    }
+
+    // Update other fields
+    if (firstName && firstName !== user.firstName) {
+      user.firstName = firstName;
+      updatedFields.push('firstName');
+    }
+
+    if (lastName && lastName !== user.lastName) {
+      user.lastName = lastName;
+      updatedFields.push('lastName');
+    }
+
+    if (sex && sex !== user.sex) {
+      user.sex = sex;
+      updatedFields.push('sex');
+    }
+
+    if (country && country !== user.country) {
+      user.country = country;
+      updatedFields.push('country');
+    }
+
+    if (language && language !== user.language) {
+      user.language = language;
+      updatedFields.push('language');
+    }
+
+    await this.userRepository.save(user);
+
+    // Send email notifications if fields were updated
+    if (updatedFields.length > 0) {
+      if (emailChanged && email) {
+        try {
+          // Send notification to old email
+          await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
+            oldEmail,
+            email,
+            firstName || user.firstName,
+          );
+
+          // Generate and send verification OTP to new email
+          await this.verificationService.generateAndSendVerificationOtp(user, true);
+
+          logger.info('Email verification OTP sent after email change', {
+            userId: user.id,
+            oldEmail,
+            newEmail: email,
+          });
+        } catch (error) {
+          logger.error('Failed to send email change notifications', {
+            userId: user.id,
+            error: error.message,
+          });
+          // Don't throw error - profile was already updated
+          // User can use resend verification if needed
+        }
+      } else if (updatedFields.length > 0) {
+        try {
+          // Send general profile update notification
+          await this.UserUpdatesEmailService.sendProfileUpdateNotification(
+            user.email,
+            user.firstName,
+            updatedFields,
+          );
+        } catch (error) {
+          logger.error('Failed to send profile update notification', {
+            userId: user.id,
+            error: error.message,
+          });
+          // Don't throw error - profile was already updated
+        }
       }
     }
+
+    logger.info('Profile updated successfully', { userId: user.id, updatedFields });
+
+    return {
+      success: true,
+      message: emailChanged
+        ? 'Profile updated successfully. A verification code has been sent to your new email address.'
+        : 'Profile updated successfully',
+      data: { user },
+    };
   }
-
-  logger.info('Profile updated successfully', { userId: user.id, updatedFields });
-
-  return {
-    success: true,
-    message: emailChanged
-      ? 'Profile updated successfully. A verification code has been sent to your new email address.'
-      : 'Profile updated successfully',
-    data: { user },
-  };
-}
 
   async uploadProfilePicture(user: User, file: Express.Multer.File) {
     if (!file) {
