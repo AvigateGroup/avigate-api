@@ -28,11 +28,6 @@ export class UpdateProfileDto {
   @IsString()
   phoneNumber?: string;
 
-  @ApiProperty({ required: false })
-  @IsOptional()
-  @IsString()
-  profilePicture?: string;
-
   @ApiProperty({ required: false, example: 'user@example.com' })
   @IsOptional()
   @IsEmail()

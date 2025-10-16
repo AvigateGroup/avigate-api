@@ -40,111 +40,103 @@ export class UserService {
   }
 
   async updateProfile(user: User, updateProfileDto: UpdateProfileDto) {
-    const { firstName, lastName, email, sex, phoneNumber, country, language, profilePicture } =
-      updateProfileDto;
-    const updatedFields: string[] = [];
-    const oldEmail = user.email;
+  const { firstName, lastName, email, sex, phoneNumber, country, language } = updateProfileDto;
+  const updatedFields: string[] = [];
+  const oldEmail = user.email;
 
-    // Track email change
-    let emailChanged = false;
+  // Track email change
+  let emailChanged = false;
 
-    // Check phone number uniqueness
-    if (phoneNumber && phoneNumber !== user.phoneNumber) {
-      const existingUser = await this.userRepository.findOne({
-        where: { phoneNumber },
-      });
-      if (existingUser && existingUser.id !== user.id) {
-        throw new ConflictException('Phone number is already in use');
-      }
-      user.phoneNumber = phoneNumber;
-      user.phoneNumberCaptured = true;
-      updatedFields.push('phoneNumber');
+  // Check phone number uniqueness
+  if (phoneNumber && phoneNumber !== user.phoneNumber) {
+    const existingUser = await this.userRepository.findOne({
+      where: { phoneNumber },
+    });
+    if (existingUser && existingUser.id !== user.id) {
+      throw new ConflictException('Phone number is already in use');
     }
-
-    // Check email uniqueness
-    if (email && email !== user.email) {
-      const existingUser = await this.userRepository.findOne({
-        where: { email },
-      });
-      if (existingUser && existingUser.id !== user.id) {
-        throw new ConflictException('Email is already in use');
-      }
-      user.email = email;
-      user.isVerified = false; // Require re-verification
-      emailChanged = true;
-      updatedFields.push('email');
-    }
-
-    // Update other fields
-    if (firstName && firstName !== user.firstName) {
-      user.firstName = firstName;
-      updatedFields.push('firstName');
-    }
-
-    if (lastName && lastName !== user.lastName) {
-      user.lastName = lastName;
-      updatedFields.push('lastName');
-    }
-
-    if (sex && sex !== user.sex) {
-      user.sex = sex;
-      updatedFields.push('sex');
-    }
-
-    if (country && country !== user.country) {
-      user.country = country;
-      updatedFields.push('country');
-    }
-
-    if (language && language !== user.language) {
-      user.language = language;
-      updatedFields.push('language');
-    }
-
-    if (profilePicture && profilePicture !== user.profilePicture) {
-      user.profilePicture = profilePicture;
-      updatedFields.push('profilePicture');
-    }
-
-    await this.userRepository.save(user);
-
-    // Send email notifications if fields were updated
-    if (updatedFields.length > 0) {
-      if (emailChanged && email) {
-        // Add email check here
-        // Send to old email
-        await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
-          oldEmail,
-          email, // TypeScript now knows email is string, not undefined
-          firstName || user.firstName,
-        );
-
-        // Send to new email
-        await this.UserUpdatesEmailService.sendEmailChangeConfirmationToNewEmail(
-          email, // TypeScript now knows email is string, not undefined
-          oldEmail,
-          firstName || user.firstName,
-        );
-      } else if (updatedFields.length > 0) {
-        // Send general profile update notification
-        await this.UserUpdatesEmailService.sendProfileUpdateNotification(
-          user.email,
-          user.firstName,
-          updatedFields,
-        );
-      }
-    }
-
-    logger.info('Profile updated successfully', { userId: user.id, updatedFields });
-
-    return {
-      success: true,
-      message: emailChanged
-        ? 'Profile updated successfully. Please verify your new email address.'
-        : 'Profile updated successfully',
-      data: { user },
-    };
+    user.phoneNumber = phoneNumber;
+    user.phoneNumberCaptured = true;
+    updatedFields.push('phoneNumber');
   }
+
+  // Check email uniqueness
+  if (email && email !== user.email) {
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
+    if (existingUser && existingUser.id !== user.id) {
+      throw new ConflictException('Email is already in use');
+    }
+    user.email = email;
+    user.isVerified = false; // Require re-verification
+    emailChanged = true;
+    updatedFields.push('email');
+  }
+
+  // Update other fields
+  if (firstName && firstName !== user.firstName) {
+    user.firstName = firstName;
+    updatedFields.push('firstName');
+  }
+
+  if (lastName && lastName !== user.lastName) {
+    user.lastName = lastName;
+    updatedFields.push('lastName');
+  }
+
+  if (sex && sex !== user.sex) {
+    user.sex = sex;
+    updatedFields.push('sex');
+  }
+
+  if (country && country !== user.country) {
+    user.country = country;
+    updatedFields.push('country');
+  }
+
+  if (language && language !== user.language) {
+    user.language = language;
+    updatedFields.push('language');
+  }
+  await this.userRepository.save(user);
+
+  // Send email notifications if fields were updated
+  if (updatedFields.length > 0) {
+    if (emailChanged && email) {
+      // Send to old email
+      await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
+        oldEmail,
+        email,
+        firstName || user.firstName,
+      );
+
+      // Send to new email
+      await this.UserUpdatesEmailService.sendEmailChangeConfirmationToNewEmail(
+        email,
+        oldEmail,
+        firstName || user.firstName,
+      );
+    } else if (updatedFields.length > 0) {
+      // Send general profile update notification
+      await this.UserUpdatesEmailService.sendProfileUpdateNotification(
+        user.email,
+        user.firstName,
+        updatedFields,
+      );
+    }
+  }
+
+  logger.info('Profile updated successfully', { userId: user.id, updatedFields });
+
+  return {
+    success: true,
+    message: emailChanged
+      ? 'Profile updated successfully. Please verify your new email address.'
+      : 'Profile updated successfully',
+    data: { user },
+  };
+}
 
   async uploadProfilePicture(user: User, file: Express.Multer.File) {
     if (!file) {
