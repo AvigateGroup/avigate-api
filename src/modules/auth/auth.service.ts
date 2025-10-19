@@ -9,9 +9,8 @@ import { UserDevice } from '../user/entities/user-device.entity';
 import { UserOTP } from '../user/entities/user-otp.entity';
 import { RegisterDto } from '../user/dto/register.dto';
 import { LoginDto } from '../user/dto/login.dto';
-import { VerifyEmailDto } from '../user/dto/verify-email.dto';
-import { RequestLoginOtpDto } from '../user/dto/login-with-otp.dto';
 import { VerifyLoginOtpDto } from '../user/dto/verify-login-otp.dto';
+import { VerifyEmailDto } from '../user/dto/verify-email.dto';
 import { GoogleAuthDto } from '../user/dto/google-auth.dto';
 import { CapturePhoneDto } from '../user/dto/capture-phone.dto';
 import { ForgotPasswordDto } from '../user/dto/forgot-password.dto';
@@ -19,7 +18,6 @@ import { ResetPasswordDto } from '../user/dto/reset-password.dto';
 import { RegistrationService } from './services/registration.service';
 import { LoginService } from './services/login.service';
 import { VerificationService } from './services/verification.service';
-import { OtpLoginService } from './services/otp-login.service';
 import { GoogleAuthService } from './services/google-auth.service';
 import { PasswordResetService } from './services/password-reset.service';
 import { TokenService } from './services/token.service';
@@ -37,7 +35,6 @@ export class AuthService {
     private registrationService: RegistrationService,
     private loginService: LoginService,
     private verificationService: VerificationService,
-    private otpLoginService: OtpLoginService,
     private googleAuthService: GoogleAuthService,
     private passwordResetService: PasswordResetService,
     private tokenService: TokenService,
@@ -48,16 +45,25 @@ export class AuthService {
     return this.registrationService.register(registerDto, req);
   }
 
+  /**
+   * Step 1: Validate credentials and send OTP
+   */
   async login(loginDto: LoginDto, req: Request) {
     return this.loginService.login(loginDto, req);
   }
 
-  async requestLoginOtp(requestLoginOtpDto: RequestLoginOtpDto, req: Request) {
-    return this.otpLoginService.requestLoginOtp(requestLoginOtpDto, req);
+  /**
+   * Step 2: Verify OTP and complete login
+   */
+  async verifyLoginOtp(verifyLoginOtpDto: VerifyLoginOtpDto, req: Request) {
+    return this.loginService.verifyLoginOtp(verifyLoginOtpDto, req);
   }
 
-  async verifyLoginOtp(verifyLoginOtpDto: VerifyLoginOtpDto, req: Request) {
-    return this.otpLoginService.verifyLoginOtp(verifyLoginOtpDto, req);
+  /**
+   * Resend login OTP
+   */
+  async resendLoginOtp(email: string, req: Request) {
+    return this.loginService.resendLoginOtp(email, req);
   }
 
   async googleAuth(googleAuthDto: GoogleAuthDto, req: Request) {

@@ -6,10 +6,10 @@ import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from '../user/dto/register.dto';
 import { LoginDto } from '../user/dto/login.dto';
+import { VerifyLoginOtpDto } from '../user/dto/verify-login-otp.dto';
+import { ResendLoginOtpDto } from '../user/dto/resend-login-otp.dto';
 import { VerifyEmailDto } from '../user/dto/verify-email.dto';
 import { RefreshTokenDto } from '../user/dto/refresh-token.dto';
-import { RequestLoginOtpDto } from '../user/dto/login-with-otp.dto';
-import { VerifyLoginOtpDto } from '../user/dto/verify-login-otp.dto';
 import { GoogleAuthDto } from '../user/dto/google-auth.dto';
 import { CapturePhoneDto } from '../user/dto/capture-phone.dto';
 import { ForgotPasswordDto } from '../user/dto/forgot-password.dto';
@@ -30,21 +30,30 @@ export class AuthController {
   }
 
   @Post('login')
-  @ApiOperation({ summary: 'Login user with password' })
+  @ApiOperation({ 
+    summary: 'Step 1: Login with email and password',
+    description: 'Validates credentials and sends OTP to email for verification'
+  })
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
     return this.authService.login(loginDto, req);
   }
 
-  @Post('login/request-otp')
-  @ApiOperation({ summary: 'Request OTP for login' })
-  async requestLoginOtp(@Body() requestLoginOtpDto: RequestLoginOtpDto, @Req() req: Request) {
-    return this.authService.requestLoginOtp(requestLoginOtpDto, req);
-  }
-
   @Post('login/verify-otp')
-  @ApiOperation({ summary: 'Verify OTP and login' })
+  @ApiOperation({ 
+    summary: 'Step 2: Verify OTP and complete login',
+    description: 'Verifies the OTP code sent to email and returns access tokens'
+  })
   async verifyLoginOtp(@Body() verifyLoginOtpDto: VerifyLoginOtpDto, @Req() req: Request) {
     return this.authService.verifyLoginOtp(verifyLoginOtpDto, req);
+  }
+
+  @Post('login/resend-otp')
+  @ApiOperation({ 
+    summary: 'Resend login OTP',
+    description: 'Resends a new OTP code to the user\'s email. Previous OTPs will be invalidated.'
+  })
+  async resendLoginOtp(@Body() resendLoginOtpDto: ResendLoginOtpDto, @Req() req: Request) {
+    return this.authService.resendLoginOtp(resendLoginOtpDto.email, req);
   }
 
   @Post('google')
