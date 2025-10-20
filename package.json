@@ -69,6 +69,7 @@
     "express-rate-limit": "^7.1.5",
     "firebase-admin": "^13.5.0",
     "geolib": "^3.3.4",
+    "google-auth-library": "^10.4.1",
     "helmet": "^7.1.0",
     "ml-matrix": "^6.12.1",
     "multer": "^2.0.2",
