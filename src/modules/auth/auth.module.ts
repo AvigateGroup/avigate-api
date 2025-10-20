@@ -19,7 +19,6 @@ import { User } from '../user/entities/user.entity';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { UserOTP } from '../user/entities/user-otp.entity';
 import { JwtStrategy } from './strategies/jwt.strategy';
-import { GoogleStrategy } from './strategies/google.strategy';
 import { UserEmailService } from '../email/user-email.service';
 import { UserUpdatesEmailService } from '../email/user-updates-email.service';
 import { UserModule } from '../user/user.module';
@@ -53,7 +52,6 @@ import { UserModule } from '../user/user.module';
     DeviceService,
     OtpService,
     JwtStrategy,
-    GoogleStrategy,
     UserEmailService,
     UserUpdatesEmailService,
   ],
