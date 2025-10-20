@@ -67,6 +67,7 @@
     "cookie-parser": "^1.4.7",
     "dd-trace": "^5.68.0",
     "express-rate-limit": "^7.1.5",
+    "firebase": "^12.4.0",
     "firebase-admin": "^13.5.0",
     "geolib": "^3.3.4",
     "google-auth-library": "^10.4.1",
