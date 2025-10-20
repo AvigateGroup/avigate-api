@@ -1,10 +1,9 @@
+// src/modules/notifications/notifications.service.ts
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as admin from 'firebase-admin';
-import * as fs from 'fs';
-import * as path from 'path';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { logger } from '@/utils/logger.util';
 
@@ -26,24 +25,23 @@ export class NotificationsService implements OnModuleInit {
   onModuleInit() {
     try {
       if (!admin.apps.length) {
-        const serviceAccountPath = this.configService.get('FIREBASE_SERVICE_ACCOUNT_PATH');
+        const projectId = this.configService.get('FIREBASE_PROJECT_ID');
+        const privateKey = this.configService.get('FIREBASE_PRIVATE_KEY');
+        const clientEmail = this.configService.get('FIREBASE_CLIENT_EMAIL');
 
-        if (serviceAccountPath) {
-          // Resolve the absolute path
-          const absolutePath = path.resolve(process.cwd(), serviceAccountPath);
-
-          // Read the file synchronously
-          const serviceAccountFile = fs.readFileSync(absolutePath, 'utf8');
-          const serviceAccount = JSON.parse(serviceAccountFile);
-
+        if (projectId && privateKey && clientEmail) {
           admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
+            credential: admin.credential.cert({
+              projectId,
+              privateKey: privateKey.replace(/\\n/g, '\n'), // Handle escaped newlines
+              clientEmail,
+            }),
           });
 
-          logger.info('Firebase initialized successfully with service account file');
+          logger.info('Firebase initialized successfully from environment variables');
         } else {
           logger.warn(
-            'Firebase service account path not configured. Push notifications will be disabled.',
+            'Firebase credentials not configured. Push notifications will be disabled.',
           );
         }
       }
