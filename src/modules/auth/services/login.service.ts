@@ -93,17 +93,9 @@ export class LoginService {
     const { email, otpCode, fcmToken, deviceInfo } = verifyLoginOtpDto;
 
     // Find user
-    const user = await this.userRepository.findOne({ 
+    const user = await this.userRepository.findOne({
       where: { email },
-      select: [
-        'id',
-        'email',
-        'firstName',
-        'lastName',
-        'isVerified',
-        'isActive',
-        'isTestAccount',
-      ],
+      select: ['id', 'email', 'firstName', 'lastName', 'isVerified', 'isActive', 'isTestAccount'],
     });
 
     if (!user) {
@@ -198,70 +190,70 @@ export class LoginService {
   }
 
   async resendLoginOtp(email: string, req: Request) {
-  // Find user
-  const user = await this.userRepository.findOne({
-    where: { email },
-    select: ['id', 'email', 'firstName', 'isVerified', 'isActive', 'isTestAccount'],
-  });
+    // Find user
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'firstName', 'isVerified', 'isActive', 'isTestAccount'],
+    });
 
-  if (!user) {
-    throw new UnauthorizedException('User not found');
-  }
-
-  if (!user.isActive) {
-    throw new UnauthorizedException('Account is deactivated');
-  }
-
-  const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
-
-  // Check verification requirement
-  if (!isTestAccount || !TEST_SETTINGS.bypassEmailVerification) {
-    if (!user.isVerified) {
-      throw new BadRequestException('Please verify your email first');
+    if (!user) {
+      throw new UnauthorizedException('User not found');
     }
-  }
 
-  // Check rate limit
-  if (!isTestAccount || !TEST_SETTINGS.skipSecurityChecks) {
-    await this.checkOtpRateLimit(user.id);
-  }
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
 
-  // Invalidate any existing unused login OTPs
-  await this.otpRepository.update(
-    {
+    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+
+    // Check verification requirement
+    if (!isTestAccount || !TEST_SETTINGS.bypassEmailVerification) {
+      if (!user.isVerified) {
+        throw new BadRequestException('Please verify your email first');
+      }
+    }
+
+    // Check rate limit
+    if (!isTestAccount || !TEST_SETTINGS.skipSecurityChecks) {
+      await this.checkOtpRateLimit(user.id);
+    }
+
+    // Invalidate any existing unused login OTPs
+    await this.otpRepository.update(
+      {
+        userId: user.id,
+        otpType: OTPType.LOGIN_VERIFICATION,
+        isUsed: false,
+      },
+      { isUsed: true, usedAt: new Date() },
+    );
+
+    // Generate new OTP
+    const otpCode = await this.otpService.generateAndSaveOTP(
+      user.id,
+      OTPType.LOGIN_VERIFICATION,
+      req.ip,
+    );
+
+    // Send OTP email
+    const deviceInfo = req.headers['user-agent'] || 'Unknown device';
+    await this.userEmailService.sendLoginOTP(user.email, user.firstName, otpCode, deviceInfo);
+
+    logger.info('Login OTP resent', {
       userId: user.id,
-      otpType: OTPType.LOGIN_VERIFICATION,
-      isUsed: false,
-    },
-    { isUsed: true, usedAt: new Date() }
-  );
-
-  // Generate new OTP
-  const otpCode = await this.otpService.generateAndSaveOTP(
-    user.id,
-    OTPType.LOGIN_VERIFICATION,
-    req.ip,
-  );
-
-  // Send OTP email
-  const deviceInfo = req.headers['user-agent'] || 'Unknown device';
-  await this.userEmailService.sendLoginOTP(user.email, user.firstName, otpCode, deviceInfo);
-
-  logger.info('Login OTP resent', {
-    userId: user.id,
-    email: user.email,
-    isTestAccount,
-  });
-
-  return {
-    success: true,
-    message: 'A new verification code has been sent to your email.',
-    data: {
       email: user.email,
       isTestAccount,
-    },
-  };
-}
+    });
+
+    return {
+      success: true,
+      message: 'A new verification code has been sent to your email.',
+      data: {
+        email: user.email,
+        isTestAccount,
+      },
+    };
+  }
 
   /**
    * Private helper methods

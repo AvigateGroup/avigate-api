@@ -1,6 +1,11 @@
 // src/modules/auth/services/google-auth.service.ts
 
-import { Injectable, ConflictException, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
@@ -90,7 +95,7 @@ export class GoogleAuthService {
       // Case 2: User has Google ID but it doesn't match
       else if (user.googleId && user.googleId !== googleId) {
         throw new ConflictException(
-          'This email is already registered with a different Google account'
+          'This email is already registered with a different Google account',
         );
       }
       // Case 3: User already has this Google ID - normal login
@@ -157,13 +162,8 @@ export class GoogleAuthService {
       try {
         // Convert deviceInfo object to string if it exists
         const deviceInfoString = deviceInfo ? JSON.stringify(deviceInfo) : undefined;
-        
-        await this.deviceService.updateOrCreateDevice(
-          user.id, 
-          fcmToken, 
-          req, 
-          deviceInfoString
-        );
+
+        await this.deviceService.updateOrCreateDevice(user.id, fcmToken, req, deviceInfoString);
         logger.info('Device registered/updated', { userId: user.id });
       } catch (error) {
         logger.error('Failed to register device', { userId: user.id, error: error.message });

@@ -30,27 +30,27 @@ export class AuthController {
   }
 
   @Post('login')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Step 1: Login with email and password',
-    description: 'Validates credentials and sends OTP to email for verification'
+    description: 'Validates credentials and sends OTP to email for verification',
   })
   async login(@Body() loginDto: LoginDto, @Req() req: Request) {
     return this.authService.login(loginDto, req);
   }
 
   @Post('login/verify-otp')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Step 2: Verify OTP and complete login',
-    description: 'Verifies the OTP code sent to email and returns access tokens'
+    description: 'Verifies the OTP code sent to email and returns access tokens',
   })
   async verifyLoginOtp(@Body() verifyLoginOtpDto: VerifyLoginOtpDto, @Req() req: Request) {
     return this.authService.verifyLoginOtp(verifyLoginOtpDto, req);
   }
 
   @Post('login/resend-otp')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Resend login OTP',
-    description: 'Resends a new OTP code to the user\'s email. Previous OTPs will be invalidated.'
+    description: "Resends a new OTP code to the user's email. Previous OTPs will be invalidated.",
   })
   async resendLoginOtp(@Body() resendLoginOtpDto: ResendLoginOtpDto, @Req() req: Request) {
     return this.authService.resendLoginOtp(resendLoginOtpDto.email, req);

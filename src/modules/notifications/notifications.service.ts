@@ -40,9 +40,7 @@ export class NotificationsService implements OnModuleInit {
 
           logger.info('Firebase initialized successfully from environment variables');
         } else {
-          logger.warn(
-            'Firebase credentials not configured. Push notifications will be disabled.',
-          );
+          logger.warn('Firebase credentials not configured. Push notifications will be disabled.');
         }
       }
     } catch (error) {
