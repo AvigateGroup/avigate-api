@@ -1,12 +1,14 @@
-// src/modules/route/services/trip.service.ts
+// src/modules/route/services/trip.service.ts (UPDATED WITH EMAIL INTEGRATION)
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActiveTrip, TripStatus } from '../entities/active-trip.entity';
 import { Route } from '../entities/route.entity';
 import { RouteStep } from '../entities/route-step.entity';
+import { User } from '../../user/entities/user.entity';
 import { GeofencingService } from './geofencing.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { UserTripEmailService } from '../../email/user-trip-email.service';
 import { logger } from '@/utils/logger.util';
 
 export interface LocationUpdate {
@@ -33,8 +35,11 @@ export class TripService {
     private routeRepository: Repository<Route>,
     @InjectRepository(RouteStep)
     private stepRepository: Repository<RouteStep>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     private geofencingService: GeofencingService,
     private notificationsService: NotificationsService,
+    private userTripEmailService: UserTripEmailService,
   ) {}
 
   /**
@@ -200,7 +205,7 @@ export class TripService {
           const isLastStep = currentStepIndex === trip.route.steps.length - 1;
 
           if (isLastStep) {
-            // Trip completed
+            // Trip completed - this will trigger email
             await this.completeTrip(trip.id, userId);
             alerts.push('Trip completed! You have arrived at your destination.');
           } else {
@@ -294,12 +299,19 @@ export class TripService {
   }
 
   /**
-   * Complete a trip
+   * Complete a trip (with email notification)
    */
   async completeTrip(tripId: string, userId: string): Promise<ActiveTrip> {
     const trip = await this.tripRepository.findOne({
       where: { id: tripId, userId },
-      relations: ['route', 'route.endLocation'],
+      relations: [
+        'route',
+        'route.endLocation',
+        'route.startLocation',
+        'route.steps',
+        'route.steps.fromLocation',
+        'route.steps.toLocation',
+      ],
     });
 
     if (!trip) {
@@ -311,6 +323,7 @@ export class TripService {
 
     await this.tripRepository.save(trip);
 
+    // Send push notification
     await this.notificationsService.sendToUser(userId, {
       title: 'Trip Completed',
       body: `You have arrived at ${trip.route.endLocation.name}. We hope you had a safe journey!`,
@@ -320,35 +333,152 @@ export class TripService {
       },
     });
 
+    // Send email with trip summary
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user && user.email) {
+        // Sort steps for email
+        trip.route.steps.sort((a, b) => a.stepOrder - b.stepOrder);
+
+        await this.userTripEmailService.sendTripCompletionEmail({
+          tripId: trip.id,
+          userName: user.firstName,
+          userEmail: user.email,
+          startLocation: trip.route.startLocation.name,
+          endLocation: trip.route.endLocation.name,
+          startTime: trip.startedAt,
+          endTime: trip.completedAt,
+          distance: Number(trip.route.distance),
+          duration: Number(trip.route.estimatedDuration),
+          transportModes: trip.route.transportModes || [],
+          steps: trip.route.steps.map((step, index) => ({
+            stepNumber: index + 1,
+            instruction: step.instructions,
+            distance: Number(step.distance),
+            duration: Number(step.estimatedDuration),
+            fromLocation: step.fromLocation?.name,
+            toLocation: step.toLocation?.name,
+          })),
+          fare: trip.route.minFare
+            ? {
+                min: Number(trip.route.minFare),
+                max: Number(trip.route.maxFare),
+              }
+            : undefined,
+          status: 'completed',
+        });
+
+        logger.info(`Trip completion email sent for trip ${trip.id}`);
+      }
+    } catch (emailError) {
+      logger.error('Failed to send trip completion email:', emailError);
+      // Don't fail the trip completion if email fails
+    }
+
     logger.info(`Trip completed: ${trip.id} for user ${userId}`);
 
     return trip;
   }
 
   /**
-   * Cancel a trip
+   * Cancel a trip (with email notification)
    */
   async cancelTrip(tripId: string, userId: string, reason?: string): Promise<ActiveTrip> {
     const trip = await this.tripRepository.findOne({
       where: { id: tripId, userId },
+      relations: [
+        'route',
+        'route.startLocation',
+        'route.endLocation',
+        'route.steps',
+        'route.steps.fromLocation',
+        'route.steps.toLocation',
+      ],
     });
 
     if (!trip) {
       throw new NotFoundException('Trip not found');
     }
 
+    if (trip.status !== TripStatus.IN_PROGRESS) {
+      throw new BadRequestException('Only active trips can be cancelled');
+    }
+
+    const previousStatus = trip.status;
     trip.status = TripStatus.CANCELLED;
+    trip.completedAt = new Date();
     trip.metadata = {
       ...trip.metadata,
       cancellationReason: reason,
       cancelledAt: new Date().toISOString(),
+      previousStatus,
     };
 
     await this.tripRepository.save(trip);
 
-    logger.info(`Trip cancelled: ${trip.id} for user ${userId}`);
+    // Send push notification
+    await this.notificationsService.sendToUser(userId, {
+      title: 'Trip Cancelled',
+      body: reason ? `Trip cancelled: ${reason}` : 'Your trip has been cancelled.',
+      data: {
+        type: 'trip_cancelled',
+        tripId: trip.id,
+      },
+    });
+
+    // Send cancellation email
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (user && user.email) {
+        // Sort steps for email
+        trip.route.steps.sort((a, b) => a.stepOrder - b.stepOrder);
+
+        await this.userTripEmailService.sendTripCancellationEmail({
+          tripId: trip.id,
+          userName: user.firstName,
+          userEmail: user.email,
+          startLocation: trip.route.startLocation.name,
+          endLocation: trip.route.endLocation.name,
+          startTime: trip.startedAt,
+          endTime: trip.completedAt,
+          distance: Number(trip.route.distance),
+          duration: Number(trip.route.estimatedDuration),
+          transportModes: trip.route.transportModes || [],
+          steps: trip.route.steps.map((step, index) => ({
+            stepNumber: index + 1,
+            instruction: step.instructions,
+            distance: Number(step.distance),
+            duration: Number(step.estimatedDuration),
+            fromLocation: step.fromLocation?.name,
+            toLocation: step.toLocation?.name,
+          })),
+          fare: trip.route.minFare
+            ? {
+                min: Number(trip.route.minFare),
+                max: Number(trip.route.maxFare),
+              }
+            : undefined,
+          status: 'cancelled',
+          cancellationReason: reason,
+        });
+
+        logger.info(`Trip cancellation email sent for trip ${trip.id}`);
+      }
+    } catch (emailError) {
+      logger.error('Failed to send trip cancellation email:', emailError);
+      // Don't fail the cancellation if email fails
+    }
+
+    logger.info(`Trip cancelled: ${trip.id} for user ${userId}. Reason: ${reason || 'Not provided'}`);
 
     return trip;
+  }
+
+  /**
+   * End trip manually (alias for cancel with specific reason)
+   */
+  async endTrip(tripId: string, userId: string): Promise<ActiveTrip> {
+    return this.cancelTrip(tripId, userId, 'Ended by user');
   }
 
   /**
@@ -361,5 +491,28 @@ export class TripService {
       order: { createdAt: 'DESC' },
       take: limit,
     });
+  }
+
+  /**
+   * Get trip statistics for user
+   */
+  async getTripStatistics(userId: string) {
+    const trips = await this.tripRepository.find({
+      where: { userId },
+      relations: ['route'],
+    });
+
+    const completed = trips.filter(t => t.status === TripStatus.COMPLETED);
+    const cancelled = trips.filter(t => t.status === TripStatus.CANCELLED);
+
+    const totalDistance = completed.reduce((sum, trip) => sum + Number(trip.route.distance || 0), 0);
+
+    return {
+      totalTrips: trips.length,
+      completedTrips: completed.length,
+      cancelledTrips: cancelled.length,
+      activeTrips: trips.filter(t => t.status === TripStatus.IN_PROGRESS).length,
+      totalDistance: totalDistance.toFixed(2),
+    };
   }
 }
