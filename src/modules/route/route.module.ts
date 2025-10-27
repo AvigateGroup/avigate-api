@@ -1,4 +1,4 @@
-// src/modules/route/route.module.ts (UPDATED)
+// src/modules/route/route.module.ts (UPDATED WITH EMAIL SERVICE)
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
@@ -14,16 +14,19 @@ import { Route } from './entities/route.entity';
 import { RouteStep } from './entities/route-step.entity';
 import { ActiveTrip } from './entities/active-trip.entity';
 import { Location } from '../location/entities/location.entity';
+import { User } from '../user/entities/user.entity';
 import { LocationModule } from '../location/location.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Route, RouteStep, ActiveTrip, Location]),
+    TypeOrmModule.forFeature([Route, RouteStep, ActiveTrip, Location, User]),
     ConfigModule,
     JwtModule.register({}),
     LocationModule,
     NotificationsModule,
+    EmailModule, 
   ],
   controllers: [RouteController],
   providers: [
