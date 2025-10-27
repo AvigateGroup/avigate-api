@@ -16,28 +16,16 @@ export class RouteService {
   ) {}
 
   async findRoutes(findRoutesDto: FindRoutesDto) {
-    const { startLocationId, endLocationId, preferredModes, maxFare } = findRoutesDto;
+    const { startLocationId, endLocationId } = findRoutesDto;
 
-    const query = this.routeRepository
+    const routes = await this.routeRepository
       .createQueryBuilder('route')
       .leftJoinAndSelect('route.startLocation', 'startLocation')
       .leftJoinAndSelect('route.endLocation', 'endLocation')
       .leftJoinAndSelect('route.steps', 'steps')
       .where('route.startLocationId = :startLocationId', { startLocationId })
       .andWhere('route.endLocationId = :endLocationId', { endLocationId })
-      .andWhere('route.isActive = :isActive', { isActive: true });
-
-    if (maxFare) {
-      query.andWhere('route.maxFare <= :maxFare', { maxFare });
-    }
-
-    if (preferredModes && preferredModes.length > 0) {
-      query.andWhere('route.transportModes && :modes', {
-        modes: preferredModes,
-      });
-    }
-
-    const routes = await query
+      .andWhere('route.isActive = :isActive', { isActive: true })
       .orderBy('route.popularityScore', 'DESC')
       .addOrderBy('route.estimatedDuration', 'ASC')
       .limit(5)
