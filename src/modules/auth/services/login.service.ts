@@ -29,13 +29,7 @@ export class LoginService {
   ) {}
 
   /**
-   * IMPORTANT: This replaces your existing login() method
    * Step 1: Validate credentials and send OTP
-   */
-
-  /**
-   * Step 1: Validate credentials and send OTP
-   * This replaces the old direct login that returned tokens
    */
   async login(loginDto: LoginDto, req: Request) {
     const { email, password } = loginDto;
