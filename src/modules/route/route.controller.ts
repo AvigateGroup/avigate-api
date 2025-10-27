@@ -1,4 +1,4 @@
-// src/modules/route/route.controller.ts
+// src/modules/route/route.controller.ts (UPDATED WITH END TRIP ENDPOINT)
 import { Controller, Get, Post, Body, Param, Query, UseGuards, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -26,6 +26,7 @@ export class RouteController {
   async findRoutes(@Body() findRoutesDto: FindRoutesDto) {
     return this.routeService.findRoutes(findRoutesDto);
   }
+
   @Post('search/smart')
   @ApiOperation({ summary: 'Smart route search with coordinates or addresses' })
   async smartRouteSearch(@Body() dto: SmartRouteSearchDto) {
@@ -43,7 +44,6 @@ export class RouteController {
       startLat = coords.lat;
       startLng = coords.lng;
     } else if (dto.startLat !== undefined && dto.startLng !== undefined) {
-      // Add explicit checks and assignment
       startLat = dto.startLat;
       startLng = dto.startLng;
     } else {
@@ -65,7 +65,6 @@ export class RouteController {
       endLat = coords.lat;
       endLng = coords.lng;
     } else if (dto.endLat !== undefined && dto.endLng !== undefined) {
-      // Add explicit checks and assignment
       endLat = dto.endLat;
       endLng = dto.endLng;
     } else {
@@ -154,21 +153,42 @@ export class RouteController {
   @Post('trips/:tripId/complete')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Complete a trip' })
+  @ApiOperation({ summary: 'Complete a trip (arrives at destination)' })
   async completeTrip(@CurrentUser() user: User, @Param('tripId') tripId: string) {
     const trip = await this.tripService.completeTrip(tripId, user.id);
 
     return {
       success: true,
       data: { trip },
-      message: 'Trip completed successfully',
+      message: 'Trip completed successfully. Check your email for trip summary.',
+    };
+  }
+
+  @Post('trips/:tripId/end')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'End trip manually (stops trip before reaching destination)',
+    description: 'Use this when user wants to end the trip midway without completing the full route',
+  })
+  async endTrip(@CurrentUser() user: User, @Param('tripId') tripId: string) {
+    const trip = await this.tripService.endTrip(tripId, user.id);
+
+    return {
+      success: true,
+      data: { trip },
+      message: 'Trip ended. A summary has been sent to your email.',
     };
   }
 
   @Post('trips/:tripId/cancel')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Cancel a trip' })
+  @ApiOperation({
+    summary: 'Cancel a trip with optional reason',
+    description:
+      'Cancel an active trip. Provide a reason for better tracking. Email notification will be sent.',
+  })
   async cancelTrip(
     @CurrentUser() user: User,
     @Param('tripId') tripId: string,
@@ -179,7 +199,7 @@ export class RouteController {
     return {
       success: true,
       data: { trip },
-      message: 'Trip cancelled',
+      message: 'Trip cancelled. A confirmation has been sent to your email.',
     };
   }
 
@@ -193,6 +213,19 @@ export class RouteController {
     return {
       success: true,
       data: { trips },
+    };
+  }
+
+  @Get('trips/statistics')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get trip statistics for user' })
+  async getTripStatistics(@CurrentUser() user: User) {
+    const stats = await this.tripService.getTripStatistics(user.id);
+
+    return {
+      success: true,
+      data: stats,
     };
   }
 
