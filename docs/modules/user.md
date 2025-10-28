@@ -121,7 +121,7 @@ When a user updates their profile:
 **Process:**
 1. Validate file upload
 2. Delete old profile picture (if exists)
-3. Upload to Cloudinary
+3. Upload to AWS S3
 4. Update user record
 5. Send notification email
 6. Return new picture URL
@@ -167,7 +167,7 @@ When a user updates their profile:
 **Cascade Deletion:**
 - User devices
 - User OTPs
-- Profile picture (from Cloudinary)
+- Profile picture (from AWS S3)
 - User account record
 
 **Exceptions:**
@@ -195,7 +195,7 @@ Authorization: Bearer {ACCESS_TOKEN}
       "sex": "male",
       "country": "Nigeria",
       "language": "English",
-      "profilePicture": "https://res.cloudinary.com/.../profile.jpg",
+      "profilePicture": "https://avigate-uploads.s3.amazonaws.com/.../profile.jpg",
       "isVerified": true,
       "isActive": true,
       "authProvider": "local",
@@ -298,11 +298,11 @@ FormData:
   "success": true,
   "message": "Profile picture uploaded successfully",
   "data": {
-    "profilePicture": "https://res.cloudinary.com/avigate/image/upload/v1234567890/profile-pictures/user-uuid.jpg"
+    "profilePicture": "https://avigate-uploads.s3.amazonaws.com/"
   }
 }
 
-// Old profile picture deleted from Cloudinary
+// Old profile picture deleted from AWS S3
 // Notification email sent
 ```
 
@@ -401,7 +401,7 @@ Content-Type: application/json
 // Following data is deleted:
 // - All user devices
 // - All user OTPs
-// - Profile picture (from Cloudinary)
+// - Profile picture (from AWS S3)
 // - User account record
 
 // Confirmation email sent to user

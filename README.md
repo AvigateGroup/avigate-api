@@ -31,7 +31,7 @@ Avigate API is a comprehensive RESTful backend service powering Nigeria's intell
 - **Database**: PostgreSQL 15.x with TypeORM
 - **Authentication**: JWT + Passport
 - **Email**: ZeptoMail
-- **File Upload**: Cloudinary
+- **File Upload**: AWS S3
 - **API Documentation**: Swagger/OpenAPI
 
 ### Project Structure
@@ -164,10 +164,11 @@ ZEPTOMAIL_FROM_NAME=Avigate
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
+# AWS S3
+AWS_REGION=*******
+AWS_ACCESS_KEY_ID=*******
+AWS_SECRET_ACCESS_KEY=tv7J*****pGYnY6
+AWS_S3_BUCKET=********
 
 # Application
 PORT=3000
