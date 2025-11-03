@@ -34,21 +34,26 @@ async function bootstrap() {
     configService.get('ADMIN_FRONTEND_URL') || 'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
-    'http://localhost:5500', // Live Server
-    'http://127.0.0.1:5500', // Live Server (127.0.0.1)
+    'http://localhost:5500',
+    'http://127.0.0.1:5500',
     'http://localhost:8080',
     'http://127.0.0.1:8080',
+    'http://localhost:8081', // Expo Metro Bundler
+    'exp://localhost:8081', // Expo Go
+    'http://192.168.0.134:8081', // Your local network IP
+    'exp://192.168.0.134:8081', // Expo Go with local IP
   ].filter(Boolean);
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or Postman)
+      // Allow requests with no origin (like mobile apps, Postman, or Expo)
       if (!origin) return callback(null, true);
       
       // In production, check against whitelist
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
+        console.warn(`Blocked by CORS: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
