@@ -42,6 +42,8 @@ async function bootstrap() {
     'exp://localhost:8081', // Expo Go
     'http://192.168.0.134:8081', // Your local network IP
     'exp://192.168.0.134:8081', // Expo Go with local IP
+    'exp://192.168.0.198:8081',
+    'http://192.168.0.198:8081'
   ].filter(Boolean);
 
   app.enableCors({
