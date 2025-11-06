@@ -345,7 +345,7 @@ export class UserUpdatesEmailService {
       <div style="background-color: #e7f3ff; border-left: 4px solid #0d6efd; padding: 16px; margin: 24px 0; border-radius: 4px;">
         <p style="margin: 0 0 8px 0; font-size: 14px; color: #084298; font-weight: 600;">How to verify:</p>
         <ol style="margin: 8px 0 0 0; padding-left: 20px; font-size: 14px; color: #084298; line-height: 1.6;">
-          <li>Go to the Avigate app or website</li>
+          <li>Go to the Avigate app</li>
           <li>Navigate to email verification</li>
           <li>Enter the code above</li>
         </ol>
