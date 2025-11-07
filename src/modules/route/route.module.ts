@@ -26,7 +26,7 @@ import { EmailModule } from '../email/email.module';
     JwtModule.register({}),
     LocationModule,
     NotificationsModule,
-    EmailModule, 
+    EmailModule,
   ],
   controllers: [RouteController],
   providers: [

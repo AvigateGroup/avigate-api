@@ -27,7 +27,7 @@ async function bootstrap() {
   // Security
   app.use(helmet());
   app.use(compression());
-  
+
   // CORS Configuration
   const allowedOrigins = [
     configService.get('FRONTEND_URL') || 'http://localhost:3000',
@@ -43,14 +43,14 @@ async function bootstrap() {
     'http://192.168.0.134:8081', // Your local network IP
     'exp://192.168.0.134:8081', // Expo Go with local IP
     'exp://192.168.0.198:8081',
-    'http://192.168.0.198:8081'
+    'http://192.168.0.198:8081',
   ].filter(Boolean);
 
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, or Expo)
       if (!origin) return callback(null, true);
-      
+
       // In production, check against whitelist
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);

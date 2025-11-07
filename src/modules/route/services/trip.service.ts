@@ -469,7 +469,9 @@ export class TripService {
       // Don't fail the cancellation if email fails
     }
 
-    logger.info(`Trip cancelled: ${trip.id} for user ${userId}. Reason: ${reason || 'Not provided'}`);
+    logger.info(
+      `Trip cancelled: ${trip.id} for user ${userId}. Reason: ${reason || 'Not provided'}`,
+    );
 
     return trip;
   }
@@ -505,7 +507,10 @@ export class TripService {
     const completed = trips.filter(t => t.status === TripStatus.COMPLETED);
     const cancelled = trips.filter(t => t.status === TripStatus.CANCELLED);
 
-    const totalDistance = completed.reduce((sum, trip) => sum + Number(trip.route.distance || 0), 0);
+    const totalDistance = completed.reduce(
+      (sum, trip) => sum + Number(trip.route.distance || 0),
+      0,
+    );
 
     return {
       totalTrips: trips.length,

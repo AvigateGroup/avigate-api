@@ -44,7 +44,7 @@ export class RouteStep {
   duration: number; // minutes (kept for backward compatibility)
 
   @Column('decimal', { precision: 10, scale: 2 })
-  estimatedDuration: number; 
+  estimatedDuration: number;
 
   @Column('decimal', { precision: 10, scale: 2 })
   distance: number; // kilometers

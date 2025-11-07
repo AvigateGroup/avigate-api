@@ -169,7 +169,8 @@ export class RouteController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'End trip manually (stops trip before reaching destination)',
-    description: 'Use this when user wants to end the trip midway without completing the full route',
+    description:
+      'Use this when user wants to end the trip midway without completing the full route',
   })
   async endTrip(@CurrentUser() user: User, @Param('tripId') tripId: string) {
     const trip = await this.tripService.endTrip(tripId, user.id);
