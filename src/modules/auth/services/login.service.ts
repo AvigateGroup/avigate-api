@@ -253,48 +253,54 @@ export class LoginService {
    * Private helper methods
    */
 
-  private async findAndValidateUser(email: string, password: string): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { email },
-      select: [
-        'id',
-        'email',
-        'passwordHash',
-        'firstName',
-        'lastName',
-        'isVerified',
-        'isActive',
-        'isTestAccount',
-      ],
-    });
+  // src/modules/auth/services/login.service.ts
 
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
+private async findAndValidateUser(email: string, password: string): Promise<User> {
+  const user = await this.userRepository.findOne({
+    where: { email },
+    select: [
+      'id',
+      'email',
+      'passwordHash',
+      'firstName',
+      'lastName',
+      'isVerified',
+      'isActive',
+      'isTestAccount',
+    ],
+  });
 
-    if (!user.isActive) {
-      throw new UnauthorizedException('Account is deactivated');
-    }
-
-    // Check if this is a test account
-    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
-
-    // For test accounts, also check against configured test password
-    if (isTestAccount && TEST_ACCOUNTS[email.toLowerCase()]) {
-      const testConfig = TEST_ACCOUNTS[email.toLowerCase()];
-      if (password === testConfig.password) {
-        return user;
-      }
-    }
-
-    // Regular password validation
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    return user;
+  // ✅ SPECIFIC ERROR: User not found
+  if (!user) {
+    throw new UnauthorizedException(
+      'No account found with this email. Please sign up if you don\'t have an account.',
+    );
   }
+
+  // ✅ SPECIFIC ERROR: Account deactivated
+  if (!user.isActive) {
+    throw new UnauthorizedException('Your account has been deactivated. Please contact support.');
+  }
+
+  // Check if this is a test account
+  const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
+
+  // For test accounts, also check against configured test password
+  if (isTestAccount && TEST_ACCOUNTS[email.toLowerCase()]) {
+    const testConfig = TEST_ACCOUNTS[email.toLowerCase()];
+    if (password === testConfig.password) {
+      return user;
+    }
+  }
+
+  // ✅ SPECIFIC ERROR: Wrong password
+  const isPasswordValid = await user.comparePassword(password);
+  if (!isPasswordValid) {
+    throw new UnauthorizedException('Incorrect password. Please try again or reset your password.');
+  }
+
+  return user;
+}
 
   private async handleUnverifiedUser(user: User, req: Request) {
     const otpCode = await this.otpService.generateAndSaveOTP(
