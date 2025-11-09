@@ -113,10 +113,10 @@ export class PasswordResetService {
       if (existingOtp) {
         // OTP exists but is invalid
         if (existingOtp.isUsed) {
-          logger.warn('Attempted to use already-used OTP', { 
-            userId: user.id, 
+          logger.warn('Attempted to use already-used OTP', {
+            userId: user.id,
             email: user.email,
-            otpCode 
+            otpCode,
           });
           throw new UnauthorizedException(
             'This reset code has already been used. Please request a new code.',
@@ -124,11 +124,11 @@ export class PasswordResetService {
         }
 
         if (existingOtp.expiresAt < new Date()) {
-          logger.warn('Attempted to use expired OTP', { 
-            userId: user.id, 
+          logger.warn('Attempted to use expired OTP', {
+            userId: user.id,
             email: user.email,
             otpCode,
-            expiredAt: existingOtp.expiresAt 
+            expiredAt: existingOtp.expiresAt,
           });
           throw new UnauthorizedException(
             'This reset code has expired. Please request a new code.',
@@ -137,14 +137,12 @@ export class PasswordResetService {
       }
 
       // OTP doesn't exist or code is wrong
-      logger.warn('Invalid OTP code attempt', { 
-        userId: user.id, 
+      logger.warn('Invalid OTP code attempt', {
+        userId: user.id,
         email: user.email,
-        otpCode 
+        otpCode,
       });
-      throw new UnauthorizedException(
-        'Invalid reset code. Please check the code and try again.',
-      );
+      throw new UnauthorizedException('Invalid reset code. Please check the code and try again.');
     }
 
     // Mark OTP as used
