@@ -45,6 +45,16 @@ export class PasswordResetService {
     // Check rate limit
     await this.checkRateLimit(user.id);
 
+    // Invalidate any existing unused password reset OTPs
+    await this.otpRepository.update(
+      {
+        userId: user.id,
+        otpType: OTPType.PASSWORD_RESET,
+        isUsed: false,
+      },
+      { isUsed: true },
+    );
+
     // Generate OTP
     const otpCode = await this.otpService.generateAndSaveOTP(
       user.id,
@@ -78,7 +88,7 @@ export class PasswordResetService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Find and validate OTP
+    // Find and validate OTP with detailed error checking
     const otp = await this.otpRepository.findOne({
       where: {
         userId: user.id,
@@ -90,11 +100,56 @@ export class PasswordResetService {
     });
 
     if (!otp) {
-      throw new UnauthorizedException('Invalid or expired OTP');
+      // Check if OTP exists but has issues
+      const existingOtp = await this.otpRepository.findOne({
+        where: {
+          userId: user.id,
+          otpCode,
+          otpType: OTPType.PASSWORD_RESET,
+        },
+        order: { createdAt: 'DESC' },
+      });
+
+      if (existingOtp) {
+        // OTP exists but is invalid
+        if (existingOtp.isUsed) {
+          logger.warn('Attempted to use already-used OTP', { 
+            userId: user.id, 
+            email: user.email,
+            otpCode 
+          });
+          throw new UnauthorizedException(
+            'This reset code has already been used. Please request a new code.',
+          );
+        }
+
+        if (existingOtp.expiresAt < new Date()) {
+          logger.warn('Attempted to use expired OTP', { 
+            userId: user.id, 
+            email: user.email,
+            otpCode,
+            expiredAt: existingOtp.expiresAt 
+          });
+          throw new UnauthorizedException(
+            'This reset code has expired. Please request a new code.',
+          );
+        }
+      }
+
+      // OTP doesn't exist or code is wrong
+      logger.warn('Invalid OTP code attempt', { 
+        userId: user.id, 
+        email: user.email,
+        otpCode 
+      });
+      throw new UnauthorizedException(
+        'Invalid reset code. Please check the code and try again.',
+      );
     }
 
     // Mark OTP as used
     otp.isUsed = true;
+    otp.usedAt = new Date();
     await this.otpRepository.save(otp);
 
     // Update password
@@ -123,13 +178,15 @@ export class PasswordResetService {
       where: {
         userId,
         otpType: OTPType.PASSWORD_RESET,
-        createdAt: MoreThan(new Date(Date.now() - 60 * 1000)),
+        createdAt: MoreThan(new Date(Date.now() - 60 * 1000)), // 1 minute
       },
       order: { createdAt: 'DESC' },
     });
 
     if (recentOTP) {
-      throw new BadRequestException('Please wait before requesting a new password reset code');
+      throw new BadRequestException(
+        'Please wait before requesting a new password reset code. Check your email for the previous code.',
+      );
     }
   }
 }
