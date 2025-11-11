@@ -114,6 +114,21 @@ export class User {
 
   @Column({ default: 0 })
   totalContributions: number;
+  
+  @Column({ nullable: true, length: 10 })
+  @Index()
+  termsVersion: string;
+
+  @Column({ nullable: true, length: 10 })
+  @Index()
+  privacyVersion: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  @Index()
+  termsAcceptedAt: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  privacyAcceptedAt: Date;
 
   @CreateDateColumn()
   createdAt: Date;

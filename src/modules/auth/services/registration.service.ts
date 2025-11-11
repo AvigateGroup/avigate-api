@@ -14,6 +14,10 @@ import { OTPType } from '../../user/entities/user-otp.entity';
 import { TEST_ACCOUNTS, TEST_SETTINGS } from '@/config/test-accounts.config';
 import { logger } from '@/utils/logger.util';
 
+// Legal document versions
+const CURRENT_TERMS_VERSION = '1.0';
+const CURRENT_PRIVACY_VERSION = '1.0';
+
 @Injectable()
 export class RegistrationService {
   constructor(
@@ -57,14 +61,14 @@ export class RegistrationService {
       const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
       const testAccountConfig = isTestAccount ? TEST_ACCOUNTS[email.toLowerCase()] : null;
 
-      // CRITICAL FIX: Hash the password before saving
+      // Hash the password before saving
       const saltRounds = 10;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Create user with HASHED password
+      // Create user with HASHED password and legal compliance tracking
       const user = this.userRepository.create({
         email,
-        passwordHash: hashedPassword, // NOW PROPERLY HASHED!
+        passwordHash: hashedPassword,
         firstName,
         lastName,
         sex,
@@ -75,6 +79,11 @@ export class RegistrationService {
         isTestAccount,
         isVerified: isTestAccount && TEST_SETTINGS.bypassEmailVerification,
         phoneNumberCaptured: !!phoneNumber,
+        // Legal compliance tracking
+        termsVersion: CURRENT_TERMS_VERSION,
+        privacyVersion: CURRENT_PRIVACY_VERSION,
+        termsAcceptedAt: new Date(),
+        privacyAcceptedAt: new Date(),
       });
 
       // Add Google ID if it's a test account with Google OAuth
@@ -83,6 +92,13 @@ export class RegistrationService {
       }
 
       await this.userRepository.save(user);
+
+      logger.info('User registered with legal compliance tracking', {
+        userId: user.id,
+        email: user.email,
+        termsVersion: user.termsVersion,
+        privacyVersion: user.privacyVersion,
+      });
 
       // Create device if FCM token provided
       if (fcmToken) {
@@ -114,6 +130,8 @@ export class RegistrationService {
             userId: user.id,
             email: user.email,
             requiresVerification: true,
+            termsVersion: user.termsVersion,
+            privacyVersion: user.privacyVersion,
           },
         };
       }
@@ -132,6 +150,8 @@ export class RegistrationService {
           email: user.email,
           requiresVerification: false,
           isTestAccount: true,
+          termsVersion: user.termsVersion,
+          privacyVersion: user.privacyVersion,
         },
       };
     } catch (error) {
