@@ -1,5 +1,4 @@
 // src/modules/auth/services/registration.service.ts
-// FIXED VERSION - Properly hashes password before saving
 
 import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
