@@ -114,7 +114,7 @@ export class User {
 
   @Column({ default: 0 })
   totalContributions: number;
-  
+
   @Column({ nullable: true, length: 10 })
   @Index()
   termsVersion: string;
