@@ -9,8 +9,8 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
-import { OAuth2Client } from 'google-auth-library';
 import { ConfigService } from '@nestjs/config';
+import * as admin from 'firebase-admin';
 import { User, AuthProvider } from '../../user/entities/user.entity';
 import { GoogleAuthDto } from '../../user/dto/google-auth.dto';
 import { CapturePhoneDto } from '../../user/dto/capture-phone.dto';
@@ -20,33 +20,36 @@ import { logger } from '@/utils/logger.util';
 
 @Injectable()
 export class GoogleAuthService {
-  private googleClient: OAuth2Client;
-
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private tokenService: TokenService,
     private deviceService: DeviceService,
     private configService: ConfigService,
-  ) {
-    // Initialize Google OAuth Client
-    const clientId = this.configService.get('GOOGLE_CLIENT_ID');
-    this.googleClient = new OAuth2Client(clientId);
-  }
+  ) {}
 
   /**
-   * Verify Google ID Token (optional but recommended for security)
+   * Verify Firebase ID Token (from your React Native app)
    */
-  async verifyGoogleToken(idToken: string): Promise<any> {
+  async verifyFirebaseToken(idToken: string): Promise<admin.auth.DecodedIdToken> {
     try {
-      const ticket = await this.googleClient.verifyIdToken({
-        idToken,
-        audience: this.configService.get('GOOGLE_CLIENT_ID'),
-      });
-      return ticket.getPayload();
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      return decodedToken;
     } catch (error) {
-      logger.error('Google token verification failed', { error: error.message });
-      throw new UnauthorizedException('Invalid Google token');
+      logger.error('Firebase token verification failed', { 
+        error: error.message,
+        code: error.code 
+      });
+      
+      if (error.code === 'auth/id-token-expired') {
+        throw new UnauthorizedException('Firebase token has expired');
+      } else if (error.code === 'auth/argument-error') {
+        throw new UnauthorizedException('Invalid Firebase token format');
+      } else if (error.code === 'auth/invalid-id-token') {
+        throw new UnauthorizedException('Invalid Firebase token');
+      }
+      
+      throw new UnauthorizedException('Firebase token verification failed');
     }
   }
 
@@ -63,15 +66,35 @@ export class GoogleAuthService {
       language,
       fcmToken,
       deviceInfo,
-      idToken, // Optional: if you want to verify the token
+      idToken,
     } = googleAuthDto;
 
-    // Optional: Verify the Google ID token for added security
-    if (idToken) {
-      const payload = await this.verifyGoogleToken(idToken);
-      if (payload.sub !== googleId || payload.email !== email) {
-        throw new UnauthorizedException('Token mismatch');
-      }
+    // Verify the Firebase ID token
+    if (!idToken) {
+      throw new BadRequestException('Firebase ID token is required');
+    }
+
+    let decodedToken: admin.auth.DecodedIdToken;
+    try {
+      decodedToken = await this.verifyFirebaseToken(idToken);
+    } catch (error) {
+      logger.error('Token verification failed', { 
+        error: error.message,
+        email,
+        googleId 
+      });
+      throw error;
+    }
+
+    // Verify token claims match the provided data
+    if (decodedToken.email !== email) {
+      throw new UnauthorizedException('Token email does not match provided email');
+    }
+
+    // Extract Google ID from Firebase token
+    const firebaseGoogleId = decodedToken.firebase?.identities?.['google.com']?.[0];
+    if (firebaseGoogleId && firebaseGoogleId !== googleId) {
+      throw new UnauthorizedException('Token Google ID does not match provided Google ID');
     }
 
     if (!email || !googleId) {
@@ -84,21 +107,50 @@ export class GoogleAuthService {
 
     if (user) {
       // ===== EXISTING USER =====
-      logger.info('Existing user found', { userId: user.id, email: user.email });
+      logger.info('Existing user found', { 
+        userId: user.id, 
+        email: user.email,
+        hasGoogleId: !!user.googleId,
+        storedGoogleId: user.googleId,
+        incomingGoogleId: googleId
+      });
 
-      // Case 1: User registered with local auth, now signing in with Google
+      // Case 1: User registered with local auth (email/password), now signing in with Google
       if (!user.googleId && user.authProvider === AuthProvider.LOCAL) {
-        logger.info('Linking Google account to existing local user', { userId: user.id });
+        logger.info('Linking Google account to existing local user', { 
+          userId: user.id,
+          googleId 
+        });
         user.googleId = googleId;
         user.authProvider = AuthProvider.GOOGLE;
       }
-      // Case 2: User has Google ID but it doesn't match
+      // Case 2: User already has a different Google ID
       else if (user.googleId && user.googleId !== googleId) {
+        logger.error('Google ID mismatch', {
+          userId: user.id,
+          email: user.email,
+          storedGoogleId: user.googleId,
+          incomingGoogleId: googleId
+        });
         throw new ConflictException(
-          'This email is already registered with a different Google account',
+          'This email is already registered with a different Google account'
         );
       }
-      // Case 3: User already has this Google ID - normal login
+      // Case 3: User has no Google ID but was registered via Google before
+      else if (!user.googleId && user.authProvider === AuthProvider.GOOGLE) {
+        logger.info('Updating Google ID for existing Google user', { 
+          userId: user.id,
+          googleId 
+        });
+        user.googleId = googleId;
+      }
+      // Case 4: User already has this exact Google ID - normal login
+      else if (user.googleId === googleId) {
+        logger.info('User logging in with matching Google ID', { 
+          userId: user.id,
+          googleId 
+        });
+      }
 
       // Update profile picture if provided and user doesn't have one
       if (profilePicture && !user.profilePicture) {
@@ -130,13 +182,13 @@ export class GoogleAuthService {
       user.lastLoginAt = new Date();
     } else {
       // ===== NEW USER =====
-      logger.info('Creating new user via Google auth', { email });
+      logger.info('Creating new user via Google auth', { email, googleId });
       isNewUser = true;
 
       user = this.userRepository.create({
         email,
         googleId,
-        firstName: firstName || email.split('@')[0], // Fallback to email username
+        firstName: firstName || email.split('@')[0],
         lastName: lastName || '',
         profilePicture,
         phoneNumber,
@@ -144,7 +196,7 @@ export class GoogleAuthService {
         country: country || 'Nigeria',
         language: language || 'English',
         authProvider: AuthProvider.GOOGLE,
-        isVerified: true, // Auto-verify Google users
+        isVerified: true,
         phoneNumberCaptured: !!phoneNumber,
         lastLoginAt: new Date(),
       });
@@ -160,14 +212,11 @@ export class GoogleAuthService {
     // Handle device registration
     if (fcmToken) {
       try {
-        // Convert deviceInfo object to string if it exists
         const deviceInfoString = deviceInfo ? JSON.stringify(deviceInfo) : undefined;
-
         await this.deviceService.updateOrCreateDevice(user.id, fcmToken, req, deviceInfoString);
         logger.info('Device registered/updated', { userId: user.id });
       } catch (error) {
         logger.error('Failed to register device', { userId: user.id, error: error.message });
-        // Don't fail the auth flow if device registration fails
       }
     }
 
@@ -205,7 +254,6 @@ export class GoogleAuthService {
       throw new BadRequestException('Phone number is required');
     }
 
-    // Check if phone number is already in use
     const existingUser = await this.userRepository.findOne({ where: { phoneNumber } });
     if (existingUser && existingUser.id !== user.id) {
       throw new ConflictException('Phone number is already in use');
