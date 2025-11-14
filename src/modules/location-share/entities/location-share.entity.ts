@@ -9,7 +9,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { User } from '../user/entities/user.entity';
+import { User } from '../../user/entities/user.entity';
 
 export enum ShareType {
   PUBLIC = 'public',       // Anyone with link
