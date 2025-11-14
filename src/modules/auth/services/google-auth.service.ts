@@ -36,11 +36,11 @@ export class GoogleAuthService {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
       return decodedToken;
     } catch (error) {
-      logger.error('Firebase token verification failed', { 
+      logger.error('Firebase token verification failed', {
         error: error.message,
-        code: error.code 
+        code: error.code,
       });
-      
+
       if (error.code === 'auth/id-token-expired') {
         throw new UnauthorizedException('Firebase token has expired');
       } else if (error.code === 'auth/argument-error') {
@@ -48,7 +48,7 @@ export class GoogleAuthService {
       } else if (error.code === 'auth/invalid-id-token') {
         throw new UnauthorizedException('Invalid Firebase token');
       }
-      
+
       throw new UnauthorizedException('Firebase token verification failed');
     }
   }
@@ -78,10 +78,10 @@ export class GoogleAuthService {
     try {
       decodedToken = await this.verifyFirebaseToken(idToken);
     } catch (error) {
-      logger.error('Token verification failed', { 
+      logger.error('Token verification failed', {
         error: error.message,
         email,
-        googleId 
+        googleId,
       });
       throw error;
     }
@@ -107,19 +107,19 @@ export class GoogleAuthService {
 
     if (user) {
       // ===== EXISTING USER =====
-      logger.info('Existing user found', { 
-        userId: user.id, 
+      logger.info('Existing user found', {
+        userId: user.id,
         email: user.email,
         hasGoogleId: !!user.googleId,
         storedGoogleId: user.googleId,
-        incomingGoogleId: googleId
+        incomingGoogleId: googleId,
       });
 
       // Case 1: User registered with local auth (email/password), now signing in with Google
       if (!user.googleId && user.authProvider === AuthProvider.LOCAL) {
-        logger.info('Linking Google account to existing local user', { 
+        logger.info('Linking Google account to existing local user', {
           userId: user.id,
-          googleId 
+          googleId,
         });
         user.googleId = googleId;
         user.authProvider = AuthProvider.GOOGLE;
@@ -130,25 +130,25 @@ export class GoogleAuthService {
           userId: user.id,
           email: user.email,
           storedGoogleId: user.googleId,
-          incomingGoogleId: googleId
+          incomingGoogleId: googleId,
         });
         throw new ConflictException(
-          'This email is already registered with a different Google account'
+          'This email is already registered with a different Google account',
         );
       }
       // Case 3: User has no Google ID but was registered via Google before
       else if (!user.googleId && user.authProvider === AuthProvider.GOOGLE) {
-        logger.info('Updating Google ID for existing Google user', { 
+        logger.info('Updating Google ID for existing Google user', {
           userId: user.id,
-          googleId 
+          googleId,
         });
         user.googleId = googleId;
       }
       // Case 4: User already has this exact Google ID - normal login
       else if (user.googleId === googleId) {
-        logger.info('User logging in with matching Google ID', { 
+        logger.info('User logging in with matching Google ID', {
           userId: user.id,
-          googleId 
+          googleId,
         });
       }
 
