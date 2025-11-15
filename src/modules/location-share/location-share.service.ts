@@ -1,7 +1,7 @@
-// src/modules/location-share/location-share.service.ts 
+// src/modules/location-share/location-share.service.ts (UPDATED FOR YOUR UPLOAD SERVICE)
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm'; 
+import { Repository, In } from 'typeorm';
 import * as crypto from 'crypto';
 import { LocationShare, ShareType, ShareStatus } from './entities/location-share.entity';
 import { User } from '../user/entities/user.entity';
@@ -10,7 +10,7 @@ import { IntelligentRouteService } from '../route/services/intelligent-route.ser
 import { NotificationsService } from '../notifications/notifications.service';
 import { QRCodeService } from './services/qr-code.service';
 import { UploadService } from '../upload/upload.service';
-import { logger } from '@/utils/logger.util'; 
+import { logger } from '@/utils/logger.util';
 
 interface CreateShareDto {
   shareType: ShareType;
@@ -21,7 +21,7 @@ interface CreateShareDto {
   expiresAt?: Date;
   maxAccess?: number;
   allowedUserIds?: string[];
-  eventDate?: Date; 
+  eventDate?: Date;
 }
 
 @Injectable()
@@ -53,22 +53,24 @@ export class LocationShareService {
     const { qrCodeDataUrl, qrCodeBuffer } = await this.qrCodeService.generateLocationShareQR({
       shareUrl,
       locationName: data.locationName,
-      ownerName, // FIXED: Properly set ownerName
+      ownerName,
       latitude: data.latitude,
       longitude: data.longitude,
     });
 
-    // Upload QR code to S3 (optional - for email attachments and printing)
+    // Upload QR code to S3 using uploadBuffer method
     let qrCodeImageUrl: string | undefined;
     try {
-      // Convert buffer to file format for upload
-      const qrFile = {
-        buffer: qrCodeBuffer,
-        originalname: `qr-${shareToken}.png`,
-        mimetype: 'image/png',
-      } as Express.Multer.File;
+      // Generate unique filename for QR code
+      const qrFileName = `qr-${shareToken}.png`;
 
-      qrCodeImageUrl = await this.uploadService.uploadFile(qrFile, 'qr-codes');
+      // UPDATED: Use uploadBuffer method which works with your service
+      qrCodeImageUrl = await this.uploadService.uploadBuffer(
+        qrCodeBuffer,
+        qrFileName,
+        'image/png',
+        'qr-codes',
+      );
     } catch (error) {
       logger.warn('Failed to upload QR code to S3:', error);
       // Continue without uploaded QR code - we still have data URL
@@ -86,7 +88,7 @@ export class LocationShareService {
       expiresAt: data.expiresAt,
       maxAccess: data.maxAccess,
       allowedUserIds: data.allowedUserIds || [],
-      eventDate: data.eventDate, // FIXED: Now properly handled
+      eventDate: data.eventDate,
       status: ShareStatus.ACTIVE,
       accessCount: 0,
       metadata: {
@@ -285,7 +287,7 @@ export class LocationShareService {
       longitude: eventData.longitude,
       description: eventData.description || `Join us at ${eventData.eventName}!`,
       expiresAt,
-      eventDate: eventData.eventDate, // ADDED: Pass eventDate properly
+      eventDate: eventData.eventDate,
     });
   }
 
@@ -379,7 +381,7 @@ export class LocationShareService {
   }
 
   /**
-   * Regenerate QR code for share (useful if URL changes or for different styling)
+   * Regenerate QR code for share
    */
   async regenerateQRCode(userId: string, shareId: string) {
     const share = await this.shareRepository.findOne({
@@ -400,16 +402,17 @@ export class LocationShareService {
       longitude: Number(share.longitude),
     });
 
-    // Upload new QR code
+    // Upload new QR code using uploadBuffer
     let qrCodeImageUrl: string | undefined;
     try {
-      const qrFile = {
-        buffer: qrCodeBuffer,
-        originalname: `qr-${share.shareToken}.png`,
-        mimetype: 'image/png',
-      } as Express.Multer.File;
+      const qrFileName = `qr-${share.shareToken}.png`;
 
-      qrCodeImageUrl = await this.uploadService.uploadFile(qrFile, 'qr-codes');
+      qrCodeImageUrl = await this.uploadService.uploadBuffer(
+        qrCodeBuffer,
+        qrFileName,
+        'image/png',
+        'qr-codes',
+      );
     } catch (error) {
       logger.warn('Failed to upload regenerated QR code:', error);
     }
