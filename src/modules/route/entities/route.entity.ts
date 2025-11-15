@@ -7,11 +7,14 @@ import {
   UpdateDateColumn,
   ManyToOne,
   OneToMany,
+  ManyToMany,
+  JoinTable,
   JoinColumn,
   Index,
 } from 'typeorm';
 import { Location } from '../../location/entities/location.entity';
 import { RouteStep } from './route-step.entity';
+import { RouteSegment } from './route-segment.entity';
 import { TransportMode } from '../enums/transport-mode.enum';
 
 @Entity('routes')
@@ -89,4 +92,13 @@ export class Route {
 
   @OneToMany(() => RouteStep, step => step.route)
   steps: RouteStep[];
+
+  // ADDED: Missing inverse relation for RouteSegment
+  @ManyToMany(() => RouteSegment, segment => segment.routes)
+  @JoinTable({
+    name: 'route_segments_mapping',
+    joinColumn: { name: 'routeId', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'segmentId', referencedColumnName: 'id' },
+  })
+  segments: RouteSegment[];
 }
