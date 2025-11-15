@@ -39,7 +39,7 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
       useFactory: (configService: ConfigService) => {
         // FIXED: Use DATABASE_URL from Railway
         const databaseUrl = configService.get<string>('DATABASE_URL');
-        
+
         if (databaseUrl) {
           // Railway/Production: Use DATABASE_URL
           return {
