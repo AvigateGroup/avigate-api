@@ -1,4 +1,4 @@
-// src/app.module.ts
+// src/app.module.ts (FIXED - Uses DATABASE_URL from Railway)
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -27,7 +27,6 @@ import { Landmark } from './modules/location/entities/landmark.entity';
 import { Route } from './modules/route/entities/route.entity';
 import { RouteStep } from './modules/route/entities/route-step.entity';
 import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
-// Add any other entities you have
 
 @Module({
   imports: [
@@ -37,33 +36,59 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: configService.get('DB_PORT'),
-        username: configService.get('DB_USER'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
+      useFactory: (configService: ConfigService) => {
+        // FIXED: Use DATABASE_URL from Railway
+        const databaseUrl = configService.get<string>('DATABASE_URL');
+        
+        if (databaseUrl) {
+          // Railway/Production: Use DATABASE_URL
+          return {
+            type: 'postgres' as const,
+            url: databaseUrl,
+            entities: [
+              Admin,
+              AdminSession,
+              User,
+              UserDevice,
+              UserOTP,
+              Location,
+              Landmark,
+              Route,
+              RouteStep,
+              FareFeedback,
+            ],
+            synchronize: false,
+            logging: configService.get('NODE_ENV') === 'development',
+            ssl: {
+              rejectUnauthorized: false, // Required for Railway
+            },
+          };
+        }
 
-        // FIXED: Explicitly list all entities instead of using glob pattern
-        entities: [
-          Admin,
-          AdminSession,
-          User,
-          UserDevice,
-          UserOTP,
-          Location,
-          Landmark,
-          Route,
-          RouteStep,
-          FareFeedback,
-          // Add any other entities here
-        ],
-
-        synchronize: false,
-        logging: configService.get('NODE_ENV') === 'development',
-        ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-      }),
+        // Local development: Use individual environment variables
+        return {
+          type: 'postgres' as const,
+          host: configService.get<string>('DB_HOST') || 'localhost',
+          port: parseInt(configService.get<string>('DB_PORT') || '5432', 10),
+          username: configService.get<string>('DB_USER') || 'postgres',
+          password: configService.get<string>('DB_PASSWORD') || '',
+          database: configService.get<string>('DB_NAME') || 'avigate_db',
+          entities: [
+            Admin,
+            AdminSession,
+            User,
+            UserDevice,
+            UserOTP,
+            Location,
+            Landmark,
+            Route,
+            RouteStep,
+            FareFeedback,
+          ],
+          synchronize: false,
+          logging: configService.get('NODE_ENV') === 'development',
+        };
+      },
       inject: [ConfigService],
     }),
     ThrottlerModule.forRootAsync({
