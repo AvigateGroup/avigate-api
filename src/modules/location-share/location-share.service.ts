@@ -1,7 +1,7 @@
-// src/modules/location-share/location-share.service.ts
+// src/modules/location-share/location-share.service.ts 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm'; 
 import * as crypto from 'crypto';
 import { LocationShare, ShareType, ShareStatus } from './entities/location-share.entity';
 import { User } from '../user/entities/user.entity';
@@ -10,6 +10,7 @@ import { IntelligentRouteService } from '../route/services/intelligent-route.ser
 import { NotificationsService } from '../notifications/notifications.service';
 import { QRCodeService } from './services/qr-code.service';
 import { UploadService } from '../upload/upload.service';
+import { logger } from '@/utils/logger.util'; 
 
 interface CreateShareDto {
   shareType: ShareType;
@@ -20,6 +21,7 @@ interface CreateShareDto {
   expiresAt?: Date;
   maxAccess?: number;
   allowedUserIds?: string[];
+  eventDate?: Date; 
 }
 
 @Injectable()
@@ -43,11 +45,15 @@ export class LocationShareService {
     const shareToken = this.generateShareToken();
     const shareUrl = `https://avigate.app/share/${shareToken}`;
 
+    // Get user info for QR code
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    const ownerName = user ? `${user.firstName} ${user.lastName}` : 'Unknown';
+
     // Generate QR code
     const { qrCodeDataUrl, qrCodeBuffer } = await this.qrCodeService.generateLocationShareQR({
       shareUrl,
       locationName: data.locationName,
-      ownerName: '', // Will be filled after fetching user
+      ownerName, // FIXED: Properly set ownerName
       latitude: data.latitude,
       longitude: data.longitude,
     });
@@ -80,7 +86,7 @@ export class LocationShareService {
       expiresAt: data.expiresAt,
       maxAccess: data.maxAccess,
       allowedUserIds: data.allowedUserIds || [],
-      eventDate: data.eventDate,
+      eventDate: data.eventDate, // FIXED: Now properly handled
       status: ShareStatus.ACTIVE,
       accessCount: 0,
       metadata: {
@@ -103,10 +109,14 @@ export class LocationShareService {
   /**
    * Get share and generate navigation
    */
-  async accessShare(shareToken: string, accessorUserId?: string, accessorLocation?: {
-    lat: number;
-    lng: number;
-  }) {
+  async accessShare(
+    shareToken: string,
+    accessorUserId?: string,
+    accessorLocation?: {
+      lat: number;
+      lng: number;
+    },
+  ) {
     const share = await this.shareRepository.findOne({
       where: { shareToken },
       relations: ['owner'],
@@ -160,11 +170,7 @@ export class LocationShareService {
   /**
    * Get step-by-step directions to shared location
    */
-  async getDirectionsToShare(
-    shareToken: string,
-    fromLat: number,
-    fromLng: number,
-  ) {
+  async getDirectionsToShare(shareToken: string, fromLat: number, fromLng: number) {
     const share = await this.shareRepository.findOne({
       where: { shareToken, status: ShareStatus.ACTIVE },
     });
@@ -240,10 +246,10 @@ export class LocationShareService {
     const shares = await this.shareRepository
       .createQueryBuilder('share')
       .where('share.status = :status', { status: ShareStatus.ACTIVE })
-      .andWhere(
-        '(share.shareType = :public OR :userId = ANY(share.allowedUserIds))',
-        { public: ShareType.PUBLIC, userId }
-      )
+      .andWhere('(share.shareType = :public OR :userId = ANY(share.allowedUserIds))', {
+        public: ShareType.PUBLIC,
+        userId,
+      })
       .andWhere('(share.expiresAt IS NULL OR share.expiresAt > :now)', { now: new Date() })
       .orderBy('share.createdAt', 'DESC')
       .take(50)
@@ -258,14 +264,17 @@ export class LocationShareService {
   /**
    * Share location for event
    */
-  async shareEventLocation(userId: string, eventData: {
-    eventName: string;
-    venue: string;
-    latitude: number;
-    longitude: number;
-    eventDate: Date;
-    description?: string;
-  }) {
+  async shareEventLocation(
+    userId: string,
+    eventData: {
+      eventName: string;
+      venue: string;
+      latitude: number;
+      longitude: number;
+      eventDate: Date;
+      description?: string;
+    },
+  ) {
     const expiresAt = new Date(eventData.eventDate);
     expiresAt.setHours(expiresAt.getHours() + 6); // Share expires 6 hours after event
 
@@ -276,59 +285,8 @@ export class LocationShareService {
       longitude: eventData.longitude,
       description: eventData.description || `Join us at ${eventData.eventName}!`,
       expiresAt,
+      eventDate: eventData.eventDate, // ADDED: Pass eventDate properly
     });
-  }
-
-  /**
-   * Private: Validate access to share
-   */
-  private validateAccess(share: LocationShare, accessorUserId?: string) {
-    // Check if expired
-    if (share.expiresAt && share.expiresAt < new Date()) {
-      throw new NotFoundException('Share link has expired');
-    }
-
-    // Check status
-    if (share.status !== ShareStatus.ACTIVE) {
-      throw new NotFoundException('Share link is not active');
-    }
-
-    // Check max access
-    if (share.maxAccess && share.accessCount >= share.maxAccess) {
-      throw new NotFoundException('Share link has reached maximum access limit');
-    }
-
-    // Check private access
-    if (share.shareType === ShareType.PRIVATE) {
-      if (!accessorUserId || !share.allowedUserIds.includes(accessorUserId)) {
-        throw new NotFoundException('You do not have permission to access this share');
-      }
-    }
-  }
-
-  /**
-   * Private: Notify allowed users
-   */
-  private async notifyAllowedUsers(share: LocationShare) {
-    const users = await this.userRepository.findBy({
-      id: In(share.allowedUserIds),
-    });
-
-    const owner = await this.userRepository.findOne({
-      where: { id: share.ownerId },
-    });
-
-    for (const user of users) {
-      await this.notificationsService.sendToUser(user.id, {
-        title: 'Location Shared',
-        body: `${owner?.firstName} shared a location with you: ${share.locationName}`,
-        data: {
-          type: 'location_share',
-          shareToken: share.shareToken,
-          shareUrl: share.shareUrl,
-        },
-      });
-    }
   }
 
   /**
@@ -473,6 +431,58 @@ export class LocationShareService {
       },
       message: 'QR code regenerated successfully',
     };
+  }
+
+  /**
+   * Private: Validate access to share
+   */
+  private validateAccess(share: LocationShare, accessorUserId?: string) {
+    // Check if expired
+    if (share.expiresAt && share.expiresAt < new Date()) {
+      throw new NotFoundException('Share link has expired');
+    }
+
+    // Check status
+    if (share.status !== ShareStatus.ACTIVE) {
+      throw new NotFoundException('Share link is not active');
+    }
+
+    // Check max access
+    if (share.maxAccess && share.accessCount >= share.maxAccess) {
+      throw new NotFoundException('Share link has reached maximum access limit');
+    }
+
+    // Check private access
+    if (share.shareType === ShareType.PRIVATE) {
+      if (!accessorUserId || !share.allowedUserIds.includes(accessorUserId)) {
+        throw new NotFoundException('You do not have permission to access this share');
+      }
+    }
+  }
+
+  /**
+   * Private: Notify allowed users
+   */
+  private async notifyAllowedUsers(share: LocationShare) {
+    const users = await this.userRepository.findBy({
+      id: In(share.allowedUserIds),
+    });
+
+    const owner = await this.userRepository.findOne({
+      where: { id: share.ownerId },
+    });
+
+    for (const user of users) {
+      await this.notificationsService.sendToUser(user.id, {
+        title: 'Location Shared',
+        body: `${owner?.firstName} shared a location with you: ${share.locationName}`,
+        data: {
+          type: 'location_share',
+          shareToken: share.shareToken,
+          shareUrl: share.shareUrl,
+        },
+      });
+    }
   }
 
   /**
