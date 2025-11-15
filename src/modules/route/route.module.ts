@@ -25,14 +25,7 @@ import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Route,
-      RouteStep,
-      RouteSegment,
-      ActiveTrip,
-      Location,
-      User,
-    ]),
+    TypeOrmModule.forFeature([Route, RouteStep, RouteSegment, ActiveTrip, Location, User]),
     ConfigModule,
     JwtModule.register({}),
     LocationModule,
@@ -46,9 +39,9 @@ import { EmailModule } from '../email/email.module';
     GoogleMapsService,
     GeofencingService,
     RouteMatchingService,
-    IntelligentRouteService, 
-    IntermediateStopHandlerService, 
-    SmartStopMatchingService, 
+    IntelligentRouteService,
+    IntermediateStopHandlerService,
+    SmartStopMatchingService,
     TripGateway,
   ],
   exports: [
@@ -58,8 +51,8 @@ import { EmailModule } from '../email/email.module';
     GeofencingService,
     RouteMatchingService,
     IntelligentRouteService,
-    IntermediateStopHandlerService, 
-    SmartStopMatchingService, 
+    IntermediateStopHandlerService,
+    SmartStopMatchingService,
   ],
 })
 export class RouteModule {}

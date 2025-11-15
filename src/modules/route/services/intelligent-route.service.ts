@@ -80,10 +80,9 @@ export class IntelligentRouteService {
     // Find segments that pass through the location
     const segments = await this.segmentRepository
       .createQueryBuilder('segment')
-      .where(
-        `segment.intermediateStops @> :stop`,
-        { stop: JSON.stringify([{ locationId: throughLocationId }]) }
-      )
+      .where(`segment.intermediateStops @> :stop`, {
+        stop: JSON.stringify([{ locationId: throughLocationId }]),
+      })
       .andWhere('segment.isActive = :isActive', { isActive: true })
       .getMany();
 
@@ -113,19 +112,19 @@ export class IntelligentRouteService {
 
     // Get intermediate stops
     for (const stop of segment.intermediateStops) {
-    if (!stop.locationId) continue; // This ensures locationId is string
-    
-    const partialDistance = this.calculatePartialDistance(segment, stop.locationId);
-    const partialFare = this.estimateFare(partialDistance, segment);
+      if (!stop.locationId) continue; // This ensures locationId is string
 
-    alternatives.push({
-      locationId: stop.locationId, // Now guaranteed to be string
-      locationName: stop.name,
-      estimatedFare: partialFare,
-      saving: segment.maxFare ? Number(segment.maxFare) - partialFare : 0,
-      isOptional: stop.isOptional,
-    });
-  }
+      const partialDistance = this.calculatePartialDistance(segment, stop.locationId);
+      const partialFare = this.estimateFare(partialDistance, segment);
+
+      alternatives.push({
+        locationId: stop.locationId, // Now guaranteed to be string
+        locationName: stop.name,
+        estimatedFare: partialFare,
+        saving: segment.maxFare ? Number(segment.maxFare) - partialFare : 0,
+        isOptional: stop.isOptional,
+      });
+    }
 
     return alternatives;
   }
@@ -159,9 +158,7 @@ export class IntelligentRouteService {
     endId: string,
   ): Promise<RouteComposition | null> {
     // Queue: [currentLocationId, segments used, visited locations]
-    const queue: Array<[string, RouteSegment[], Set<string>]> = [
-      [startId, [], new Set([startId])],
-    ];
+    const queue: Array<[string, RouteSegment[], Set<string>]> = [[startId, [], new Set([startId])]];
     const maxDepth = 3; // Maximum 3 segments in a route
 
     while (queue.length > 0) {
@@ -227,10 +224,10 @@ export class IntelligentRouteService {
    */
   private estimateFare(distance: number, segment: RouteSegment): number {
     if (!segment.maxFare) return 0;
-    
+
     const fullDistance = Number(segment.distance);
     const fullFare = Number(segment.maxFare);
-    
+
     return (distance / fullDistance) * fullFare;
   }
 }

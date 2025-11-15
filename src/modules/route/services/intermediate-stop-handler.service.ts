@@ -41,7 +41,11 @@ export class IntermediateStopHandlerService {
     destinationLng: number,
     destinationName?: string,
   ): Promise<IntermediateStopResult | null> {
-    logger.info('Searching for intermediate stop', { destinationLat, destinationLng, destinationName });
+    logger.info('Searching for intermediate stop', {
+      destinationLat,
+      destinationLng,
+      destinationName,
+    });
 
     // Get all active segments
     const segments = await this.segmentRepository.find({
@@ -59,7 +63,12 @@ export class IntermediateStopHandlerService {
       );
 
       if (isOnSegment) {
-        const stopInfo = await this.getStopDetails(segment, destinationLat, destinationLng, destinationName);
+        const stopInfo = await this.getStopDetails(
+          segment,
+          destinationLat,
+          destinationLng,
+          destinationName,
+        );
         const instructions = this.generateIntermediateStopInstructions(segment, stopInfo);
 
         return {
@@ -85,11 +94,12 @@ export class IntermediateStopHandlerService {
   ): Promise<boolean> {
     // Method 1: Check if it's in intermediateStops
     if (locationName && segment.intermediateStops && segment.intermediateStops.length > 0) {
-      const foundInStops = segment.intermediateStops.some(stop =>
-        stop.name.toLowerCase().includes(locationName.toLowerCase()) ||
-        locationName.toLowerCase().includes(stop.name.toLowerCase())
+      const foundInStops = segment.intermediateStops.some(
+        stop =>
+          stop.name.toLowerCase().includes(locationName.toLowerCase()) ||
+          locationName.toLowerCase().includes(stop.name.toLowerCase()),
       );
-      
+
       if (foundInStops) {
         logger.info(`Location ${locationName} found in segment intermediate stops`);
         return true;
@@ -147,10 +157,10 @@ export class IntermediateStopHandlerService {
   ): boolean {
     // Calculate perpendicular distance from point to line
     const distance = this.perpendicularDistance(point, lineStart, lineEnd);
-    
+
     // Also check if point is between start and end (not beyond)
     const isBetween = this.isPointBetweenEndpoints(point, lineStart, lineEnd);
-    
+
     return distance <= toleranceKm && isBetween;
   }
 
@@ -185,10 +195,12 @@ export class IntermediateStopHandlerService {
       nearestLng = lineStart.lng + param * D;
     }
 
-    return this.geofencingService.calculateDistance(
-      { lat: point.lat, lng: point.lng },
-      { lat: nearestLat, lng: nearestLng },
-    ) / 1000; // Convert to km
+    return (
+      this.geofencingService.calculateDistance(
+        { lat: point.lat, lng: point.lng },
+        { lat: nearestLat, lng: nearestLng },
+      ) / 1000
+    ); // Convert to km
   }
 
   /**
@@ -216,7 +228,7 @@ export class IntermediateStopHandlerService {
 
     // Point is between if sum of distances is approximately equal to total distance
     // Allow 10% tolerance for route curvature
-    return (distStartToPoint + distPointToEnd) <= (distStartToEnd * 1.1);
+    return distStartToPoint + distPointToEnd <= distStartToEnd * 1.1;
   }
 
   /**
@@ -229,20 +241,22 @@ export class IntermediateStopHandlerService {
   ): Promise<{ isOnRoute: boolean; deviationKm: number }> {
     // Get route without waypoint
     const directRoute = await this.googleMapsService.getDirections(start, end, 'transit');
-    
+
     // Get route with waypoint
     // Note: You'd need to modify googleMapsService to support waypoints
     // For now, we'll use a simpler approach
-    
-    const distanceToStart = this.geofencingService.calculateDistance(
-      { lat: start.lat, lng: start.lng },
-      { lat: point.lat, lng: point.lng },
-    ) / 1000;
 
-    const distanceToEnd = this.geofencingService.calculateDistance(
-      { lat: point.lat, lng: point.lng },
-      { lat: end.lat, lng: end.lng },
-    ) / 1000;
+    const distanceToStart =
+      this.geofencingService.calculateDistance(
+        { lat: start.lat, lng: start.lng },
+        { lat: point.lat, lng: point.lng },
+      ) / 1000;
+
+    const distanceToEnd =
+      this.geofencingService.calculateDistance(
+        { lat: point.lat, lng: point.lng },
+        { lat: end.lat, lng: end.lng },
+      ) / 1000;
 
     const directDistance = directRoute.distance;
     const viaPointDistance = distanceToStart + distanceToEnd;
@@ -250,7 +264,7 @@ export class IntermediateStopHandlerService {
 
     // If detour is less than 20%, it's likely on the route
     return {
-      isOnRoute: deviation < (directDistance * 0.2),
+      isOnRoute: deviation < directDistance * 0.2,
       deviationKm: deviation,
     };
   }
@@ -271,18 +285,15 @@ export class IntermediateStopHandlerService {
     estimatedFare: number;
   }> {
     // Check if it's in intermediate stops
-    const foundStop = segment.intermediateStops?.find(stop =>
-      locationName && (
-        stop.name.toLowerCase().includes(locationName.toLowerCase()) ||
-        locationName.toLowerCase().includes(stop.name.toLowerCase())
-      )
+    const foundStop = segment.intermediateStops?.find(
+      stop =>
+        locationName &&
+        (stop.name.toLowerCase().includes(locationName.toLowerCase()) ||
+          locationName.toLowerCase().includes(stop.name.toLowerCase())),
     );
 
     if (foundStop) {
-      const distanceFromStart = this.calculatePartialDistance(
-        segment,
-        foundStop.order,
-      );
+      const distanceFromStart = this.calculatePartialDistance(segment, foundStop.order);
 
       return {
         name: foundStop.name,
@@ -296,11 +307,10 @@ export class IntermediateStopHandlerService {
     // If not in intermediate stops, calculate based on geographic position
     const startLat = Number(segment.startLocation?.latitude);
     const startLng = Number(segment.startLocation?.longitude);
-    
-    const distanceFromStart = this.geofencingService.calculateDistance(
-      { lat: startLat, lng: startLng },
-      { lat, lng },
-    ) / 1000; // Convert to km
+
+    const distanceFromStart =
+      this.geofencingService.calculateDistance({ lat: startLat, lng: startLng }, { lat, lng }) /
+      1000; // Convert to km
 
     // Try to get location name from database or Google
     let stopName = locationName || 'Your destination';
@@ -324,7 +334,7 @@ export class IntermediateStopHandlerService {
   private calculatePartialDistance(segment: RouteSegment, stopOrder: number): number {
     const totalDistance = Number(segment.distance);
     const totalStops = segment.intermediateStops?.length || 0;
-    
+
     // Rough estimate: proportional to stop order
     return totalDistance * (stopOrder / (totalStops + 1));
   }
@@ -335,7 +345,7 @@ export class IntermediateStopHandlerService {
   private estimateStopOrder(segment: RouteSegment, distanceFromStart: number): number {
     const totalDistance = Number(segment.distance);
     const totalStops = segment.intermediateStops?.length || 0;
-    
+
     // Estimate which position this stop would be in
     return Math.round((distanceFromStart / totalDistance) * (totalStops + 1));
   }
@@ -346,26 +356,23 @@ export class IntermediateStopHandlerService {
   private estimatePartialFare(segment: RouteSegment, distanceFromStart: number): number {
     const totalDistance = Number(segment.distance);
     const maxFare = Number(segment.maxFare || 0);
-    
+
     if (maxFare === 0) return 0;
-    
+
     // Calculate proportional fare
     const proportion = distanceFromStart / totalDistance;
-    
+
     // Add minimum fare (usually 40% of max fare as base)
     const minFare = maxFare * 0.4;
     const variableFare = (maxFare - minFare) * proportion;
-    
+
     return Math.round(minFare + variableFare);
   }
 
   /**
    * Generate instructions for intermediate stop
    */
-  private generateIntermediateStopInstructions(
-    segment: RouteSegment,
-    stopInfo: any,
-  ): string {
+  private generateIntermediateStopInstructions(segment: RouteSegment, stopInfo: any): string {
     const startName = segment.startLocation?.name || 'the starting point';
     const endName = segment.endLocation?.name || 'the end point';
     const stopName = stopInfo.name;
@@ -409,8 +416,10 @@ Since you're not going all the way to ${endName}, your fare should be less than 
 
     // Get landmarks around this stop position
     const totalLandmarks = segment.landmarks.length;
-    const landmarkIndex = Math.floor((stopOrder / (segment.intermediateStops?.length || 1)) * totalLandmarks);
-    
+    const landmarkIndex = Math.floor(
+      (stopOrder / (segment.intermediateStops?.length || 1)) * totalLandmarks,
+    );
+
     const relevantLandmarks = segment.landmarks.slice(
       Math.max(0, landmarkIndex - 1),
       Math.min(totalLandmarks, landmarkIndex + 2),

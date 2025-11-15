@@ -335,7 +335,11 @@ export class CommunityEmailService {
       tier: string;
     },
   ): Promise<void> {
-    logger.info('Preparing badge earned email', { email, firstName, badgeName: badgeData.badgeName });
+    logger.info('Preparing badge earned email', {
+      email,
+      firstName,
+      badgeName: badgeData.badgeName,
+    });
 
     const tierColors: Record<string, string> = {
       bronze: '#cd7f32',
@@ -540,7 +544,11 @@ export class CommunityEmailService {
       commentText: string;
     },
   ): Promise<void> {
-    logger.info('Preparing post comment notification', { email, firstName, postId: commentData.postId });
+    logger.info('Preparing post comment notification', {
+      email,
+      firstName,
+      postId: commentData.postId,
+    });
 
     const content = `
       <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #86B300;">New Comment on Your Post 💬</h1>

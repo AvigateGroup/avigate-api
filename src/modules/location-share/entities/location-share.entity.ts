@@ -12,10 +12,10 @@ import {
 import { User } from '../../user/entities/user.entity';
 
 export enum ShareType {
-  PUBLIC = 'public',       // Anyone with link
-  PRIVATE = 'private',     // Only specified users
-  EVENT = 'event',         // Public event
-  BUSINESS = 'business',   // Business location
+  PUBLIC = 'public', // Anyone with link
+  PRIVATE = 'private', // Only specified users
+  EVENT = 'event', // Public event
+  BUSINESS = 'business', // Business location
 }
 
 export enum ShareStatus {

@@ -109,16 +109,17 @@ export class RouteMatchingService {
     // Step 3: Check if destination is an intermediate stop on any segment
     if (!result.hasDirectRoute || result.routes.length === 0) {
       logger.info('No direct route found, checking intermediate stops');
-      
-      const intermediateResult = await this.intermediateStopHandler.findSegmentContainingDestination(
-        endLat,
-        endLng,
-        endLocationName,
-      );
+
+      const intermediateResult =
+        await this.intermediateStopHandler.findSegmentContainingDestination(
+          endLat,
+          endLng,
+          endLocationName,
+        );
 
       if (intermediateResult?.isOnRoute) {
         result.hasIntermediateStop = true;
-        
+
         // Now find routes from start to the segment's start
         const segmentStartLocation = await this.locationRepository.findOne({
           where: { id: intermediateResult.segment.startLocationId },
@@ -141,13 +142,18 @@ export class RouteMatchingService {
               result.routes.push({
                 routeName: `${startLocation.name} to ${intermediateResult.stopInfo.name} (via ${segmentStartLocation.name})`,
                 source: 'intermediate_stop',
-                distance: Number(routeToSegmentStart.distance) + intermediateResult.stopInfo.distanceFromStart,
-                duration: Number(routeToSegmentStart.estimatedDuration) + 
-                         Math.round(intermediateResult.stopInfo.distanceFromStart * 2), // rough estimate
-                minFare: (routeToSegmentStart.minFare ? Number(routeToSegmentStart.minFare) : 0) + 
-                        intermediateResult.stopInfo.estimatedFare,
-                maxFare: (routeToSegmentStart.maxFare ? Number(routeToSegmentStart.maxFare) : 0) + 
-                        intermediateResult.stopInfo.estimatedFare,
+                distance:
+                  Number(routeToSegmentStart.distance) +
+                  intermediateResult.stopInfo.distanceFromStart,
+                duration:
+                  Number(routeToSegmentStart.estimatedDuration) +
+                  Math.round(intermediateResult.stopInfo.distanceFromStart * 2), // rough estimate
+                minFare:
+                  (routeToSegmentStart.minFare ? Number(routeToSegmentStart.minFare) : 0) +
+                  intermediateResult.stopInfo.estimatedFare,
+                maxFare:
+                  (routeToSegmentStart.maxFare ? Number(routeToSegmentStart.maxFare) : 0) +
+                  intermediateResult.stopInfo.estimatedFare,
                 steps: [
                   ...routeToSegmentStart.steps,
                   {
@@ -174,13 +180,14 @@ export class RouteMatchingService {
           } else {
             // Direct to segment start, then intermediate stop
             // Check if start location IS the segment start
-            const distanceToSegmentStart = this.geofencingService.calculateDistance(
-              { lat: startLat, lng: startLng },
-              { 
-                lat: Number(segmentStartLocation.latitude), 
-                lng: Number(segmentStartLocation.longitude) 
-              },
-            ) / 1000;
+            const distanceToSegmentStart =
+              this.geofencingService.calculateDistance(
+                { lat: startLat, lng: startLng },
+                {
+                  lat: Number(segmentStartLocation.latitude),
+                  lng: Number(segmentStartLocation.longitude),
+                },
+              ) / 1000;
 
             if (distanceToSegmentStart < 1) {
               // User is already at segment start!
@@ -226,7 +233,7 @@ export class RouteMatchingService {
     // Step 4: Get Google Maps route as fallback
     if (result.routes.length === 0) {
       logger.info('No database or intermediate routes found, using Google Maps');
-      
+
       try {
         const googleRoute = await this.googleMapsService.getDirections(
           { lat: startLat, lng: startLng },
@@ -323,8 +330,8 @@ export class RouteMatchingService {
     // Search exact locations
     const exactMatches = await this.locationRepository
       .createQueryBuilder('location')
-      .where('LOWER(location.name) LIKE LOWER(:query)', { 
-        query: `%${searchQuery}%` 
+      .where('LOWER(location.name) LIKE LOWER(:query)', {
+        query: `%${searchQuery}%`,
       })
       .andWhere('location.isActive = :isActive', { isActive: true })
       .take(10)
@@ -350,9 +357,9 @@ export class RouteMatchingService {
             const startLng = Number(segment.startLocation?.longitude);
             const endLat = Number(segment.endLocation?.latitude);
             const endLng = Number(segment.endLocation?.longitude);
-            
+
             const ratio = stop.order / (segment.intermediateStops.length + 1);
-            
+
             intermediateStops.push({
               stopName: stop.name,
               segmentName: segment.name,
@@ -381,12 +388,12 @@ export class RouteMatchingService {
       logger.info('Geocoding address:', address);
       // Use the existing geocode method from GoogleMapsService
       const result = await this.googleMapsService.geocode(address);
-      
+
       if (result) {
         logger.info('Geocoded successfully:', result);
         return result;
       }
-      
+
       logger.warn('Geocoding failed - no results for address:', address);
       return null;
     } catch (error) {
@@ -404,12 +411,12 @@ export class RouteMatchingService {
       logger.info('Reverse geocoding coordinates:', { lat, lng });
       // Use the existing reverseGeocode method from GoogleMapsService
       const address = await this.googleMapsService.reverseGeocode(lat, lng);
-      
+
       if (address) {
         logger.info('Reverse geocoded successfully:', address);
         return address;
       }
-      
+
       logger.warn('Reverse geocoding failed - no results for coordinates:', { lat, lng });
       return null;
     } catch (error) {

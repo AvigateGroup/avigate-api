@@ -201,12 +201,15 @@ export class QRCodeService {
    * Generate printable QR code with text labels
    * Returns HTML that can be converted to PDF
    */
-  generatePrintableQRHTML(qrDataUrl: string, metadata: {
-    locationName: string;
-    ownerName: string;
-    description?: string;
-    eventDate?: Date;
-  }): string {
+  generatePrintableQRHTML(
+    qrDataUrl: string,
+    metadata: {
+      locationName: string;
+      ownerName: string;
+      description?: string;
+      eventDate?: Date;
+    },
+  ): string {
     const eventInfo = metadata.eventDate
       ? `
       <div style="margin-top: 16px; padding: 12px; background-color: #f8f9fa; border-radius: 8px;">

@@ -5,7 +5,10 @@ import { Repository, In } from 'typeorm';
 import * as crypto from 'crypto';
 import { LocationShare, ShareType, ShareStatus } from './entities/location-share.entity';
 import { User } from '../user/entities/user.entity';
-import { RouteMatchingService, EnhancedRouteResult } from '../route/services/route-matching.service';
+import {
+  RouteMatchingService,
+  EnhancedRouteResult,
+} from '../route/services/route-matching.service';
 import { IntelligentRouteService } from '../route/services/intelligent-route.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { QRCodeService } from './services/qr-code.service';

@@ -147,7 +147,7 @@ export class FeedService {
    */
   async muteUser(userId: string, targetUserId: string, mute: boolean) {
     const preferences = await this.getUserPreferences(userId);
-    
+
     if (mute) {
       if (!preferences.mutedUsers.includes(targetUserId)) {
         preferences.mutedUsers.push(targetUserId);
@@ -198,7 +198,7 @@ export class FeedService {
 
     // Load from database or create default
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    
+
     const defaultPreferences: FeedPreferences = {
       userId,
       enabledPostTypes: Object.values(PostType),

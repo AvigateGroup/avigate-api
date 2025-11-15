@@ -9,9 +9,19 @@ import { LocationShareEmailService } from './location-share-email.service';
 
 @Module({
   imports: [ConfigModule],
-  providers: [UserEmailService, AdminEmailService, UserTripEmailService, CommunityEmailService,
-    LocationShareEmailService,],
-  exports: [UserEmailService, AdminEmailService, UserTripEmailService, CommunityEmailService,
-    LocationShareEmailService,],
+  providers: [
+    UserEmailService,
+    AdminEmailService,
+    UserTripEmailService,
+    CommunityEmailService,
+    LocationShareEmailService,
+  ],
+  exports: [
+    UserEmailService,
+    AdminEmailService,
+    UserTripEmailService,
+    CommunityEmailService,
+    LocationShareEmailService,
+  ],
 })
 export class EmailModule {}

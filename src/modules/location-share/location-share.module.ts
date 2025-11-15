@@ -19,13 +19,10 @@ import { UploadModule } from '../upload/upload.module'; // ADDED: Missing module
     RouteModule,
     NotificationsModule,
     EmailModule,
-    UploadModule, 
+    UploadModule,
   ],
   controllers: [LocationShareController],
-  providers: [
-    LocationShareService,
-    QRCodeService, 
-  ],
+  providers: [LocationShareService, QRCodeService],
   exports: [LocationShareService, QRCodeService],
 })
 export class LocationShareModule {}

@@ -15,7 +15,6 @@ interface SegmentStopWithCoordinates {
   coordinates: { lat: number; lng: number };
 }
 
-
 interface SmartStopResult {
   useIntermediateStop: boolean;
   closestStop?: {
@@ -53,7 +52,7 @@ export class SmartStopMatchingService {
 
   /**
    * Find if destination is near an intermediate stop on any segment
-   * 
+   *
    * Example: User wants "Kala Police Station"
    * - System finds it's 50m from "Wimpy" (intermediate stop)
    * - Returns route to Wimpy + walking directions
@@ -102,7 +101,7 @@ export class SmartStopMatchingService {
         // If no exact coordinates, geocode the stop name
         if (!stopCoordinates) {
           const geocoded = await this.googleMapsService.geocode(
-            `${stop.name}, Port Harcourt, Rivers State, Nigeria`
+            `${stop.name}, Port Harcourt, Rivers State, Nigeria`,
           );
           if (geocoded) {
             stopCoordinates = geocoded;
@@ -244,11 +243,7 @@ If you prefer not to walk, you can ask locals at ${stop.name} for okada (motorcy
     });
 
     // First, check if destination is near any intermediate stop
-    const stopMatch = await this.findNearestIntermediateStop(
-      endLat,
-      endLng,
-      destinationName,
-    );
+    const stopMatch = await this.findNearestIntermediateStop(endLat, endLng, destinationName);
 
     if (stopMatch.useIntermediateStop && stopMatch.closestStop) {
       logger.info('Found intermediate stop route', {
@@ -259,7 +254,7 @@ If you prefer not to walk, you can ask locals at ${stop.name} for okada (motorcy
 
       // Now find route from start to the intermediate stop
       const stopCoordinates = stopMatch.closestStop.coordinates;
-      
+
       return {
         success: true,
         strategy: 'intermediate_stop',
@@ -269,8 +264,12 @@ If you prefer not to walk, you can ask locals at ${stop.name} for okada (motorcy
           walkingDirections: stopMatch.walkingDirections,
           instructions: stopMatch.instructions,
           summary: {
-            totalDistance: Number(stopMatch.segment?.distance || 0) + (stopMatch.walkingDirections?.distance || 0),
-            totalDuration: Number(stopMatch.segment?.estimatedDuration || 0) + (stopMatch.walkingDirections?.duration || 0),
+            totalDistance:
+              Number(stopMatch.segment?.distance || 0) +
+              (stopMatch.walkingDirections?.distance || 0),
+            totalDuration:
+              Number(stopMatch.segment?.estimatedDuration || 0) +
+              (stopMatch.walkingDirections?.duration || 0),
             transportFare: {
               min: Number(stopMatch.segment?.minFare || 0),
               max: Number(stopMatch.segment?.maxFare || 0),
@@ -321,7 +320,7 @@ If you prefer not to walk, you can ask locals at ${stop.name} for okada (motorcy
 
       if (!coordinates) {
         coordinates = await this.googleMapsService.geocode(
-          `${stop.name}, Port Harcourt, Rivers State, Nigeria`
+          `${stop.name}, Port Harcourt, Rivers State, Nigeria`,
         );
       }
 
