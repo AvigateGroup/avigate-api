@@ -1,4 +1,4 @@
-// src/modules/upload/upload.service.ts (UPDATED FOR QR CODE SUPPORT)
+// src/modules/upload/upload.service.ts (FIXED - TypeScript Errors Resolved)
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
@@ -13,14 +13,19 @@ export class UploadService {
   private region: string;
 
   constructor(private configService: ConfigService) {
-    this.region = this.configService.get<string>('AWS_REGION');
+    const region = this.configService.get<string>('AWS_REGION');
     const accessKeyId = this.configService.get<string>('AWS_ACCESS_KEY_ID');
     const secretAccessKey = this.configService.get<string>('AWS_SECRET_ACCESS_KEY');
-    this.bucketName = this.configService.get<string>('AWS_S3_BUCKET');
+    const bucketName = this.configService.get<string>('AWS_S3_BUCKET');
 
-    if (!this.region || !accessKeyId || !secretAccessKey || !this.bucketName) {
+    // Validate all required config values
+    if (!region || !accessKeyId || !secretAccessKey || !bucketName) {
       throw new Error('Missing required AWS configuration');
     }
+
+    // FIXED: Assign to class properties after validation ensures they're strings
+    this.region = region;
+    this.bucketName = bucketName;
 
     this.s3Client = new S3Client({
       region: this.region,
