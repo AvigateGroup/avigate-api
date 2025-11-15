@@ -16,7 +16,7 @@ interface RouteComposition {
 }
 
 interface AlternativeStop {
-  locationId: string | undefined;
+  locationId: string;
   locationName: string;
   estimatedFare: number;
   saving: number;
@@ -113,18 +113,19 @@ export class IntelligentRouteService {
 
     // Get intermediate stops
     for (const stop of segment.intermediateStops) {
-      // Calculate fare to this stop
-      const partialDistance = this.calculatePartialDistance(segment, stop.locationId);
-      const partialFare = this.estimateFare(partialDistance, segment);
+    if (!stop.locationId) continue; // This ensures locationId is string
+    
+    const partialDistance = this.calculatePartialDistance(segment, stop.locationId);
+    const partialFare = this.estimateFare(partialDistance, segment);
 
-      alternatives.push({
-        locationId: stop.locationId,
-        locationName: stop.name,
-        estimatedFare: partialFare,
-        saving: segment.maxFare ? Number(segment.maxFare) - partialFare : 0,
-        isOptional: stop.isOptional,
-      });
-    }
+    alternatives.push({
+      locationId: stop.locationId, // Now guaranteed to be string
+      locationName: stop.name,
+      estimatedFare: partialFare,
+      saving: segment.maxFare ? Number(segment.maxFare) - partialFare : 0,
+      isOptional: stop.isOptional,
+    });
+  }
 
     return alternatives;
   }
