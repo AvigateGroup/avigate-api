@@ -3,10 +3,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Route } from '../entities/route.entity';
-import { RouteStep } from '../entities/route-step.entity';
 import { RouteSegment } from '../entities/route-segment.entity';
 import { Location } from '../../location/entities/location.entity';
-import { logger } from '@/utils/logger.util';
 
 interface RouteComposition {
   segments: RouteSegment[];
@@ -15,6 +13,14 @@ interface RouteComposition {
   minFare: number;
   maxFare: number;
   instructions: string[];
+}
+
+interface AlternativeStop {
+  locationId: string | undefined;
+  locationName: string;
+  estimatedFare: number;
+  saving: number;
+  isOptional: boolean;
 }
 
 @Injectable()
@@ -103,7 +109,7 @@ export class IntelligentRouteService {
 
     if (!segment) return [];
 
-    const alternatives = [];
+    const alternatives: AlternativeStop[] = [];
 
     // Get intermediate stops
     for (const stop of segment.intermediateStops) {

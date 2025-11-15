@@ -8,6 +8,14 @@ import { GoogleMapsService } from './google-maps.service';
 import { GeofencingService } from './geofencing.service';
 import { logger } from '@/utils/logger.util';
 
+interface SegmentStopWithCoordinates {
+  name: string;
+  order: number;
+  isOptional: boolean;
+  coordinates: { lat: number; lng: number };
+}
+
+
 interface SmartStopResult {
   useIntermediateStop: boolean;
   closestStop?: {
@@ -294,7 +302,7 @@ If you prefer not to walk, you can ask locals at ${stop.name} for okada (motorcy
       return [];
     }
 
-    const stops = [];
+    const stops: SegmentStopWithCoordinates[] = [];
 
     for (const stop of segment.intermediateStops) {
       let coordinates: { lat: number; lng: number } | null = null;
