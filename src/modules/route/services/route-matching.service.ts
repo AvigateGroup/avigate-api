@@ -239,7 +239,14 @@ export class RouteMatchingService {
           source: 'google_maps',
           distance: googleRoute.distance,
           duration: googleRoute.duration,
-          steps: googleRoute.steps,
+          steps: googleRoute.steps.map((step, index) => ({
+            order: index + 1,
+            instructions: step.instruction,
+            distance: step.distance,
+            duration: step.duration,
+            startLocation: step.startLocation,
+            endLocation: step.endLocation,
+          })),
           confidence: 70,
         });
       } catch (error) {
@@ -363,5 +370,74 @@ export class RouteMatchingService {
       exactMatches,
       intermediateStops,
     };
+  }
+
+  /**
+   * Geocode an address to coordinates using Google Maps
+   * This method uses the existing geocode() method from GoogleMapsService
+   */
+  async geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      logger.info('Geocoding address:', address);
+      // Use the existing geocode method from GoogleMapsService
+      const result = await this.googleMapsService.geocode(address);
+      
+      if (result) {
+        logger.info('Geocoded successfully:', result);
+        return result;
+      }
+      
+      logger.warn('Geocoding failed - no results for address:', address);
+      return null;
+    } catch (error) {
+      logger.error('Error geocoding address:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Reverse geocode coordinates to address using Google Maps
+   * This method uses the existing reverseGeocode() method from GoogleMapsService
+   */
+  async reverseGeocode(lat: number, lng: number): Promise<string | null> {
+    try {
+      logger.info('Reverse geocoding coordinates:', { lat, lng });
+      // Use the existing reverseGeocode method from GoogleMapsService
+      const address = await this.googleMapsService.reverseGeocode(lat, lng);
+      
+      if (address) {
+        logger.info('Reverse geocoded successfully:', address);
+        return address;
+      }
+      
+      logger.warn('Reverse geocoding failed - no results for coordinates:', { lat, lng });
+      return null;
+    } catch (error) {
+      logger.error('Error reverse geocoding:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Smart route search - wrapper for findEnhancedRoutes
+   * This is the main method called by the controller for route searching
+   */
+  async findSmartRoutes(
+    startLat: number,
+    startLng: number,
+    endLat: number,
+    endLng: number,
+    endLocationName?: string,
+  ): Promise<EnhancedRouteResult> {
+    logger.info('Smart route search initiated', {
+      startLat,
+      startLng,
+      endLat,
+      endLng,
+      endLocationName,
+    });
+
+    // Use the existing enhanced route finding logic
+    return this.findEnhancedRoutes(startLat, startLng, endLat, endLng, endLocationName);
   }
 }
