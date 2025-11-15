@@ -1,11 +1,11 @@
-// src/modules/location-share/location-share.service.ts (UPDATED FOR YOUR UPLOAD SERVICE)
+// src/modules/location-share/location-share.service.ts (FIXED)
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import * as crypto from 'crypto';
 import { LocationShare, ShareType, ShareStatus } from './entities/location-share.entity';
 import { User } from '../user/entities/user.entity';
-import { RouteMatchingService } from '../route/services/route-matching.service';
+import { RouteMatchingService, EnhancedRouteResult } from '../route/services/route-matching.service';
 import { IntelligentRouteService } from '../route/services/intelligent-route.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { QRCodeService } from './services/qr-code.service';
@@ -140,15 +140,16 @@ export class LocationShareService {
     await this.shareRepository.save(share);
 
     // Generate navigation if accessor location provided
-    let navigation = null;
+    let navigation: EnhancedRouteResult | null = null;
     if (accessorLocation) {
-      const routes = await this.routeMatchingService.findSmartRoutes(
+      // FIXED: Changed from findSmartRoutes to findEnhancedRoutes
+      navigation = await this.routeMatchingService.findEnhancedRoutes(
         accessorLocation.lat,
         accessorLocation.lng,
         Number(share.latitude),
         Number(share.longitude),
+        share.locationName, // Pass location name for intermediate stop matching
       );
-      navigation = routes;
     }
 
     return {
@@ -181,11 +182,13 @@ export class LocationShareService {
       throw new NotFoundException('Share link not found');
     }
 
-    const routes = await this.routeMatchingService.findSmartRoutes(
+    // FIXED: Changed from findSmartRoutes to findEnhancedRoutes
+    const routes = await this.routeMatchingService.findEnhancedRoutes(
       fromLat,
       fromLng,
       Number(share.latitude),
       Number(share.longitude),
+      share.locationName, // Pass location name for intermediate stop matching
     );
 
     return {
