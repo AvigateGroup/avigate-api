@@ -26,9 +26,8 @@ import { Location } from './modules/location/entities/location.entity';
 import { Landmark } from './modules/location/entities/landmark.entity';
 import { Route } from './modules/route/entities/route.entity';
 import { RouteStep } from './modules/route/entities/route-step.entity';
-import { RouteSegment } from './modules/route/entities/route-segment.entity'; // ADDED
+import { RouteSegment } from './modules/route/entities/route-segment.entity';
 import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
-// Add any other entities you have
 
 @Module({
   imports: [
@@ -45,7 +44,6 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
         username: configService.get('DB_USER'),
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_DATABASE'),
-        // FIXED: Explicitly list all entities instead of using glob pattern
         entities: [
           Admin,
           AdminSession,
@@ -56,13 +54,18 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
           Landmark,
           Route,
           RouteStep,
-          RouteSegment, // ADDED
+          RouteSegment,
           FareFeedback,
-          // Add any other entities here
         ],
         synchronize: false,
         logging: configService.get('NODE_ENV') === 'development',
         ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
+        
+        // ADD THESE RETRY CONFIGURATIONS
+        retryAttempts: 10,           // Try to connect 10 times
+        retryDelay: 3000,            // Wait 3 seconds between attempts
+        connectTimeoutMS: 10000,     // 10 second connection timeout
+        maxQueryExecutionTime: 5000, // Log slow queries (5 seconds)
       }),
       inject: [ConfigService],
     }),
