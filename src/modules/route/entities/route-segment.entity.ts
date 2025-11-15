@@ -5,10 +5,13 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  Index,
+  ManyToOne,
   ManyToMany,
+  JoinColumn,
+  Index,
 } from 'typeorm';
 import { Route } from './route.entity';
+import { Location } from '../../location/entities/location.entity';
 
 /**
  * RouteSegment represents a shared path between two locations
@@ -20,7 +23,7 @@ export class RouteSegment {
   id: string;
 
   @Column()
-  name: string; // e.g., "Rumuokoro to Mile1 via Aba Road"
+  name: string; // e.g., "Rumuokoro to Mile1 via Ikwere Road "
 
   @Column('uuid')
   @Index()
@@ -33,7 +36,7 @@ export class RouteSegment {
   // Intermediate stops on this segment
   @Column({ type: 'jsonb', default: [] })
   intermediateStops: Array<{
-    locationId: string;
+    locationId?: string;
     name: string;
     order: number;
     isOptional: boolean; // Some stops are optional depending on driver
@@ -78,6 +81,15 @@ export class RouteSegment {
 
   @UpdateDateColumn()
   updatedAt: Date;
+
+  // ADDED: Relations to Location entities
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'startLocationId' })
+  startLocation: Location;
+
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'endLocationId' })
+  endLocation: Location;
 
   @ManyToMany(() => Route, route => route.segments)
   routes: Route[];
