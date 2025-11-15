@@ -34,7 +34,7 @@ export interface EnhancedRouteResult {
 }
 
 @Injectable()
-export class EnhancedRouteMatchingService {
+export class RouteMatchingService {
   constructor(
     @InjectRepository(Location)
     private locationRepository: Repository<Location>,
