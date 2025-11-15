@@ -1,4 +1,4 @@
-// src/app.module.ts
+// src/app.module.ts 
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -15,6 +15,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { EmailModule } from './modules/email/email.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import databaseConfig from './config/database.config';
+
 // Import all entities explicitly
 import { Admin } from './modules/admin/entities/admin.entity';
 import { AdminSession } from './modules/admin/entities/admin-session.entity';
@@ -25,8 +26,10 @@ import { Location } from './modules/location/entities/location.entity';
 import { Landmark } from './modules/location/entities/landmark.entity';
 import { Route } from './modules/route/entities/route.entity';
 import { RouteStep } from './modules/route/entities/route-step.entity';
+import { RouteSegment } from './modules/route/entities/route-segment.entity'; // ADDED
 import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
 // Add any other entities you have
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -41,7 +44,7 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
         port: configService.get('DB_PORT'),
         username: configService.get('DB_USER'),
         password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
+        database: configService.get('DB_DATABASE'),
         // FIXED: Explicitly list all entities instead of using glob pattern
         entities: [
           Admin,
@@ -53,6 +56,7 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
           Landmark,
           Route,
           RouteStep,
+          RouteSegment, // ADDED
           FareFeedback,
           // Add any other entities here
         ],
