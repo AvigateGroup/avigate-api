@@ -21,7 +21,7 @@ export default new DataSource({
   ),
   entities: ['src/**/*.entity{.ts,.js}'],
   migrations: ['src/migrations/*{.ts,.js}'],
-  synchronize: true,
+  synchronize: false,
   logging: true,
   ssl: process.env.NODE_ENV === 'production' 
     ? { rejectUnauthorized: false } 
