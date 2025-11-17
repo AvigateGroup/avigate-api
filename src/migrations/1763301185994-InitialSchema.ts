@@ -4,12 +4,14 @@ export class InitialSchema1763301185994 implements MigrationInterface {
     name = 'InitialSchema1763301185994'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP INDEX "public"."IDX_users_termsVersion"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_users_privacyVersion"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_users_termsAcceptedAt"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_user_google_id"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_user_auth_provider"`);
-        await queryRunner.query(`DROP INDEX "public"."IDX_users_privacyAcceptedAt"`);
+        // Use IF EXISTS to avoid errors if indexes don't exist yet
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_users_termsVersion"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_users_privacyVersion"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_users_termsAcceptedAt"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_user_google_id"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_user_auth_provider"`);
+        await queryRunner.query(`DROP INDEX IF EXISTS "public"."IDX_users_privacyAcceptedAt"`);
+        
         await queryRunner.query(`CREATE TABLE "route_segments" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying NOT NULL, "startLocationId" uuid NOT NULL, "endLocationId" uuid NOT NULL, "intermediateStops" jsonb NOT NULL DEFAULT '[]', "transportModes" text NOT NULL, "distance" numeric(10,2) NOT NULL, "estimatedDuration" numeric(10,2) NOT NULL, "minFare" numeric(10,2), "maxFare" numeric(10,2), "instructions" text NOT NULL, "landmarks" jsonb NOT NULL DEFAULT '[]', "usageCount" integer NOT NULL DEFAULT '0', "isActive" boolean NOT NULL DEFAULT true, "isVerified" boolean NOT NULL DEFAULT false, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "PK_67f35163b4fb5b5e4c28d8847b2" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "IDX_42f5eb5528f60d8e703fc80344" ON "route_segments" ("startLocationId") `);
         await queryRunner.query(`CREATE INDEX "IDX_a586ad7688ea83602253e94383" ON "route_segments" ("endLocationId") `);
@@ -24,15 +26,18 @@ export class InitialSchema1763301185994 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "route_segments_mapping" ("routeId" uuid NOT NULL, "segmentId" uuid NOT NULL, CONSTRAINT "PK_6f7ae48933de8e8a12491fc1d9b" PRIMARY KEY ("routeId", "segmentId"))`);
         await queryRunner.query(`CREATE INDEX "IDX_f8ca36ab4f63168d833775eab3" ON "route_segments_mapping" ("routeId") `);
         await queryRunner.query(`CREATE INDEX "IDX_5e943f0c65951bc8e034514845" ON "route_segments_mapping" ("segmentId") `);
-        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "country"`);
+        
+        // Use IF EXISTS for table columns that might not exist
+        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "country"`);
         await queryRunner.query(`ALTER TABLE "users" ADD "country" character varying NOT NULL DEFAULT 'Nigeria'`);
-        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "language"`);
+        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "language"`);
         await queryRunner.query(`ALTER TABLE "users" ADD "language" character varying NOT NULL DEFAULT 'English'`);
-        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "authProvider"`);
+        await queryRunner.query(`ALTER TABLE "users" DROP COLUMN IF EXISTS "authProvider"`);
         await queryRunner.query(`CREATE TYPE "public"."users_authprovider_enum" AS ENUM('local', 'google')`);
         await queryRunner.query(`ALTER TABLE "users" ADD "authProvider" "public"."users_authprovider_enum" NOT NULL DEFAULT 'local'`);
         await queryRunner.query(`ALTER TABLE "users" ALTER COLUMN "phoneNumberCaptured" SET NOT NULL`);
         await queryRunner.query(`ALTER TABLE "route_steps" ALTER COLUMN "estimatedDuration" DROP DEFAULT`);
+        
         await queryRunner.query(`CREATE INDEX "IDX_0972df853515239f45870628f8" ON "users" ("termsVersion") `);
         await queryRunner.query(`CREATE INDEX "IDX_39f0390cbf6f75685d4ca5c1b2" ON "users" ("privacyVersion") `);
         await queryRunner.query(`CREATE INDEX "IDX_41104b624e61778f7767449db0" ON "users" ("termsAcceptedAt") `);
@@ -82,5 +87,4 @@ export class InitialSchema1763301185994 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "IDX_users_privacyVersion" ON "users" ("privacyVersion") `);
         await queryRunner.query(`CREATE INDEX "IDX_users_termsVersion" ON "users" ("termsVersion") `);
     }
-
 }
