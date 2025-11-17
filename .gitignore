@@ -17,4 +17,3 @@ scripts/
 firebase-service-account.json
 *firebase-adminsdk*.json
 frontend/
-migrations/
