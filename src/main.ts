@@ -32,7 +32,7 @@ async function bootstrap() {
   const allowedOrigins = [
     configService.get('FRONTEND_URL') || 'http://localhost:3000',
     configService.get('ADMIN_FRONTEND_URL') || 'http://localhost:3000',
-    'https://avigate-api-production.up.railway.app', // ✅ ADD THIS - Your Railway production URL
+    'https://avigate-api-production.up.railway.app', 
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5500',
