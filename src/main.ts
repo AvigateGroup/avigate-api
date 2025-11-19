@@ -20,7 +20,8 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get('PORT') || 3000;
-  const apiPrefix = configService.get('API_PREFIX') || 'api/v1';
+  const apiPrefix = configService.get('API_PREFIX');
+  const nodeEnv = configService.get('NODE_ENV');
 
   app.use(cookieParser());
 
@@ -28,24 +29,28 @@ async function bootstrap() {
   app.use(helmet());
   app.use(compression());
 
-  // CORS Configuration
+  // Build allowed origins from environment variables
+  const localNetworkIp = configService.get('LOCAL_NETWORK_IP');
+  
   const allowedOrigins = [
-    configService.get('FRONTEND_URL') || 'http://localhost:3000',
-    configService.get('ADMIN_FRONTEND_URL') || 'http://localhost:3000',
-    'https://avigate-api-production.up.railway.app', 
+    configService.get('FRONTEND_URL'),
+    configService.get('ADMIN_FRONTEND_URL'),
+    configService.get('RAILWAY_APP_URL'),
+    configService.get('DEV_MOBILE_URL_1'),
+    configService.get('DEV_MOBILE_URL_2'),
+    // Development URLs
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
     'http://localhost:8080',
     'http://127.0.0.1:8080',
-    'http://localhost:8081', // Expo Metro Bundler
-    'exp://localhost:8081', // Expo Go
-    'http://192.168.0.134:8081', // Your local network IP
-    'exp://192.168.0.134:8081', // Expo Go with local IP
-    'exp://192.168.0.198:8081',
-    'http://192.168.0.198:8081',
-  ].filter(Boolean);
+    // Add local network IP variants if provided
+    ...(localNetworkIp ? [
+      `http://${localNetworkIp}:8081`,
+      `exp://${localNetworkIp}:8081`,
+    ] : []),
+  ].filter(Boolean); // Remove undefined values
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -56,7 +61,7 @@ async function bootstrap() {
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
       } else {
-        logger.warn(`Blocked by CORS: ${origin}`); // Use logger instead of console.warn
+        logger.warn(`Blocked by CORS: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     },
@@ -108,8 +113,9 @@ async function bootstrap() {
 
   await app.listen(port);
 
-  logger.info(` Avigate API is running on: http://localhost:${port}/${apiPrefix}`);
+  logger.info(`Avigate API is running on: http://localhost:${port}/${apiPrefix}`);
   logger.info(`API Documentation: http://localhost:${port}/api/docs`);
+  logger.info(`Environment: ${nodeEnv}`);
 }
 
 bootstrap();
