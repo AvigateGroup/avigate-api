@@ -1,14 +1,5 @@
 // src/modules/admin/admin.controller.ts
-import {
-  Controller,
-  Post,
-  Get,
-  Patch,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminAuthGuard } from '@/common/guards/admin-auth.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
@@ -145,10 +136,6 @@ export class AdminController {
     @Param('contributionId') contributionId: string,
     @Body() updates: any,
   ) {
-    return this.contributionManagementService.editContribution(
-      contributionId,
-      admin.id,
-      updates,
-    );
+    return this.contributionManagementService.editContribution(contributionId, admin.id, updates);
   }
 }

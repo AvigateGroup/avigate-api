@@ -1,4 +1,4 @@
-// src/app.module.ts 
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -60,11 +60,11 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
         synchronize: false,
         logging: configService.get('NODE_ENV') === 'development',
         ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-        
+
         // ADD THESE RETRY CONFIGURATIONS
-        retryAttempts: 10,           // Try to connect 10 times
-        retryDelay: 3000,            // Wait 3 seconds between attempts
-        connectTimeoutMS: 10000,     // 10 second connection timeout
+        retryAttempts: 10, // Try to connect 10 times
+        retryDelay: 3000, // Wait 3 seconds between attempts
+        connectTimeoutMS: 10000, // 10 second connection timeout
         maxQueryExecutionTime: 5000, // Log slow queries (5 seconds)
       }),
       inject: [ConfigService],

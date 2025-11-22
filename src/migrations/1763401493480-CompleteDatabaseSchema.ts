@@ -1,13 +1,12 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Enable UUID extension
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Enable UUID extension
-        await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-
-        // Create users table with ALL fields
-        await queryRunner.query(`
+    // Create users table with ALL fields
+    await queryRunner.query(`
             CREATE TABLE "users" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "email" character varying NOT NULL,
@@ -33,19 +32,29 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create authProvider enum and add to users
-        await queryRunner.query(`CREATE TYPE "public"."users_authprovider_enum" AS ENUM('local', 'google')`);
-        await queryRunner.query(`ALTER TABLE "users" ADD "authProvider" "public"."users_authprovider_enum" NOT NULL DEFAULT 'local'`);
+    // Create authProvider enum and add to users
+    await queryRunner.query(
+      `CREATE TYPE "public"."users_authprovider_enum" AS ENUM('local', 'google')`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "users" ADD "authProvider" "public"."users_authprovider_enum" NOT NULL DEFAULT 'local'`,
+    );
 
-        // Create indexes for users
-        await queryRunner.query(`CREATE INDEX "IDX_users_email" ON "users" ("email")`);
-        await queryRunner.query(`CREATE INDEX "IDX_users_googleId" ON "users" ("googleId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_0972df853515239f45870628f8" ON "users" ("termsVersion")`);
-        await queryRunner.query(`CREATE INDEX "IDX_39f0390cbf6f75685d4ca5c1b2" ON "users" ("privacyVersion")`);
-        await queryRunner.query(`CREATE INDEX "IDX_41104b624e61778f7767449db0" ON "users" ("termsAcceptedAt")`);
+    // Create indexes for users
+    await queryRunner.query(`CREATE INDEX "IDX_users_email" ON "users" ("email")`);
+    await queryRunner.query(`CREATE INDEX "IDX_users_googleId" ON "users" ("googleId")`);
+    await queryRunner.query(
+      `CREATE INDEX "IDX_0972df853515239f45870628f8" ON "users" ("termsVersion")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_39f0390cbf6f75685d4ca5c1b2" ON "users" ("privacyVersion")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_41104b624e61778f7767449db0" ON "users" ("termsAcceptedAt")`,
+    );
 
-        // Create locations table
-        await queryRunner.query(`
+    // Create locations table
+    await queryRunner.query(`
             CREATE TABLE "locations" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "name" character varying NOT NULL,
@@ -64,13 +73,13 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create indexes for locations
-        await queryRunner.query(`CREATE INDEX "IDX_locations_city" ON "locations" ("city")`);
-        await queryRunner.query(`CREATE INDEX "IDX_locations_state" ON "locations" ("state")`);
-        await queryRunner.query(`CREATE INDEX "IDX_locations_isActive" ON "locations" ("isActive")`);
+    // Create indexes for locations
+    await queryRunner.query(`CREATE INDEX "IDX_locations_city" ON "locations" ("city")`);
+    await queryRunner.query(`CREATE INDEX "IDX_locations_state" ON "locations" ("state")`);
+    await queryRunner.query(`CREATE INDEX "IDX_locations_isActive" ON "locations" ("isActive")`);
 
-        // Create landmarks table
-        await queryRunner.query(`
+    // Create landmarks table
+    await queryRunner.query(`
             CREATE TABLE "landmarks" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "name" character varying NOT NULL,
@@ -86,8 +95,8 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create routes table
-        await queryRunner.query(`
+    // Create routes table
+    await queryRunner.query(`
             CREATE TABLE "routes" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "name" character varying NOT NULL,
@@ -104,13 +113,15 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create indexes for routes
-        await queryRunner.query(`CREATE INDEX "IDX_routes_startLocation" ON "routes" ("startLocationId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_routes_endLocation" ON "routes" ("endLocationId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_routes_isActive" ON "routes" ("isActive")`);
+    // Create indexes for routes
+    await queryRunner.query(
+      `CREATE INDEX "IDX_routes_startLocation" ON "routes" ("startLocationId")`,
+    );
+    await queryRunner.query(`CREATE INDEX "IDX_routes_endLocation" ON "routes" ("endLocationId")`);
+    await queryRunner.query(`CREATE INDEX "IDX_routes_isActive" ON "routes" ("isActive")`);
 
-        // Create route_steps table
-        await queryRunner.query(`
+    // Create route_steps table
+    await queryRunner.query(`
             CREATE TABLE "route_steps" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "routeId" uuid NOT NULL,
@@ -128,11 +139,11 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create indexes for route_steps
-        await queryRunner.query(`CREATE INDEX "IDX_route_steps_routeId" ON "route_steps" ("routeId")`);
+    // Create indexes for route_steps
+    await queryRunner.query(`CREATE INDEX "IDX_route_steps_routeId" ON "route_steps" ("routeId")`);
 
-        // Create route_segments table
-        await queryRunner.query(`
+    // Create route_segments table
+    await queryRunner.query(`
             CREATE TABLE "route_segments" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "name" character varying NOT NULL,
@@ -155,16 +166,28 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create indexes for route_segments
-        await queryRunner.query(`CREATE INDEX "IDX_42f5eb5528f60d8e703fc80344" ON "route_segments" ("startLocationId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_a586ad7688ea83602253e94383" ON "route_segments" ("endLocationId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_55a600c43631901936823d750c" ON "route_segments" ("isActive")`);
-        await queryRunner.query(`CREATE INDEX "IDX_469b82c2117bc119d5c1efc18e" ON "route_segments" ("isVerified")`);
+    // Create indexes for route_segments
+    await queryRunner.query(
+      `CREATE INDEX "IDX_42f5eb5528f60d8e703fc80344" ON "route_segments" ("startLocationId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_a586ad7688ea83602253e94383" ON "route_segments" ("endLocationId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_55a600c43631901936823d750c" ON "route_segments" ("isActive")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_469b82c2117bc119d5c1efc18e" ON "route_segments" ("isVerified")`,
+    );
 
-        // Create location_shares enums and table
-        await queryRunner.query(`CREATE TYPE "public"."location_shares_sharetype_enum" AS ENUM('public', 'private', 'event', 'business')`);
-        await queryRunner.query(`CREATE TYPE "public"."location_shares_status_enum" AS ENUM('active', 'paused', 'expired', 'revoked')`);
-        await queryRunner.query(`
+    // Create location_shares enums and table
+    await queryRunner.query(
+      `CREATE TYPE "public"."location_shares_sharetype_enum" AS ENUM('public', 'private', 'event', 'business')`,
+    );
+    await queryRunner.query(
+      `CREATE TYPE "public"."location_shares_status_enum" AS ENUM('active', 'paused', 'expired', 'revoked')`,
+    );
+    await queryRunner.query(`
             CREATE TABLE "location_shares" (
                 "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
                 "ownerId" uuid NOT NULL,
@@ -191,13 +214,19 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create indexes for location_shares
-        await queryRunner.query(`CREATE INDEX "IDX_7c78036b9fc4ff08477e5b9c61" ON "location_shares" ("ownerId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_0e55c68fba6353edb67e36cd08" ON "location_shares" ("shareToken")`);
-        await queryRunner.query(`CREATE INDEX "IDX_28ae040bf4fd0a0a278d03b900" ON "location_shares" ("status")`);
+    // Create indexes for location_shares
+    await queryRunner.query(
+      `CREATE INDEX "IDX_7c78036b9fc4ff08477e5b9c61" ON "location_shares" ("ownerId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_0e55c68fba6353edb67e36cd08" ON "location_shares" ("shareToken")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_28ae040bf4fd0a0a278d03b900" ON "location_shares" ("status")`,
+    );
 
-        // Create route_segments_mapping table
-        await queryRunner.query(`
+    // Create route_segments_mapping table
+    await queryRunner.query(`
             CREATE TABLE "route_segments_mapping" (
                 "routeId" uuid NOT NULL,
                 "segmentId" uuid NOT NULL,
@@ -205,98 +234,112 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
             )
         `);
 
-        // Create indexes for route_segments_mapping
-        await queryRunner.query(`CREATE INDEX "IDX_f8ca36ab4f63168d833775eab3" ON "route_segments_mapping" ("routeId")`);
-        await queryRunner.query(`CREATE INDEX "IDX_5e943f0c65951bc8e034514845" ON "route_segments_mapping" ("segmentId")`);
+    // Create indexes for route_segments_mapping
+    await queryRunner.query(
+      `CREATE INDEX "IDX_f8ca36ab4f63168d833775eab3" ON "route_segments_mapping" ("routeId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_5e943f0c65951bc8e034514845" ON "route_segments_mapping" ("segmentId")`,
+    );
 
-        // Add ALL foreign key constraints
-        await queryRunner.query(`
+    // Add ALL foreign key constraints
+    await queryRunner.query(`
             ALTER TABLE "landmarks" 
             ADD CONSTRAINT "FK_landmarks_location" 
             FOREIGN KEY ("locationId") REFERENCES "locations"("id") 
             ON DELETE SET NULL ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "routes" 
             ADD CONSTRAINT "FK_routes_startLocation" 
             FOREIGN KEY ("startLocationId") REFERENCES "locations"("id") 
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "routes" 
             ADD CONSTRAINT "FK_routes_endLocation" 
             FOREIGN KEY ("endLocationId") REFERENCES "locations"("id") 
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "route_steps" 
             ADD CONSTRAINT "FK_route_steps_route" 
             FOREIGN KEY ("routeId") REFERENCES "routes"("id") 
             ON DELETE CASCADE ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "route_segments" 
             ADD CONSTRAINT "FK_42f5eb5528f60d8e703fc803440" 
             FOREIGN KEY ("startLocationId") REFERENCES "locations"("id") 
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "route_segments" 
             ADD CONSTRAINT "FK_a586ad7688ea83602253e943832" 
             FOREIGN KEY ("endLocationId") REFERENCES "locations"("id") 
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "location_shares" 
             ADD CONSTRAINT "FK_7c78036b9fc4ff08477e5b9c61a" 
             FOREIGN KEY ("ownerId") REFERENCES "users"("id") 
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "route_segments_mapping" 
             ADD CONSTRAINT "FK_f8ca36ab4f63168d833775eab36" 
             FOREIGN KEY ("routeId") REFERENCES "routes"("id") 
             ON DELETE CASCADE ON UPDATE CASCADE
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             ALTER TABLE "route_segments_mapping" 
             ADD CONSTRAINT "FK_5e943f0c65951bc8e0345148450" 
             FOREIGN KEY ("segmentId") REFERENCES "route_segments"("id") 
             ON DELETE NO ACTION ON UPDATE NO ACTION
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop foreign keys first
-        await queryRunner.query(`ALTER TABLE "route_segments_mapping" DROP CONSTRAINT "FK_5e943f0c65951bc8e0345148450"`);
-        await queryRunner.query(`ALTER TABLE "route_segments_mapping" DROP CONSTRAINT "FK_f8ca36ab4f63168d833775eab36"`);
-        await queryRunner.query(`ALTER TABLE "location_shares" DROP CONSTRAINT "FK_7c78036b9fc4ff08477e5b9c61a"`);
-        await queryRunner.query(`ALTER TABLE "route_segments" DROP CONSTRAINT "FK_a586ad7688ea83602253e943832"`);
-        await queryRunner.query(`ALTER TABLE "route_segments" DROP CONSTRAINT "FK_42f5eb5528f60d8e703fc803440"`);
-        await queryRunner.query(`ALTER TABLE "route_steps" DROP CONSTRAINT "FK_route_steps_route"`);
-        await queryRunner.query(`ALTER TABLE "routes" DROP CONSTRAINT "FK_routes_endLocation"`);
-        await queryRunner.query(`ALTER TABLE "routes" DROP CONSTRAINT "FK_routes_startLocation"`);
-        await queryRunner.query(`ALTER TABLE "landmarks" DROP CONSTRAINT "FK_landmarks_location"`);
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop foreign keys first
+    await queryRunner.query(
+      `ALTER TABLE "route_segments_mapping" DROP CONSTRAINT "FK_5e943f0c65951bc8e0345148450"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "route_segments_mapping" DROP CONSTRAINT "FK_f8ca36ab4f63168d833775eab36"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "location_shares" DROP CONSTRAINT "FK_7c78036b9fc4ff08477e5b9c61a"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "route_segments" DROP CONSTRAINT "FK_a586ad7688ea83602253e943832"`,
+    );
+    await queryRunner.query(
+      `ALTER TABLE "route_segments" DROP CONSTRAINT "FK_42f5eb5528f60d8e703fc803440"`,
+    );
+    await queryRunner.query(`ALTER TABLE "route_steps" DROP CONSTRAINT "FK_route_steps_route"`);
+    await queryRunner.query(`ALTER TABLE "routes" DROP CONSTRAINT "FK_routes_endLocation"`);
+    await queryRunner.query(`ALTER TABLE "routes" DROP CONSTRAINT "FK_routes_startLocation"`);
+    await queryRunner.query(`ALTER TABLE "landmarks" DROP CONSTRAINT "FK_landmarks_location"`);
 
-        // Drop tables
-        await queryRunner.query(`DROP TABLE "route_segments_mapping"`);
-        await queryRunner.query(`DROP TABLE "location_shares"`);
-        await queryRunner.query(`DROP TYPE "public"."location_shares_status_enum"`);
-        await queryRunner.query(`DROP TYPE "public"."location_shares_sharetype_enum"`);
-        await queryRunner.query(`DROP TABLE "route_segments"`);
-        await queryRunner.query(`DROP TABLE "route_steps"`);
-        await queryRunner.query(`DROP TABLE "routes"`);
-        await queryRunner.query(`DROP TABLE "landmarks"`);
-        await queryRunner.query(`DROP TABLE "locations"`);
-        await queryRunner.query(`DROP TABLE "users"`);
-        await queryRunner.query(`DROP TYPE "public"."users_authprovider_enum"`);
-    }
+    // Drop tables
+    await queryRunner.query(`DROP TABLE "route_segments_mapping"`);
+    await queryRunner.query(`DROP TABLE "location_shares"`);
+    await queryRunner.query(`DROP TYPE "public"."location_shares_status_enum"`);
+    await queryRunner.query(`DROP TYPE "public"."location_shares_sharetype_enum"`);
+    await queryRunner.query(`DROP TABLE "route_segments"`);
+    await queryRunner.query(`DROP TABLE "route_steps"`);
+    await queryRunner.query(`DROP TABLE "routes"`);
+    await queryRunner.query(`DROP TABLE "landmarks"`);
+    await queryRunner.query(`DROP TABLE "locations"`);
+    await queryRunner.query(`DROP TABLE "users"`);
+    await queryRunner.query(`DROP TYPE "public"."users_authprovider_enum"`);
+  }
 }

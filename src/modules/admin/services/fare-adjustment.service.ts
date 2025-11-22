@@ -92,9 +92,10 @@ export class FareAdjustmentService {
         await this.createFareHistory(route.id, null, {
           minFare: route.minFare ? Number(route.minFare) : 0,
           maxFare: route.maxFare ? Number(route.maxFare) : 0,
-          avgFare: route.minFare && route.maxFare
-            ? (Number(route.minFare) + Number(route.maxFare)) / 2
-            : 0,
+          avgFare:
+            route.minFare && route.maxFare
+              ? (Number(route.minFare) + Number(route.maxFare)) / 2
+              : 0,
           transportMode: route.transportModes[0] || 'bus',
           createdBy: adminUserId,
           metadata: {
@@ -104,9 +105,8 @@ export class FareAdjustmentService {
           },
         });
 
-        oldTotalFare += route.minFare && route.maxFare
-          ? (Number(route.minFare) + Number(route.maxFare)) / 2
-          : 0;
+        oldTotalFare +=
+          route.minFare && route.maxFare ? (Number(route.minFare) + Number(route.maxFare)) / 2 : 0;
 
         // Update fares
         if (route.minFare) {
@@ -118,9 +118,8 @@ export class FareAdjustmentService {
 
         await queryRunner.manager.save(route);
 
-        newTotalFare += route.minFare && route.maxFare
-          ? (Number(route.minFare) + Number(route.maxFare)) / 2
-          : 0;
+        newTotalFare +=
+          route.minFare && route.maxFare ? (Number(route.minFare) + Number(route.maxFare)) / 2 : 0;
 
         routesUpdated++;
       }
@@ -209,11 +208,7 @@ export class FareAdjustmentService {
   /**
    * Preview fare adjustment without applying it
    */
-  async previewFareAdjustment(
-    adjustmentPercentage: number,
-    city?: string,
-    transportMode?: string,
-  ) {
+  async previewFareAdjustment(adjustmentPercentage: number, city?: string, transportMode?: string) {
     const multiplier = 1 + adjustmentPercentage / 100;
 
     const routeQuery = this.routeRepository.createQueryBuilder('route');
@@ -236,9 +231,10 @@ export class FareAdjustmentService {
       currentMaxFare: route.maxFare,
       newMinFare: route.minFare ? Math.round(Number(route.minFare) * multiplier) : null,
       newMaxFare: route.maxFare ? Math.round(Number(route.maxFare) * multiplier) : null,
-      difference: route.minFare && route.maxFare
-        ? Math.round(((Number(route.minFare) + Number(route.maxFare)) / 2) * (multiplier - 1))
-        : 0,
+      difference:
+        route.minFare && route.maxFare
+          ? Math.round(((Number(route.minFare) + Number(route.maxFare)) / 2) * (multiplier - 1))
+          : 0,
     }));
 
     return {

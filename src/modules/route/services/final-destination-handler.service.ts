@@ -300,7 +300,7 @@ After dropping on the main road${landmarkText}:
 4. They'll take you directly to ${destination}
 
 **Why This Is Better:**
-- Saves ${Math.round(distance / 1000 * 12)} minutes of walking
+- Saves ${Math.round((distance / 1000) * 12)} minutes of walking
 - No need to navigate streets yourself
 - Comfortable, especially if carrying bags
 

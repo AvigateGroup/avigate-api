@@ -116,12 +116,11 @@ export class RouteMatchingService {
     }
 
     // Step 3: Check intermediate stops
-    const intermediateResult =
-      await this.intermediateStopHandler.findSegmentContainingDestination(
-        endLat,
-        endLng,
-        endLocationName,
-      );
+    const intermediateResult = await this.intermediateStopHandler.findSegmentContainingDestination(
+      endLat,
+      endLng,
+      endLocationName,
+    );
 
     if (intermediateResult?.isOnRoute) {
       result.hasIntermediateStop = true;
@@ -248,11 +247,9 @@ export class RouteMatchingService {
             (routeToSegmentStart?.duration || 0) +
             (finalDestInfo.walkingDirections?.duration || 0),
           minFare:
-            (segment.minFare ? Number(segment.minFare) : 0) +
-            (routeToSegmentStart?.minFare || 0),
+            (segment.minFare ? Number(segment.minFare) : 0) + (routeToSegmentStart?.minFare || 0),
           maxFare:
-            (segment.maxFare ? Number(segment.maxFare) : 0) +
-            (routeToSegmentStart?.maxFare || 0),
+            (segment.maxFare ? Number(segment.maxFare) : 0) + (routeToSegmentStart?.maxFare || 0),
           steps: [
             ...(routeToSegmentStart?.steps || []),
             {
@@ -326,7 +323,12 @@ export class RouteMatchingService {
       if (
         distanceToStart / 1000 < radiusKm ||
         distanceToEnd / 1000 < radiusKm ||
-        this.isPointNearLine({ lat, lng }, { lat: startLat, lng: startLng }, { lat: endLat, lng: endLng }, radiusKm)
+        this.isPointNearLine(
+          { lat, lng },
+          { lat: startLat, lng: startLng },
+          { lat: endLat, lng: endLng },
+          radiusKm,
+        )
       ) {
         nearbySegments.push(segment);
       }
@@ -347,10 +349,12 @@ export class RouteMatchingService {
     // Simplified check - you can use the one from IntermediateStopHandlerService
     const distanceToStart = this.geofencingService.calculateDistance(point, lineStart) / 1000;
     const distanceToEnd = this.geofencingService.calculateDistance(point, lineEnd) / 1000;
-    const lineLength =
-      this.geofencingService.calculateDistance(lineStart, lineEnd) / 1000;
+    const lineLength = this.geofencingService.calculateDistance(lineStart, lineEnd) / 1000;
 
-    return distanceToStart + distanceToEnd <= lineLength * 1.2 && Math.min(distanceToStart, distanceToEnd) <= toleranceKm;
+    return (
+      distanceToStart + distanceToEnd <= lineLength * 1.2 &&
+      Math.min(distanceToStart, distanceToEnd) <= toleranceKm
+    );
   }
 
   /**

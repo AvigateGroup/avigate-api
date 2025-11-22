@@ -31,7 +31,7 @@ async function bootstrap() {
 
   // Build allowed origins from environment variables
   const localNetworkIp = configService.get('LOCAL_NETWORK_IP');
-  
+
   const allowedOrigins = [
     configService.get('FRONTEND_URL'),
     configService.get('ADMIN_FRONTEND_URL'),
@@ -46,10 +46,7 @@ async function bootstrap() {
     'http://localhost:8080',
     'http://127.0.0.1:8080',
     // Add local network IP variants if provided
-    ...(localNetworkIp ? [
-      `http://${localNetworkIp}:8081`,
-      `exp://${localNetworkIp}:8081`,
-    ] : []),
+    ...(localNetworkIp ? [`http://${localNetworkIp}:8081`, `exp://${localNetworkIp}:8081`] : []),
   ].filter(Boolean); // Remove undefined values
 
   app.enableCors({

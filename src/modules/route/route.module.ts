@@ -1,4 +1,4 @@
-// src/modules/route/route.module.ts 
+// src/modules/route/route.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
