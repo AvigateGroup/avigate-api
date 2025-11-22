@@ -10,17 +10,17 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
-import { RolesGuard } from '@/common/guards/roles.guard';
-import { Roles } from '@/common/decorators/roles.decorator';
-import { CurrentUser } from '@/common/decorators/current-user.decorator';
-import { User } from '../user/entities/user.entity';
-import { FareAdjustmentService } from './services/fare-adjustment.service';
-import { ContributionManagementService } from './services/contribution-management.service';
+import { AdminAuthGuard } from '@/common/guards/admin-auth.guard';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { RequirePermissions } from '@/common/decorators/permissions.decorator';
+import { CurrentAdmin } from '@/common/decorators/current-admin.decorator';
+import { Admin } from '../entities/admin.entity';
+import { FareAdjustmentService } from '../services/fare-adjustment.service';
+import { ContributionManagementService } from '../services/contribution-management.service';
 
 @ApiTags('admin')
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(AdminAuthGuard, PermissionsGuard)
 @ApiBearerAuth()
 export class AdminController {
   constructor(
@@ -33,14 +33,14 @@ export class AdminController {
   // ============================================
 
   @Post('fares/adjust')
-  @Roles('admin', 'super_admin')
+  @RequirePermissions('fares.edit')
   @ApiOperation({
     summary: 'Adjust all fares by percentage (admin only)',
     description:
       'Increase or decrease all fares in the system by a percentage. Used for inflation adjustments, fuel price changes, etc.',
   })
   async adjustAllFares(
-    @CurrentUser() user: User,
+    @CurrentAdmin() admin: Admin,
     @Body()
     body: {
       adjustmentPercentage: number;
@@ -50,7 +50,7 @@ export class AdminController {
     },
   ) {
     return this.fareAdjustmentService.adjustAllFares(
-      user.id,
+      admin.id,
       body.adjustmentPercentage,
       body.reason,
       body.city,
@@ -59,7 +59,7 @@ export class AdminController {
   }
 
   @Post('fares/preview-adjustment')
-  @Roles('admin', 'super_admin')
+  @RequirePermissions('fares.view')
   @ApiOperation({
     summary: 'Preview fare adjustment without applying',
     description: 'See what the fares would be after adjustment without actually changing them',
@@ -80,7 +80,7 @@ export class AdminController {
   }
 
   @Get('fares/adjustment-history')
-  @Roles('admin', 'super_admin')
+  @RequirePermissions('fares.view')
   @ApiOperation({ summary: 'Get fare adjustment history' })
   async getFareAdjustmentHistory(@Query('limit') limit?: number) {
     return this.fareAdjustmentService.getFareAdjustmentHistory(limit);
@@ -91,20 +91,20 @@ export class AdminController {
   // ============================================
 
   @Get('contributions/pending')
-  @Roles('admin', 'super_admin', 'moderator')
+  @RequirePermissions('contributions.view')
   @ApiOperation({ summary: 'Get pending contributions for review' })
   async getPendingContributions(@Query('limit') limit?: number) {
     return this.contributionManagementService.getPendingContributions(limit);
   }
 
   @Patch('contributions/:contributionId/review')
-  @Roles('admin', 'super_admin', 'moderator')
+  @RequirePermissions('contributions.review')
   @ApiOperation({
     summary: 'Review a contribution',
     description: 'Approve, reject, or request changes on a user contribution',
   })
   async reviewContribution(
-    @CurrentUser() user: User,
+    @CurrentAdmin() admin: Admin,
     @Param('contributionId') contributionId: string,
     @Body()
     body: {
@@ -114,40 +114,40 @@ export class AdminController {
   ) {
     return this.contributionManagementService.reviewContribution(
       contributionId,
-      user.id,
+      admin.id,
       body.action,
       body.reviewNotes,
     );
   }
 
   @Post('contributions/:contributionId/implement')
-  @Roles('admin', 'super_admin')
+  @RequirePermissions('contributions.implement')
   @ApiOperation({
     summary: 'Implement an approved contribution',
     description:
       'Apply an approved contribution to the live system (routes, segments, fares, etc.)',
   })
   async implementContribution(
-    @CurrentUser() user: User,
+    @CurrentAdmin() admin: Admin,
     @Param('contributionId') contributionId: string,
   ) {
-    return this.contributionManagementService.implementContribution(contributionId, user.id);
+    return this.contributionManagementService.implementContribution(contributionId, admin.id);
   }
 
   @Patch('contributions/:contributionId/edit')
-  @Roles('admin', 'super_admin', 'moderator')
+  @RequirePermissions('contributions.edit')
   @ApiOperation({
     summary: 'Edit a contribution before approval',
     description: 'Admin can edit contribution details before approving',
   })
   async editContribution(
-    @CurrentUser() user: User,
+    @CurrentAdmin() admin: Admin,
     @Param('contributionId') contributionId: string,
     @Body() updates: any,
   ) {
     return this.contributionManagementService.editContribution(
       contributionId,
-      user.id,
+      admin.id,
       updates,
     );
   }
