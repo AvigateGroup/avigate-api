@@ -11,6 +11,7 @@ import { AdminAuthController } from './controllers/admin-auth.controller';
 import { AdminManagementController } from './controllers/admin-management.controller';
 import { UserManagementController } from './controllers/user-management.controller';
 import { AnalyticsController } from './controllers/analytics.controller';
+import { AdminController } from './controllers/admin.controller';
 
 // Services - Auth & Security
 import { AdminAuthService } from './services/admin-auth.service';
@@ -26,25 +27,62 @@ import { AdminSessionService } from './services/admin-session.service';
 import { AdminSessionManagerService } from './services/admin-session-manager.service';
 import { AdminSessionCleanupService } from './services/admin-session-cleanup.service';
 
-// Services - Analytics
+// Services - Analytics & Fare Management
 import { AnalyticsService } from './services/analytics.service';
+import { FareAdjustmentService } from './services/fare-adjustment.service';
+import { ContributionManagementService } from './services/contribution-management.service';
 
 // Strategies
 import { AdminJwtStrategy } from './strategies/admin-jwt.strategy';
 
-// Entities
+// Entities - Admin
 import { Admin } from './entities/admin.entity';
 import { AdminSession } from './entities/admin-session.entity';
+
+// Entities - User
 import { User } from '../user/entities/user.entity';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { UserOTP } from '../user/entities/user-otp.entity';
 
+// Entities - Route & Location
+import { Route } from '../route/entities/route.entity';
+import { RouteSegment } from '../route/entities/route-segment.entity';
+import { RouteStep } from '../route/entities/route-step.entity';
+import { Location } from '../location/entities/location.entity';
+
+// Entities - Fare
+import { FareHistory } from '../fare/entities/fare-history.entity';
+import { FareRule } from '../fare/entities/fare-rule.entity';
+
+// Entities - Community
+import { RouteContribution } from '../community/entities/route-contribution.entity';
+
 // Modules
 import { EmailModule } from '../email/email.module';
+import { ReputationModule } from '../reputation/reputation.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Admin, AdminSession, User, UserDevice, UserOTP]),
+    TypeOrmModule.forFeature([
+      // Admin entities
+      Admin,
+      AdminSession,
+      // User entities
+      User,
+      UserDevice,
+      UserOTP,
+      // Route & Location entities
+      Route,
+      RouteSegment,
+      RouteStep,
+      Location,
+      // Fare entities
+      FareHistory,
+      FareRule,
+      // Community entities
+      RouteContribution,
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -57,12 +95,15 @@ import { EmailModule } from '../email/email.module';
     }),
     ScheduleModule.forRoot(), // For session cleanup cron job
     EmailModule,
+    ReputationModule,
+    NotificationsModule,
   ],
   controllers: [
     AdminAuthController,
     AdminManagementController,
     UserManagementController,
     AnalyticsController,
+    AdminController,
   ],
   providers: [
     // Auth & Strategy
@@ -84,6 +125,10 @@ import { EmailModule } from '../email/email.module';
 
     // Analytics
     AnalyticsService,
+
+    // Fare & Contribution Management
+    FareAdjustmentService,
+    ContributionManagementService,
   ],
   exports: [
     AdminAuthService,
@@ -92,6 +137,8 @@ import { EmailModule } from '../email/email.module';
     AdminSessionManagerService,
     AdminCrudService,
     AdminPermissionService,
+    FareAdjustmentService,
+    ContributionManagementService,
   ],
 })
 export class AdminModule {}
