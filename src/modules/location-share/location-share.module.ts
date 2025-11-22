@@ -10,7 +10,7 @@ import { User } from '../user/entities/user.entity';
 import { RouteModule } from '../route/route.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailModule } from '../email/email.module';
-import { UploadModule } from '../upload/upload.module'; // ADDED: Missing module import
+import { UploadModule } from '../upload/upload.module'; 
 
 @Module({
   imports: [
