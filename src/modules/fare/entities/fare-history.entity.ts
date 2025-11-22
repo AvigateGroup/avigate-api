@@ -11,7 +11,7 @@ export class FareHistory {
   routeId: string;
 
   @Column('uuid', { nullable: true })
-  routeStepId: string;
+  routeStepId: string | null; 
 
   @Column('decimal', { precision: 10, scale: 2 })
   minFare: number;
@@ -30,10 +30,10 @@ export class FareHistory {
   effectiveDate: Date;
 
   @Column('uuid', { nullable: true })
-  createdBy: string;
+  createdBy: string | null;  
 
   @Column({ type: 'jsonb', nullable: true })
-  metadata: Record<string, any>;
+  metadata: Record<string, any> | null;  
 
   @CreateDateColumn()
   createdAt: Date;
