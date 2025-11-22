@@ -9,7 +9,7 @@ import { FareHistory } from '../../fare/entities/fare-history.entity';
 import { FareRule } from '../../fare/entities/fare-rule.entity';
 import { logger } from '@/utils/logger.util';
 
-interface FareAdjustmentResult {
+export interface FareAdjustmentResult {
   routesUpdated: number;
   segmentsUpdated: number;
   stepsUpdated: number;
