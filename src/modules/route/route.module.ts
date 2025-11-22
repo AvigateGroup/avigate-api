@@ -1,4 +1,4 @@
-// src/modules/route/route.module.ts
+// src/modules/route/route.module.ts 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
@@ -12,6 +12,7 @@ import { RouteMatchingService } from './services/route-matching.service';
 import { IntelligentRouteService } from './services/intelligent-route.service';
 import { IntermediateStopHandlerService } from './services/intermediate-stop-handler.service';
 import { SmartStopMatchingService } from './services/smart-stop-matching.service';
+import { FinalDestinationHandlerService } from './services/final-destination-handler.service';
 import { TripGateway } from './gateways/trip.gateway';
 import { Route } from './entities/route.entity';
 import { RouteStep } from './entities/route-step.entity';
@@ -42,6 +43,7 @@ import { EmailModule } from '../email/email.module';
     IntelligentRouteService,
     IntermediateStopHandlerService,
     SmartStopMatchingService,
+    FinalDestinationHandlerService,
     TripGateway,
   ],
   exports: [
@@ -53,6 +55,7 @@ import { EmailModule } from '../email/email.module';
     IntelligentRouteService,
     IntermediateStopHandlerService,
     SmartStopMatchingService,
+    FinalDestinationHandlerService,
   ],
 })
 export class RouteModule {}
