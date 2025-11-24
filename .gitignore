@@ -14,7 +14,6 @@ coverage/
 .idea/
 *.swp
 *.swo
-scripts/
 # Firebase
 firebase-service-account.json
 *firebase-adminsdk*.json
