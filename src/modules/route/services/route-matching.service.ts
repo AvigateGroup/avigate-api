@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { Location } from '../../location/entities/location.entity';
 import { Route } from '../entities/route.entity';
 import { RouteSegment } from '../entities/route-segment.entity';
+import { Landmark } from '../../location/entities/landmark.entity';
 import { GoogleMapsService } from './google-maps.service';
 import { GeofencingService } from './geofencing.service';
 import { IntermediateStopHandlerService } from './intermediate-stop-handler.service';
@@ -44,6 +45,8 @@ export class RouteMatchingService {
     private routeRepository: Repository<Route>,
     @InjectRepository(RouteSegment)
     private segmentRepository: Repository<RouteSegment>,
+    @InjectRepository(Landmark)
+    private landmarkRepository: Repository<Landmark>,
     private googleMapsService: GoogleMapsService,
     private geofencingService: GeofencingService,
     private intermediateStopHandler: IntermediateStopHandlerService,
@@ -399,6 +402,258 @@ export class RouteMatchingService {
 **Your Drop-Off Point: ${dropOffName}**
 Tell the driver to stop at ${dropOffName}. This is where you'll walk from to reach your final destination.`;
   }
+
+
+/**
+ * ENHANCED: Handle street-level destinations
+ * Example: Hotel on Kala Street from Choba
+ */
+async findRouteWithStreetLevelGuidance(
+  startLat: number,
+  startLng: number,
+  endLat: number,
+  endLng: number,
+  endLocationName: string,
+): Promise<EnhancedRouteResult> {
+  logger.info('Finding route with street-level guidance', {
+    destination: endLocationName,
+  });
+
+  // 1. Get address details from Google
+  const endAddress = await this.googleMapsService.reverseGeocode(endLat, endLng);
+  const streetInfo = this.extractStreetInfo(endAddress);
+
+  // 2. Find nearest major stop on main road
+  const nearestMainRoadStop = await this.findNearestMainRoadStop(endLat, endLng);
+
+  if (!nearestMainRoadStop) {
+    return this.findEnhancedRoutes(startLat, startLng, endLat, endLng, endLocationName);
+  }
+
+  // 3. Get route to main road stop
+  const routeToMainRoad = await this.findEnhancedRoutes(
+    startLat,
+    startLng,
+    nearestMainRoadStop.lat,
+    nearestMainRoadStop.lng,
+    nearestMainRoadStop.name,
+  );
+
+  if (!routeToMainRoad.routes.length) {
+    return routeToMainRoad;
+  }
+
+  // 4. Calculate distance from main road to destination
+  const distanceToDestination = this.geofencingService.calculateDistance(
+    { lat: nearestMainRoadStop.lat, lng: nearestMainRoadStop.lng },
+    { lat: endLat, lng: endLng },
+  );
+
+  // 5. Get walking directions
+  const walkingDirections = await this.googleMapsService.getDirections(
+    { lat: nearestMainRoadStop.lat, lng: nearestMainRoadStop.lng },
+    { lat: endLat, lng: endLng },
+    'walking',
+  );
+
+  // 6. Find nearest landmark for drop-off guidance
+  const dropOffLandmark = await this.findNearestLandmark(
+    nearestMainRoadStop.lat,
+    nearestMainRoadStop.lng,
+  );
+
+  // 7. Build street-level instructions
+  const streetInstructions = this.buildStreetLevelInstructions(
+    nearestMainRoadStop.name,
+    endLocationName,
+    streetInfo,
+    distanceToDestination,
+    walkingDirections,
+    dropOffLandmark,
+  );
+
+  // 8. Enhance first route with street guidance
+  const enhancedRoute = routeToMainRoad.routes[0];
+  enhancedRoute.steps.push({
+    order: enhancedRoute.steps.length + 1,
+    fromLocation: nearestMainRoadStop.name,
+    toLocation: endLocationName,
+    transportMode: distanceToDestination > 500 ? 'keke/okada' : 'walk',
+    instructions: streetInstructions,
+    duration: distanceToDestination > 500 ? 5 : Math.round(walkingDirections.duration),
+    distance: distanceToDestination / 1000,
+    estimatedFare: distanceToDestination > 500 ? 200 : 0,
+    walkingDirections: walkingDirections,
+    alternativeTransport: distanceToDestination > 200 ? {
+      type: 'okada' as const,
+      estimatedFare: Math.min(200, Math.max(100, Math.round(distanceToDestination / 10))),
+      instructions: `At ${nearestMainRoadStop.name}, look for okada or keke riders. Tell them: "Take me go ${endLocationName} for ${streetInfo.street}"`,
+    } : undefined,
+  });
+
+  return {
+    hasDirectRoute: false,
+    hasIntermediateStop: false,
+    requiresWalking: distanceToDestination <= 500,
+    routes: [enhancedRoute],
+  };
+}
+
+/**
+ * Extract street information from address
+ */
+private extractStreetInfo(address: string | null): { street?: string; area?: string } {
+  if (!address) return {};
+
+  const parts = address.split(',').map(p => p.trim());
+  
+  return {
+    street: parts[0], // "Kala Street"
+    area: parts[1],   // "Rumuobiakani"
+  };
+}
+
+/**
+ * Find nearest major stop on main road
+ */
+private async findNearestMainRoadStop(
+  lat: number,
+  lng: number,
+): Promise<{ name: string; lat: number; lng: number; locationId: string } | null> {
+  // Find locations on major roads (Ikwerre Road, East-West Road)
+  const majorStops = await this.locationRepository
+    .createQueryBuilder('location')
+    .where('location.isActive = :isActive', { isActive: true })
+    .andWhere('location.isVerified = :isVerified', { isVerified: true })
+    .andWhere(
+      `location.description ILIKE '%major%' 
+       OR location.description ILIKE '%junction%'
+       OR location.description ILIKE '%roundabout%'`,
+    )
+    .getMany();
+
+  let nearest: typeof majorStops[0] | null = null;
+  let minDistance = Infinity;
+
+  for (const stop of majorStops) {
+    const distance = this.geofencingService.calculateDistance(
+      { lat, lng },
+      { lat: Number(stop.latitude), lng: Number(stop.longitude) },
+    );
+
+    if (distance < minDistance && distance < 2000) { // Within 2km
+      minDistance = distance;
+      nearest = stop;
+    }
+  }
+
+  if (!nearest) return null;
+
+  return {
+    name: nearest.name,
+    lat: Number(nearest.latitude),
+    lng: Number(nearest.longitude),
+    locationId: nearest.id,
+  };
+}
+
+/**
+ * Find nearest landmark to help with drop-off
+ */
+private async findNearestLandmark(
+  lat: number,
+  lng: number,
+): Promise<string | null> {
+  const landmarks = await this.landmarkRepository
+    .createQueryBuilder('landmark')
+    .where('landmark.isVerified = :isVerified', { isVerified: true })
+    .andWhere(
+      `(6371000 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude)))) < 200`,
+      { lat, lng },
+    )
+    .orderBy(
+      `(6371000 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude))))`,
+    )
+    .limit(1)
+    .getOne();
+
+  return landmarks?.name || null;
+}
+
+/**
+ * Build street-level instructions
+ */
+private buildStreetLevelInstructions(
+  mainRoadStop: string,
+  destination: string,
+  streetInfo: { street?: string; area?: string },
+  distance: number,
+  walkingDirections: any,
+  landmark: string | null,
+): string {
+  const distanceM = Math.round(distance);
+  const walkingMin = Math.round(walkingDirections.duration);
+  const landmarkText = landmark ? ` after ${landmark}` : '';
+
+  if (distance <= 200) {
+    // Very close - just walk
+    return `
+**Final Step: Walk to ${destination}**
+
+Drop off at ${mainRoadStop}${landmarkText}, then ${destination} is just ${distanceM}m away!
+
+**At ${mainRoadStop}:**
+1. Tell driver: "Driver, stop${landmarkText}!"
+2. Pay your fare
+3. ${destination} is visible from here
+
+**Walking:**
+- Distance: ${distanceM}m (about ${walkingMin} minutes)
+- Tap "Walk" button for turn-by-turn directions
+    `.trim();
+  } else if (distance <= 500) {
+    // Short walk possible
+    return `
+**Final Step: Walk to ${destination}**
+
+Drop off at ${mainRoadStop}${landmarkText}, then walk ${distanceM}m to ${destination} (about ${walkingMin} minutes).
+
+**At ${mainRoadStop}:**
+1. Tell driver: "Driver, stop${landmarkText}!"
+2. Pay your fare
+3. Cross to ${streetInfo.street ? `${streetInfo.street}` : 'the side street'}
+
+**Walking Directions:**
+${walkingDirections.steps.map((s: any, i: number) => `${i + 1}. ${s.instruction} (${Math.round(s.distance * 1000)}m)`).join('\n')}
+
+**Tip:** Tap "Walk" button for live navigation, or ask locals: "Where ${destination} dey?"
+    `.trim();
+  } else {
+    // Need keke/okada
+    return `
+**Final Step: Use Keke/Okada to ${destination}**
+
+Drop off at ${mainRoadStop}${landmarkText}, then use local transport to reach ${destination}.
+
+**At ${mainRoadStop}:**
+1. Tell driver: "Driver, stop${landmarkText}!"
+2. Pay your fare
+3. Look for keke or okada riders
+
+**Tell Them:**
+"Take me go ${destination}${streetInfo.street ? ` for ${streetInfo.street}` : ''}"
+
+**Fare:** About ₦${Math.min(200, Math.max(100, Math.round(distance / 10)))}
+**Distance:** ${distanceM}m (too far to walk comfortably)
+
+**Alternative - Walk:**
+If no keke/okada available, you can walk (${walkingMin} minutes):
+${walkingDirections.steps.slice(0, 3).map((s: any, i: number) => `${i + 1}. ${s.instruction}`).join('\n')}
+
+Tap "Walk" button for complete directions.
+    `.trim();
+  }
+}
 
   /**
    * Find nearest location (existing method)
