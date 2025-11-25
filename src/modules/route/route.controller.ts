@@ -252,6 +252,67 @@ export class RouteController {
     };
   }
 
+  @Post('search/street-level')
+  @ApiOperation({ summary: 'Find route with street-level guidance for off-road destinations' })
+  async streetLevelSearch(@Body() dto: SmartRouteSearchDto) {
+    let startLat: number, startLng: number, endLat: number, endLng: number;
+
+    // Geocode start if address provided
+    if (dto.startAddress) {
+      const coords = await this.routeMatchingService.geocodeAddress(dto.startAddress);
+      if (!coords) {
+        return {
+          success: false,
+          message: 'Could not find start location',
+        };
+      }
+      startLat = coords.lat;
+      startLng = coords.lng;
+    } else if (dto.startLat !== undefined && dto.startLng !== undefined) {
+      startLat = dto.startLat;
+      startLng = dto.startLng;
+    } else {
+      return {
+        success: false,
+        message: 'Start location is required (either address or coordinates)',
+      };
+    }
+
+    // Geocode end if address provided
+    if (dto.endAddress) {
+      const coords = await this.routeMatchingService.geocodeAddress(dto.endAddress);
+      if (!coords) {
+        return {
+          success: false,
+          message: 'Could not find end location',
+        };
+      }
+      endLat = coords.lat;
+      endLng = coords.lng;
+    } else if (dto.endLat !== undefined && dto.endLng !== undefined) {
+      endLat = dto.endLat;
+      endLng = dto.endLng;
+    } else {
+      return {
+        success: false,
+        message: 'End location is required (either address or coordinates)',
+      };
+    }
+
+    const result = await this.routeMatchingService.findRouteWithStreetLevelGuidance(
+      startLat,
+      startLng,
+      endLat,
+      endLng,
+      dto.endAddress || 'destination',
+    );
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
   @Get('geocode/reverse')
   @ApiOperation({ summary: 'Reverse geocode coordinates' })
   async reverseGeocode(@Query('lat') lat: number, @Query('lng') lng: number) {
