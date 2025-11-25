@@ -36,6 +36,33 @@ export interface EnhancedRouteResult {
   }>;
 }
 
+export interface EnhancedRouteStep {
+  order: number;
+  fromLocation: string;
+  toLocation: string;
+  transportMode: 'bus' | 'taxi' | 'keke' | 'okada' | 'walk';
+  instructions: string;
+  duration: number;
+  distance: number;
+  estimatedFare?: number;
+  dataAvailability?: {
+    hasVehicleData: boolean;
+    confidence: 'high' | 'medium' | 'low';
+    reason: string;
+  };
+  walkingDirections?: any;
+  alternativeOptions?: {
+    askLocals: boolean;
+    localPhrases: string[];
+    walkable: boolean;
+  };
+  alternativeTransport?: {
+    type: 'keke' | 'okada';
+    estimatedFare: number;
+    instructions: string;
+  };
+}
+
 @Injectable()
 export class RouteMatchingService {
   constructor(
@@ -758,7 +785,7 @@ private async findRouteWithWalking(
         endLat,
         endLng,
         endLocationName || 'your destination',
-        dropOffPoint.landmark,
+        dropOffPoint.landmark || undefined, // FIX: Convert null to undefined
       );
 
       const routeToSegmentStart = startLocation
@@ -772,7 +799,7 @@ private async findRouteWithWalking(
       // Build enhanced instructions
       const enhancedInstructions = this.generateEnhancedLastMileInstructions(
         dropOffPoint.dropOffName,
-        dropOffPoint.landmarkBefore,
+        dropOffPoint.landmark || undefined, // FIX: Convert null to undefined for landmarkBefore
         endLocationName || 'your destination',
         streetInfo,
         walkingDistance,
@@ -858,7 +885,7 @@ private buildStreetLevelInstructions(
   // Use the enhanced version
   return this.generateEnhancedLastMileInstructions(
     mainRoadStop,
-    landmark,
+    landmark || undefined, // FIX: Convert null to undefined
     destination,
     streetInfo,
     distance,
