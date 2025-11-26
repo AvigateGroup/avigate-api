@@ -56,6 +56,20 @@ export class Route {
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   maxFare: number;
 
+   @Column({ default: false })
+  requiresTransfer: boolean;
+
+  @Column('jsonb', { nullable: true })
+  transferPoints: Array<{
+    locationName: string;
+    locationId: string;
+    order: number;
+    instructions: string;
+    estimatedWaitTime: number; // minutes
+    minFare: number;
+    maxFare: number;
+  }>;
+
   @Column({ default: 0 })
   popularityScore: number;
 

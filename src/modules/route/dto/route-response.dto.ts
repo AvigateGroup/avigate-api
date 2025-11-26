@@ -58,6 +58,8 @@ export interface EnhancedRoute {
   maxFare?: number;
   steps: EnhancedRouteStep[];
   confidence: number;
+  requiresTransfer: boolean;
+  transferPoints?: TransferPoint[];
   requiresWalking?: boolean;
   finalDestinationInfo?: {
     needsWalking: boolean;
@@ -65,4 +67,13 @@ export interface EnhancedRoute {
     walkingDirections?: WalkingDirections;
     alternativeTransport?: AlternativeTransport;
   };
+}
+export interface TransferPoint {
+  locationName: string;
+  locationId: string;
+  order: number;
+  instructions: string;
+  estimatedWaitTime: number; 
+  minFare: number;
+  maxFare: number;
 }
