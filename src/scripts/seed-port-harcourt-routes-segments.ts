@@ -29,9 +29,9 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
       name: 'University of Port Harcourt Main Gate',
       city: 'Port Harcourt',
       state: 'Rivers',
-      country: 'Nigeria',
-      latitude: 4.902556,
-      longitude: 6.918031,
+      country: 'Nigeria',  
+      latitude: 4.895036935402522,
+      longitude: 6.915045049222631,
       description: 'Main entrance of UNIPORT',
       isVerified: true,
     },
@@ -40,8 +40,8 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
       city: 'Port Harcourt',
       state: 'Rivers',
       country: 'Nigeria',
-      latitude: 4.902222,
-      longitude: 6.917778,
+      latitude: 4.898616762099182,
+      longitude:  6.906686391996627,
       description: 'Major transport hub near UNIPORT',
       isVerified: true,
     },
@@ -51,8 +51,8 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
       city: 'Port Harcourt',
       state: 'Rivers',
       country: 'Nigeria',
-      latitude: 4.895833,
-      longitude: 6.925556,
+      latitude: 4.887095736260742, 
+      longitude: 6.924384885940838,
       description: 'Residential and commercial area between Choba and Rumuosi',
       isVerified: true,
     },
@@ -61,8 +61,8 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
       city: 'Port Harcourt',
       state: 'Rivers',
       country: 'Nigeria',
-      latitude: 4.883333,
-      longitude: 6.941667,
+      latitude: 4.882583564940999,
+      longitude: 6.940745379336871,
       description: 'Community along Choba-Rumuokoro route with market and churches',
       isVerified: true,
     },
@@ -71,8 +71,8 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
       city: 'Port Harcourt',
       state: 'Rivers',
       country: 'Nigeria',
-      latitude: 4.878056,
-      longitude: 6.951389,
+      latitude: 4.867381532962408,
+      longitude:  6.997523644123555,
       description: 'Residential area between Rumuosi and Nkpolu',
       isVerified: true,
     },
@@ -81,8 +81,8 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
       city: 'Port Harcourt',
       state: 'Rivers',
       country: 'Nigeria',
-      latitude: 4.870556,
-      longitude: 6.963889,
+      latitude: 4.869385926847107, 
+      longitude: 6.98076522489241,
       description: 'Commercial area near Rumuokoro with Twin Towers Hospital',
       isVerified: true,
     },
@@ -342,12 +342,35 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
   // Collect all unique landmarks from all segments
   const allLandmarks = new Map<string, { name: string; lat: number; lng: number }>();
 
+   //Choba to Airforce via Rumuokoro
+
   const segmentsWithLandmarks = [
     {
       landmarks: [
-        { name: 'Domino\'s Pizza Choba', lat: 4.902400, lng: 6.918200 },
-        { name: 'YKC Junction', lat: 4.902100, lng: 6.918500 },
+        { name: 'Market Square Choba Junction', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Every Supermarket, Choba', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Ay Machanic Workshop Choba', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Dking Logistics', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Prestige Motors', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Olobo Premier College', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Life Sanctuary parish redeem church', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Oando Gas Station', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Oando Car Wash', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'AP Filling Station', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Institue of Petroleum Studies Rd', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'University of Port Harcourt', lat: 4.893515671847516, lng: 6.914229954010483 },  
+        { name: 'Domino\'s Pizza Choba', lat: 4.893515671847516, lng: 6.914229954010483 },   
+        { name: 'YKC Junction', lat: 4.89330568908019, lng: 6.914892672141004 }, 
         { name: 'SYNLAB Nigeria', lat: 4.901800, lng: 6.918900 },
+        { name: 'Optimum Sports', lat: 4.901800, lng: 6.918900 },
+        { name: 'Igbogo Rd', lat: 4.901800, lng: 6.918900 },
+        { name: 'Omega-Zero IT Service', lat: 4.901800, lng: 6.918900 },
+        { name: 'SYNLAB Nigeria', lat: 4.901800, lng: 6.918900 },
+        { name: 'Nigerian Flyer Designers Agency', lat: 4.901800, lng: 6.918900 },
+        { name: 'Police Station Road', lat: 4.901800, lng: 6.918900 },
+        { name: 'Choba Divisional Police Station', lat: 4.901800, lng: 6.918900 },
+        { name: 'Helena Haven', lat: 4.901800, lng: 6.918900 },
+        { name: 'Helena Haven', lat: 4.901800, lng: 6.918900 },
         { name: 'GIG Logistics', lat: 4.901500, lng: 6.919200 },
         { name: 'Total Petrol Station Choba', lat: 4.901200, lng: 6.919600 },
         { name: 'Faro Event Center', lat: 4.900800, lng: 6.920100 },
@@ -1004,7 +1027,7 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
 - Vehicles fill up before leaving (5 passengers)
 
 **Alternative - Continue from Choba:**
-If you stayed on the Airforce vehicle from Choba/Rumuokoro:
+If you stayed on the Airforce vehicle from Rumuokoro:
 - Stay in the vehicle
 - No need to drop at Eliozu
 - Direct to Airforce Junction
@@ -1456,30 +1479,101 @@ If you stayed on the Airforce vehicle from Choba/Rumuokoro:
   // ============================================
   console.log('🗺️  Creating Complete Routes...\n');
 
-  const routes = [
-    {
-      name: 'Choba to Airforce via Rumuokoro and Eliozu',
-      startLocation: 'Choba Junction',
-      endLocation: 'Airforce Junction',
-      description: 'Popular route from UNIPORT area to Airforce Base via Rumuokoro and Eliozu',
-      segments: [
-        'Choba to Rumuokoro Direct',
-        'Rumuokoro to Eliozu Junction',
-        'Eliozu to Airforce Junction',
-      ],
-      transportModes: ['taxi', 'bus'],
-    },
-    {
-      name: 'Rumuokoro to Mile 1/Education Direct',
-      startLocation: 'Rumuokoro Junction',
-      endLocation: 'Mile 1 Diobu',
-      description: 'Direct bus route from Rumuokoro along Ikwerre Road to Mile 1/Education area, passing through major stops like Mile 5, Mile 4, Mile 3, UST, and Mile 2',
-      segments: [
-        'Rumuokoro to Mile 1/Education (Direct Bus)',
-      ],
-      transportModes: ['bus'],
-    },
-  ];
+  console.log('🗺️  Creating Complete Routes...\n');
+
+const routes = [
+  {
+    name: 'Choba to Airforce via Rumuokoro and Eliozu',
+    startLocation: 'Choba Junction',
+    endLocation: 'Airforce Junction',
+    description: 'Popular route from UNIPORT area to Airforce Base via Rumuokoro and Eliozu',
+    segments: [
+      'Choba to Rumuokoro Direct',
+      'Rumuokoro to Eliozu Junction',
+      'Eliozu to Airforce Junction',
+    ],
+    transportModes: ['taxi', 'bus'],
+  },
+  {
+    name: 'Rumuokoro to Mile 1/Education Direct',
+    startLocation: 'Rumuokoro Junction',
+    endLocation: 'Mile 1 Diobu',
+    description: 'Direct bus route from Rumuokoro along Ikwerre Road to Mile 1/Education area, passing through major stops like Mile 5, Mile 4, Mile 3, UST, and Mile 2',
+    segments: [
+      'Rumuokoro to Mile 1/Education (Direct Bus)',
+    ],
+    transportModes: ['bus'],
+  },
+  // ========================================
+  // NEW: Multi-segment routes requiring transfers
+  // ========================================
+  {
+    name: 'Choba to Mile 4 via Rumuokoro Transfer',
+    startLocation: 'Choba Junction',
+    endLocation: 'Mile 4',
+    description: 'Journey from Choba to Mile 4 requires transfer at Rumuokoro Junction. First vehicle to Rumuokoro, then board Mile 1/Town bus and drop at Mile 4.',
+    segments: [
+      'Choba to Rumuokoro Direct',
+      'Rumuokoro to Mile 1/Education (Direct Bus)', // This segment includes Mile 4 as intermediate stop
+    ],
+    transportModes: ['taxi', 'bus'],
+  },
+  {
+    name: 'Choba to Mile 3 via Rumuokoro Transfer',
+    startLocation: 'Choba Junction',
+    endLocation: 'Mile 3',
+    description: 'Journey from Choba to Mile 3 requires transfer at Rumuokoro Junction. First vehicle to Rumuokoro, then board Mile 1/Town bus and drop at Mile 3.',
+    segments: [
+      'Choba to Rumuokoro Direct',
+      'Rumuokoro to Mile 1/Education (Direct Bus)',
+    ],
+    transportModes: ['taxi', 'bus'],
+  },
+  {
+    name: 'Choba to UST Roundabout via Rumuokoro Transfer',
+    startLocation: 'Choba Junction',
+    endLocation: 'UST Roundabout',
+    description: 'Journey from Choba to UST requires transfer at Rumuokoro Junction. First vehicle to Rumuokoro, then board Mile 1/Town bus and drop at UST.',
+    segments: [
+      'Choba to Rumuokoro Direct',
+      'Rumuokoro to Mile 1/Education (Direct Bus)',
+    ],
+    transportModes: ['taxi', 'bus'],
+  },
+  {
+    name: 'Choba to Mile 2 Diobu via Rumuokoro Transfer',
+    startLocation: 'Choba Junction',
+    endLocation: 'Mile 2 Diobu',
+    description: 'Journey from Choba to Mile 2 requires transfer at Rumuokoro Junction. First vehicle to Rumuokoro, then board Mile 1/Town bus and drop at Mile 2.',
+    segments: [
+      'Choba to Rumuokoro Direct',
+      'Rumuokoro to Mile 1/Education (Direct Bus)',
+    ],
+    transportModes: ['taxi', 'bus'],
+  },
+  {
+    name: 'Choba to Mile 1 via Rumuokoro Transfer',
+    startLocation: 'Choba Junction',
+    endLocation: 'Mile 1 Diobu',
+    description: 'Journey from Choba to Mile 1 requires transfer at Rumuokoro Junction. First vehicle to Rumuokoro, then board Mile 1/Town bus.',
+    segments: [
+      'Choba to Rumuokoro Direct',
+      'Rumuokoro to Mile 1/Education (Direct Bus)',
+    ],
+    transportModes: ['taxi', 'bus'],
+  },
+  {
+    name: 'Choba to Education via Rumuokoro Transfer',
+    startLocation: 'Choba Junction',
+    endLocation: 'Education Bus Stop',
+    description: 'Journey from Choba to Education requires transfer at Rumuokoro Junction. First vehicle to Rumuokoro, then board Mile 1/Town bus and continue to Education.',
+    segments: [
+      'Choba to Rumuokoro Direct',
+      'Rumuokoro to Mile 1/Education (Direct Bus)',
+    ],
+    transportModes: ['taxi', 'bus'],
+  },
+];
 
   for (const route of routes) {
     // Calculate totals from segments
