@@ -18,6 +18,14 @@ import { Location } from '../../location/entities/location.entity';
  * Example: Rumuokoro to Mile1 is a segment used by multiple routes
  */
 
+export interface VehicleServiceInfo {
+  hasRegularService: boolean; // Does this segment have regular vehicle service?
+  serviceType: 'main_road' | 'side_street' | 'residential'; // Type of service
+  vehicleTypes: ('bus' | 'taxi' | 'keke' | 'okada')[]; // What vehicles actually go here
+  frequency: 'high' | 'medium' | 'low' | 'on_demand'; // How often vehicles pass
+  notes?: string; // E.g., "Keke only during day", "Ask locals for okada"
+}
+
 export interface LandmarkInfo {
   name: string;
   lat: number;
@@ -66,6 +74,10 @@ export class RouteSegment {
 
   @Column({ type: 'text' })
   instructions: string;
+
+  // NEW: Add vehicle service info
+  @Column({ type: 'jsonb', nullable: true })
+  vehicleService?: VehicleServiceInfo;
 
    @Column({ type: 'jsonb', default: [] })
   landmarks: LandmarkInfo[];
