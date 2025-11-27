@@ -17,6 +17,13 @@ import { Location } from '../../location/entities/location.entity';
  * RouteSegment represents a shared path between two locations
  * Example: Rumuokoro to Mile1 is a segment used by multiple routes
  */
+
+export interface LandmarkInfo {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 @Entity('route_segments')
 export class RouteSegment {
   @PrimaryGeneratedColumn('uuid')
@@ -60,9 +67,8 @@ export class RouteSegment {
   @Column({ type: 'text' })
   instructions: string;
 
-  // Common landmarks along this segment
-  @Column({ type: 'jsonb', default: [] })
-  landmarks: string[];
+   @Column({ type: 'jsonb', default: [] })
+  landmarks: LandmarkInfo[];
 
   // How often this segment is used (popularity)
   @Column({ default: 0 })

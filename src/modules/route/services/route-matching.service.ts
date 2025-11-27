@@ -576,26 +576,33 @@ private generateEnhancedLastMileInstructions(
   const streetText = streetInfo.street ? ` on ${streetInfo.street}` : '';
   const walkingMin = Math.ceil(walkingDirections.duration);
 
-  // CASE 1: Very close (< 200m) - just walk
+  // CASE 1: Very close (≤ 200m) - driver can take you there directly!
   if (distanceMeters <= 200) {
     return `
-**Final Step: Short Walk to ${destination}**
+**Final Step: Direct to ${destination}**
 
-Drop off at ${dropOffPoint}${landmarkText}, then ${destination} is just ${Math.round(distanceMeters)}m away!
+Great news! ${destination} is on the main road - drivers know this area well!
 
-**At ${dropOffPoint}:**
-1. Tell driver: "Driver, stop${landmarkText}!"
-2. Pay your fare
-3. ${destination} is visible from here - you can walk
+**Tell the Driver:**
+"Driver, I dey go ${destination}${streetText}"
+${landmarkBefore ? `OR "Driver, stop for ${landmarkBefore}"` : ''}
 
-**Walking:**
-- Distance: ${Math.round(distanceMeters)}m (about ${walkingMin} minutes)
-- Tap "Walk" button below for turn-by-turn directions
-- Or ask locals: "Where ${destination} dey?"
+**What Happens:**
+- Driver will take you directly there
+- No need to walk - ${destination} is visible from the road
+- Distance: ${Math.round(distanceMeters)}m from ${dropOffPoint}
+
+**Real-time Notifications:**
+- Avigate will alert you when you're approaching
+- You'll get "Tell driver now!" notification at the right time
+- Just relax and let us guide you!
+
+**Data Availability: HIGH**
+This location is on a known route with regular vehicle service.
     `.trim();
   }
 
-  // CASE 2: Walkable but check for local transport (200m - 800m)
+  // CASE 2: Moderate distance (200-800m) - might need local transport
   if (distanceMeters <= 800) {
     return `
 **Final Step: Getting to ${destination}${streetText}**
@@ -606,28 +613,30 @@ Drop off at ${dropOffPoint}${landmarkText}. ${destination} is ${Math.round(dista
 1. Tell driver: "Driver, stop${landmarkText}!"
 2. Pay your fare
 
-**⚠️ Note:** Avigate doesn't have data on vehicles going into ${streetInfo.street || 'this street'}.
+**Note:** Avigate doesn't have data on vehicles going into ${streetInfo.street || 'this street'}.
 
 **Your Options:**
 
 **Option 1 - Ask Locals (Recommended):**
-- Look around for keke, okada, or taxi entering the street
-- Ask anyone nearby: "Which motor dey go ${destination}${streetText}?"
-- Locals know the area best!
+Look around for keke, okada, or taxi entering the street. Ask:
+- "Which motor dey go ${destination}${streetText}?"
+- "You fit carry me go ${destination}?"
+
+Locals know the area best!
 
 **Option 2 - Walk:**
 - ${Math.round(distanceMeters)}m (about ${walkingMin} minutes)
-- Tap "Walk" button below for step-by-step directions
-- It's not too far!
+- Tap "Walk" button below for turn-by-turn directions
 
 **Walking Preview:**
 ${walkingDirections.steps.slice(0, 3).map((s: any, i: number) => `${i + 1}. ${s.instruction}`).join('\n')}
 
-Tap "Walk" for complete turn-by-turn navigation.
+**Data Availability: LOW**
+Side street - local knowledge recommended
     `.trim();
   }
 
-  // CASE 3: Too far to walk comfortably (> 800m)
+  // CASE 3: Far (>800m) - definitely need local transport or walking
   const estimatedFare = this.calculateLastMileFare(distanceMeters);
   
   return `
@@ -639,28 +648,29 @@ Drop off at ${dropOffPoint}${landmarkText}. ${destination} is ${Math.round(dista
 1. Tell driver: "Driver, stop${landmarkText}!"
 2. Pay your fare
 
-**⚠️ Note:** Avigate doesn't have data on vehicles going into ${streetInfo.street || 'this area'}.
+ **Note:** Avigate doesn't have data on vehicles going into ${streetInfo.street || 'this area'}.
 
 **What to Do:**
 
 **1. Look Around:**
-- Check for keke or okada entering the street
-- Look for other passengers going the same way
+Check for keke or okada entering the street
 
 **2. Ask for Help:**
-- Ask anyone nearby: "Which motor dey go ${destination}${streetText}?"
-- Tell keke/okada riders: "You fit carry me go ${destination}?"
+- "Which motor dey go ${destination}${streetText}?"
+- "You fit carry me go ${destination}?"
 - Expected fare: ₦${estimatedFare - 50} - ₦${estimatedFare + 50}
 
-**3. If No Vehicle Available:**
-- Tap "Walk" button below
-- Avigate will guide you step-by-step (${walkingMin} minutes)
-- You can always ask for directions along the way
+**3. If No Vehicle Available - Walk:**
+- ${walkingMin} minutes
+- Tap "Walk" button below for step-by-step guidance
 
 **Walking Preview:**
 ${walkingDirections.steps.slice(0, 3).map((s: any, i: number) => `${i + 1}. ${s.instruction}`).join('\n')}
 
-Remember: Locals know shortcuts Avigate doesn't! Don't hesitate to ask for help.
+**Remember:** Locals know shortcuts Avigate doesn't! Don't hesitate to ask for help.
+
+**Data Availability: LOW**
+Side street - local knowledge recommended
     `.trim();
 }
 
@@ -741,7 +751,7 @@ private calculateLastMileFare(distanceMeters: number): number {
 }
 
 /**
- * UPDATED: findRouteWithWalking with data availability
+ * IMPROVED: Check if destination is near ANY landmark on the segment
  */
 private async findRouteWithWalking(
   startLat: number,
@@ -761,18 +771,40 @@ private async findRouteWithWalking(
   let shortestWalkingDistance = Infinity;
 
   for (const segment of nearbySegments) {
-    const dropOffPoint = await this.finalDestinationHandler.findBestDropOffPoint(
-      segment.id,
+    // NEW: Check if destination is near any landmark on this segment
+    const nearestLandmark = await this.findNearestLandmarkOnSegment(
+      segment,
       endLat,
       endLng,
     );
 
-    if (!dropOffPoint) continue;
+    let dropOffPoint: any;
+    let walkingDistance: number;
 
-    const walkingDistance = this.geofencingService.calculateDistance(
-      { lat: dropOffPoint.dropOffLat, lng: dropOffPoint.dropOffLng },
-      { lat: endLat, lng: endLng },
-    );
+    if (nearestLandmark && nearestLandmark.distance <= 200) {
+      //  Destination is NEAR a landmark - we have vehicle data!
+      dropOffPoint = {
+        dropOffLat: nearestLandmark.lat,
+        dropOffLng: nearestLandmark.lng,
+        dropOffName: nearestLandmark.name,
+        landmark: nearestLandmark.name,
+      };
+      walkingDistance = nearestLandmark.distance;
+    } else {
+      // Destination is NOT near any landmark - find best drop-off
+      dropOffPoint = await this.finalDestinationHandler.findBestDropOffPoint(
+        segment.id,
+        endLat,
+        endLng,
+      );
+
+      if (!dropOffPoint) continue;
+
+      walkingDistance = this.geofencingService.calculateDistance(
+        { lat: dropOffPoint.dropOffLat, lng: dropOffPoint.dropOffLng },
+        { lat: endLat, lng: endLng },
+      );
+    }
 
     if (walkingDistance > 2000) continue;
 
@@ -785,37 +817,34 @@ private async findRouteWithWalking(
         endLat,
         endLng,
         endLocationName || 'your destination',
-        dropOffPoint.landmark || undefined, // FIX: Convert null to undefined
+        dropOffPoint.landmark || undefined,
       );
 
       const routeToSegmentStart = startLocation
         ? await this.findRouteToLocation(startLat, startLng, segment.startLocationId)
         : null;
 
-      // Get address details
       const endAddress = await this.googleMapsService.reverseGeocode(endLat, endLng);
       const streetInfo = this.extractStreetInfo(endAddress);
 
-      // Build enhanced instructions
       const enhancedInstructions = this.generateEnhancedLastMileInstructions(
         dropOffPoint.dropOffName,
-        dropOffPoint.landmark || undefined, // FIX: Convert null to undefined for landmarkBefore
+        dropOffPoint.landmark || undefined,
         endLocationName || 'your destination',
         streetInfo,
         walkingDistance,
         finalDestInfo.walkingDirections,
       );
 
-      // Build walking step with data availability
       const walkingStep = this.buildEnhancedRouteStep(
         (routeToSegmentStart?.steps.length || 0) + 2,
         dropOffPoint.dropOffName,
         endLocationName || 'Your Destination',
-        'walk',
+        walkingDistance <= 200 ? 'walk' : 'keke', //  Smart transport mode
         enhancedInstructions,
         finalDestInfo.walkingDirections?.duration || 0,
         (finalDestInfo.walkingDirections?.distance || 0) / 1000,
-        0,
+        walkingDistance <= 200 ? 0 : this.calculateLastMileFare(walkingDistance),
         finalDestInfo.walkingDirections,
         walkingDistance,
       );
@@ -862,7 +891,7 @@ private async findRouteWithWalking(
               reason: 'Main road segment with known transport routes',
             },
           },
-          walkingStep, // Enhanced walking step with data availability
+          walkingStep,
         ],
         confidence: 85,
         finalDestinationInfo: finalDestInfo,
@@ -871,6 +900,41 @@ private async findRouteWithWalking(
   }
 
   return bestRoute;
+}
+
+/**
+ * NEW: Find nearest landmark on a specific segment
+ */
+private async findNearestLandmarkOnSegment(
+  segment: RouteSegment,
+  endLat: number,
+  endLng: number,
+): Promise<{ name: string; lat: number; lng: number; distance: number } | null> {
+  if (!segment.landmarks || segment.landmarks.length === 0) {
+    return null;
+  }
+
+  let nearest: { name: string; lat: number; lng: number; distance: number } | null = null;
+  let minDistance = Infinity;
+
+  for (const landmark of segment.landmarks) {
+    const distance = this.geofencingService.calculateDistance(
+      { lat: endLat, lng: endLng },
+      { lat: landmark.lat, lng: landmark.lng },
+    );
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearest = {
+        name: landmark.name,
+        lat: landmark.lat,
+        lng: landmark.lng,
+        distance,
+      };
+    }
+  }
+
+  return nearest;
 }
 
 // UPDATE buildStreetLevelInstructions to use the enhanced version
