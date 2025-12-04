@@ -30,7 +30,8 @@
     "schema:drop": "typeorm-ts-node-commonjs schema:drop -d ormconfig.ts",
     "seed": "ts-node -r tsconfig-paths/register src/scripts/seed-nigerian-transport.ts",
     "seed:ph": "ts-node -r tsconfig-paths/register src/scripts/run-seed.ts",
-    "check:tables": "ts-node -r tsconfig-paths/register src/scripts/check-tables.ts"
+    "check:tables": "ts-node -r tsconfig-paths/register src/scripts/check-tables.ts",
+    "fix:migrations": "ts-node -r tsconfig-paths/register src/scripts/fix-migrations.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
