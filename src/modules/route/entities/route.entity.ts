@@ -56,7 +56,7 @@ export class Route {
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   maxFare: number;
 
-   @Column({ default: false })
+  @Column({ default: false })
   requiresTransfer: boolean;
 
   @Column('jsonb', { nullable: true })

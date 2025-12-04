@@ -79,7 +79,7 @@ export class RouteSegment {
   @Column({ type: 'jsonb', nullable: true })
   vehicleService?: VehicleServiceInfo;
 
-   @Column({ type: 'jsonb', default: [] })
+  @Column({ type: 'jsonb', default: [] })
   landmarks: LandmarkInfo[];
 
   // How often this segment is used (popularity)

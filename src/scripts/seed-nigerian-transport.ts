@@ -15,10 +15,11 @@ async function seed() {
     // 1. CREATE SUPER ADMIN
     // ============================================
     console.log('👤 Creating Super Admin...');
-    
+
     const passwordHash = await bcrypt.hash('Pampersbaby@12345!', 12);
-    
-    const adminResult = await dataSource.query(`
+
+    const adminResult = await dataSource.query(
+      `
       INSERT INTO admins (
         email, 
         "firstName", 
@@ -59,7 +60,9 @@ async function seed() {
         "totpEnabled" = EXCLUDED."totpEnabled",
         "updatedAt" = NOW()
       RETURNING id;
-    `, [passwordHash]);
+    `,
+      [passwordHash],
+    );
 
     console.log('✅ Super Admin created/updated');
     console.log('   Email: joel.emmanuel@avigate.co');
@@ -79,7 +82,16 @@ async function seed() {
         lastName: 'Admin',
         password: 'AdminTest123!@#',
         role: 'admin',
-        permissions: ['users.view', 'users.create', 'users.edit', 'users.delete', 'analytics.view', 'analytics.export', 'content.moderate', 'admins.view'],
+        permissions: [
+          'users.view',
+          'users.create',
+          'users.edit',
+          'users.delete',
+          'analytics.view',
+          'analytics.export',
+          'content.moderate',
+          'admins.view',
+        ],
       },
       {
         email: 'moderator@avigate.co',
@@ -93,8 +105,9 @@ async function seed() {
 
     for (const admin of additionalAdmins) {
       const adminPasswordHash = await bcrypt.hash(admin.password, 12);
-      
-      await dataSource.query(`
+
+      await dataSource.query(
+        `
         INSERT INTO admins (
           email, 
           "firstName", 
@@ -122,19 +135,21 @@ async function seed() {
           "passwordChangedAt" = EXCLUDED."passwordChangedAt",
           "totpEnabled" = EXCLUDED."totpEnabled",
           "updatedAt" = NOW()
-      `, [
-        admin.email,
-        admin.firstName,
-        admin.lastName,
-        adminPasswordHash,
-        admin.role,
-        JSON.stringify(admin.permissions),
-        true, // isActive
-        false, // mustChangePassword (false for seed data)
-        new Date(), // passwordChangedAt
-        false, // totpEnabled
-        0, // failedLoginAttempts
-      ]);
+      `,
+        [
+          admin.email,
+          admin.firstName,
+          admin.lastName,
+          adminPasswordHash,
+          admin.role,
+          JSON.stringify(admin.permissions),
+          true, // isActive
+          false, // mustChangePassword (false for seed data)
+          new Date(), // passwordChangedAt
+          false, // totpEnabled
+          0, // failedLoginAttempts
+        ],
+      );
 
       console.log(`✅ Created admin: ${admin.email} (Role: ${admin.role})`);
     }
@@ -193,8 +208,9 @@ async function seed() {
 
     for (const user of testUsers) {
       const userPasswordHash = await bcrypt.hash(user.password, 12);
-      
-      const userResult = await dataSource.query(`
+
+      const userResult = await dataSource.query(
+        `
         INSERT INTO users (
           email, 
           "firstName", 
@@ -215,19 +231,21 @@ async function seed() {
         ON CONFLICT (email) DO UPDATE 
         SET email = EXCLUDED.email
         RETURNING id;
-      `, [
-        user.email,
-        user.firstName,
-        user.lastName,
-        user.sex,
-        user.phoneNumber,
-        user.googleId,
-        userPasswordHash,
-        true,
-        true,
-        true,
-        user.email === 'testuser2@avigate.co' ? 500 : 100,
-      ]);
+      `,
+        [
+          user.email,
+          user.firstName,
+          user.lastName,
+          user.sex,
+          user.phoneNumber,
+          user.googleId,
+          userPasswordHash,
+          true,
+          true,
+          true,
+          user.email === 'testuser2@avigate.co' ? 500 : 100,
+        ],
+      );
 
       createdTestUsers.push({
         email: user.email,
@@ -246,63 +264,219 @@ async function seed() {
     console.log('📍 Creating Port Harcourt Locations...');
 
     const phLocations = [
-      { name: 'Choba Junction', lat: 4.8984, lng: 6.9157, type: 'junction', landmarks: ['University of Port Harcourt Gate', 'Choba Market'] },
-      { name: 'Rumuokoro Junction', lat: 4.8456, lng: 6.9931, type: 'junction', landmarks: ['Rumuokoro Flyover', 'Total Filling Station'] },
-      { name: 'Airforce Junction', lat: 4.8245, lng: 7.0123, type: 'junction', landmarks: ['Airforce Base Gate', 'Nigerian Air Force Secondary School'] },
-      { name: 'Eleme Junction', lat: 4.7823, lng: 7.1234, type: 'junction', landmarks: ['Eleme Petrochemical', 'Eleme Refinery'] },
-      { name: 'Oyigbo Junction', lat: 4.8956, lng: 7.1456, type: 'junction', landmarks: ['Oyigbo Market', 'Police Station'] },
-      { name: 'Waterlines Junction', lat: 4.8156, lng: 7.0234, type: 'junction', landmarks: ['Waterlines Roundabout', 'First Bank'] },
-      { name: 'Rumuola Junction', lat: 4.8334, lng: 6.9845, type: 'junction', landmarks: ['Rumuola Flyover', 'GTBank'] },
-      { name: 'Eliozu Junction', lat: 4.8567, lng: 7.0234, type: 'junction', landmarks: ['Eliozu Main Junction', 'Assemblies of God Church'] },
-      { name: 'Mile 1 Market', lat: 4.7756, lng: 7.0134, type: 'market', landmarks: ['Ikwerre Road', 'Mile 1 Taxi Park'] },
-      { name: 'Mile 3 Market', lat: 4.8012, lng: 7.0245, type: 'market', landmarks: ['Aba Road', 'Mile 3 Park'] },
-      { name: 'Oyigbo Market', lat: 4.8945, lng: 7.1445, type: 'market', landmarks: ['Oyigbo Main Market', 'Trans-Amadi Road'] },
-      { name: 'Rumuwoji Market', lat: 4.8223, lng: 6.9956, type: 'market', landmarks: ['Rumuwoji Junction', 'Zenith Bank'] },
-      { name: 'University of Port Harcourt Main Gate', lat: 4.8995, lng: 6.9167, type: 'university', landmarks: ['UNIPORT', 'Choba Gate'] },
-      { name: 'Rivers State University', lat: 4.8145, lng: 6.9823, type: 'university', landmarks: ['RSU', 'Nkpolu-Oroworukwo'] },
-      { name: 'Federal College of Education', lat: 4.7934, lng: 6.9756, type: 'college', landmarks: ['FCE Rumuolumeni'] },
-      { name: 'University of Port Harcourt Teaching Hospital', lat: 4.8234, lng: 6.9567, type: 'hospital', landmarks: ['UPTH', 'Alakahia'] },
-      { name: 'Braithwaite Memorial Hospital', lat: 4.7823, lng: 7.0156, type: 'hospital', landmarks: ['BMH', 'Aba Road'] },
-      { name: 'Rumuokwuta', lat: 4.8445, lng: 6.9712, type: 'residential', landmarks: ['Rumuokwuta Junction', 'Police Barracks'] },
-      { name: 'Alakahia', lat: 4.8323, lng: 6.9634, type: 'residential', landmarks: ['Alakahia Roundabout', 'Community Hall'] },
-      { name: 'Eliozu', lat: 4.8567, lng: 7.0234, type: 'residential', landmarks: ['Eliozu Junction', 'Assemblies of God Church'] },
-      { name: 'Mgbuoba', lat: 4.8134, lng: 6.9845, type: 'residential', landmarks: ['Mgbuoba Junction'] },
-      { name: 'Port Harcourt Mall', lat: 4.8156, lng: 7.0089, type: 'mall', landmarks: ['PH Mall', 'Aba Road'] },
-      { name: 'Genesis Cinema', lat: 4.8145, lng: 7.0078, type: 'cinema', landmarks: ['Aba Road', 'Elevation Church'] },
-      { name: 'Port Harcourt International Airport', lat: 5.0155, lng: 6.9496, type: 'airport', landmarks: ['Omagwa Airport'] },
-      { name: 'Rivers State Secretariat', lat: 4.8067, lng: 7.0123, type: 'government', landmarks: ['Government House', 'Aba Road'] },
+      {
+        name: 'Choba Junction',
+        lat: 4.8984,
+        lng: 6.9157,
+        type: 'junction',
+        landmarks: ['University of Port Harcourt Gate', 'Choba Market'],
+      },
+      {
+        name: 'Rumuokoro Junction',
+        lat: 4.8456,
+        lng: 6.9931,
+        type: 'junction',
+        landmarks: ['Rumuokoro Flyover', 'Total Filling Station'],
+      },
+      {
+        name: 'Airforce Junction',
+        lat: 4.8245,
+        lng: 7.0123,
+        type: 'junction',
+        landmarks: ['Airforce Base Gate', 'Nigerian Air Force Secondary School'],
+      },
+      {
+        name: 'Eleme Junction',
+        lat: 4.7823,
+        lng: 7.1234,
+        type: 'junction',
+        landmarks: ['Eleme Petrochemical', 'Eleme Refinery'],
+      },
+      {
+        name: 'Oyigbo Junction',
+        lat: 4.8956,
+        lng: 7.1456,
+        type: 'junction',
+        landmarks: ['Oyigbo Market', 'Police Station'],
+      },
+      {
+        name: 'Waterlines Junction',
+        lat: 4.8156,
+        lng: 7.0234,
+        type: 'junction',
+        landmarks: ['Waterlines Roundabout', 'First Bank'],
+      },
+      {
+        name: 'Rumuola Junction',
+        lat: 4.8334,
+        lng: 6.9845,
+        type: 'junction',
+        landmarks: ['Rumuola Flyover', 'GTBank'],
+      },
+      {
+        name: 'Eliozu Junction',
+        lat: 4.8567,
+        lng: 7.0234,
+        type: 'junction',
+        landmarks: ['Eliozu Main Junction', 'Assemblies of God Church'],
+      },
+      {
+        name: 'Mile 1 Market',
+        lat: 4.7756,
+        lng: 7.0134,
+        type: 'market',
+        landmarks: ['Ikwerre Road', 'Mile 1 Taxi Park'],
+      },
+      {
+        name: 'Mile 3 Market',
+        lat: 4.8012,
+        lng: 7.0245,
+        type: 'market',
+        landmarks: ['Aba Road', 'Mile 3 Park'],
+      },
+      {
+        name: 'Oyigbo Market',
+        lat: 4.8945,
+        lng: 7.1445,
+        type: 'market',
+        landmarks: ['Oyigbo Main Market', 'Trans-Amadi Road'],
+      },
+      {
+        name: 'Rumuwoji Market',
+        lat: 4.8223,
+        lng: 6.9956,
+        type: 'market',
+        landmarks: ['Rumuwoji Junction', 'Zenith Bank'],
+      },
+      {
+        name: 'University of Port Harcourt Main Gate',
+        lat: 4.8995,
+        lng: 6.9167,
+        type: 'university',
+        landmarks: ['UNIPORT', 'Choba Gate'],
+      },
+      {
+        name: 'Rivers State University',
+        lat: 4.8145,
+        lng: 6.9823,
+        type: 'university',
+        landmarks: ['RSU', 'Nkpolu-Oroworukwo'],
+      },
+      {
+        name: 'Federal College of Education',
+        lat: 4.7934,
+        lng: 6.9756,
+        type: 'college',
+        landmarks: ['FCE Rumuolumeni'],
+      },
+      {
+        name: 'University of Port Harcourt Teaching Hospital',
+        lat: 4.8234,
+        lng: 6.9567,
+        type: 'hospital',
+        landmarks: ['UPTH', 'Alakahia'],
+      },
+      {
+        name: 'Braithwaite Memorial Hospital',
+        lat: 4.7823,
+        lng: 7.0156,
+        type: 'hospital',
+        landmarks: ['BMH', 'Aba Road'],
+      },
+      {
+        name: 'Rumuokwuta',
+        lat: 4.8445,
+        lng: 6.9712,
+        type: 'residential',
+        landmarks: ['Rumuokwuta Junction', 'Police Barracks'],
+      },
+      {
+        name: 'Alakahia',
+        lat: 4.8323,
+        lng: 6.9634,
+        type: 'residential',
+        landmarks: ['Alakahia Roundabout', 'Community Hall'],
+      },
+      {
+        name: 'Eliozu',
+        lat: 4.8567,
+        lng: 7.0234,
+        type: 'residential',
+        landmarks: ['Eliozu Junction', 'Assemblies of God Church'],
+      },
+      {
+        name: 'Mgbuoba',
+        lat: 4.8134,
+        lng: 6.9845,
+        type: 'residential',
+        landmarks: ['Mgbuoba Junction'],
+      },
+      {
+        name: 'Port Harcourt Mall',
+        lat: 4.8156,
+        lng: 7.0089,
+        type: 'mall',
+        landmarks: ['PH Mall', 'Aba Road'],
+      },
+      {
+        name: 'Genesis Cinema',
+        lat: 4.8145,
+        lng: 7.0078,
+        type: 'cinema',
+        landmarks: ['Aba Road', 'Elevation Church'],
+      },
+      {
+        name: 'Port Harcourt International Airport',
+        lat: 5.0155,
+        lng: 6.9496,
+        type: 'airport',
+        landmarks: ['Omagwa Airport'],
+      },
+      {
+        name: 'Rivers State Secretariat',
+        lat: 4.8067,
+        lng: 7.0123,
+        type: 'government',
+        landmarks: ['Government House', 'Aba Road'],
+      },
     ];
 
     const locationIds = {};
 
     for (const loc of phLocations) {
-      const result = await dataSource.query(`
+      const result = await dataSource.query(
+        `
         INSERT INTO locations (
           name, city, state, country, latitude, longitude, description,
           "isVerified", "isActive", "popularityScore", "createdAt", "updatedAt"
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
         RETURNING id;
-      `, [
-        loc.name,
-        'Port Harcourt',
-        'Rivers',
-        'Nigeria',
-        loc.lat,
-        loc.lng,
-        `${loc.type.charAt(0).toUpperCase() + loc.type.slice(1)} - ${loc.landmarks.join(', ')}`,
-        true,
-        true,
-        Math.floor(Math.random() * 100) + 50
-      ]);
+      `,
+        [
+          loc.name,
+          'Port Harcourt',
+          'Rivers',
+          'Nigeria',
+          loc.lat,
+          loc.lng,
+          `${loc.type.charAt(0).toUpperCase() + loc.type.slice(1)} - ${loc.landmarks.join(', ')}`,
+          true,
+          true,
+          Math.floor(Math.random() * 100) + 50,
+        ],
+      );
 
       locationIds[loc.name] = result[0].id;
 
       for (const landmark of loc.landmarks) {
-        await dataSource.query(`
+        await dataSource.query(
+          `
           INSERT INTO landmarks (
             "locationId", name, type, latitude, longitude, "isVerified", "createdAt", "updatedAt"
           ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW());
-        `, [result[0].id, landmark, loc.type, loc.lat, loc.lng, true]);
+        `,
+          [result[0].id, landmark, loc.type, loc.lat, loc.lng, true],
+        );
       }
     }
 
@@ -361,7 +535,7 @@ async function seed() {
             distance: 7.2,
             estimatedFare: 550,
             vehicleInfo: 'Taxi or bus - Shared vehicle (Taxi: ₦500-₦600, Bus: ₦400-₦500)',
-            landmarks: ['UNIPORT Main Gate', 'Choba Market', 'Rumuokoro Flyover']
+            landmarks: ['UNIPORT Main Gate', 'Choba Market', 'Rumuokoro Flyover'],
           },
           {
             order: 2,
@@ -404,9 +578,9 @@ async function seed() {
             distance: 5.3,
             estimatedFare: 450,
             vehicleInfo: 'Yellow taxi - Shared vehicle (5 passengers)',
-            landmarks: ['Rumuokoro Flyover', 'Eliozu', 'Bori Camp', 'Airforce Base Gate']
-          }
-        ]
+            landmarks: ['Rumuokoro Flyover', 'Eliozu', 'Bori Camp', 'Airforce Base Gate'],
+          },
+        ],
       },
 
       {
@@ -463,9 +637,9 @@ async function seed() {
             distance: 10.8,
             estimatedFare: 650,
             vehicleInfo: 'Commercial bus - Stops to pick passengers',
-            landmarks: ['Alakahia', 'Rumuola', 'Mile 1 Market', 'Ikwerre Road']
-          }
-        ]
+            landmarks: ['Alakahia', 'Rumuola', 'Mile 1 Market', 'Ikwerre Road'],
+          },
+        ],
       },
 
       {
@@ -505,7 +679,7 @@ async function seed() {
             distance: 3.2,
             estimatedFare: 450,
             vehicleInfo: 'Commercial bus - Shared ride',
-            landmarks: ['Rumuokoro Flyover', 'Ikwerre Road heading to Aba Road', 'Mile 1 Market']
+            landmarks: ['Rumuokoro Flyover', 'Ikwerre Road heading to Aba Road', 'Mile 1 Market'],
           },
           {
             order: 2,
@@ -538,9 +712,9 @@ async function seed() {
             distance: 3.3,
             estimatedFare: 175,
             vehicleInfo: 'Commercial bus - Shared ride',
-            landmarks: ['Mile 1 Market', 'Aba Road', 'PH Mall', 'Spar']
-          }
-        ]
+            landmarks: ['Mile 1 Market', 'Aba Road', 'PH Mall', 'Spar'],
+          },
+        ],
       },
 
       {
@@ -590,9 +764,9 @@ async function seed() {
             distance: 11.5,
             estimatedFare: 700,
             vehicleInfo: 'Commercial bus or taxi - Shared transport',
-            landmarks: ['UNIPORT Main Gate', 'Alakahia', 'Rumuola', 'Mile 1', 'Mile 3 Market']
-          }
-        ]
+            landmarks: ['UNIPORT Main Gate', 'Alakahia', 'Rumuola', 'Mile 1', 'Mile 3 Market'],
+          },
+        ],
       },
 
       {
@@ -644,66 +818,76 @@ async function seed() {
             distance: 25.0,
             estimatedFare: 3000,
             vehicleInfo: 'Airport taxi (private) or shuttle bus (shared)',
-            landmarks: ['Airport Terminal', 'Eleme Junction', 'Oyigbo', 'Mile 1 Market']
-          }
-        ]
-      }
+            landmarks: ['Airport Terminal', 'Eleme Junction', 'Oyigbo', 'Mile 1 Market'],
+          },
+        ],
+      },
     ];
 
     let routeCount = 0;
-    const createdRoutes: Array<{ name: string; id: any; steps: Array<{ order: number; id: any }> }> = [];
+    const createdRoutes: Array<{
+      name: string;
+      id: any;
+      steps: Array<{ order: number; id: any }>;
+    }> = [];
 
     for (const route of routes) {
-      const routeResult = await dataSource.query(`
+      const routeResult = await dataSource.query(
+        `
         INSERT INTO routes (
           name, "startLocationId", "endLocationId", description,
           "transportModes", "estimatedDuration", distance, "minFare", "maxFare",
           "isVerified", "isActive", "popularityScore", "createdAt", "updatedAt"
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
         RETURNING id;
-      `, [
-        route.name,
-        locationIds[route.startLocation],
-        locationIds[route.endLocation],
-        route.description,
-        route.transportModes,
-        route.estimatedDuration,
-        route.distance,
-        route.minFare,
-        route.maxFare,
-        true,
-        true,
-        Math.floor(Math.random() * 50) + 50
-      ]);
+      `,
+        [
+          route.name,
+          locationIds[route.startLocation],
+          locationIds[route.endLocation],
+          route.description,
+          route.transportModes,
+          route.estimatedDuration,
+          route.distance,
+          route.minFare,
+          route.maxFare,
+          true,
+          true,
+          Math.floor(Math.random() * 50) + 50,
+        ],
+      );
 
       const routeId = routeResult[0].id;
       createdRoutes.push({ name: route.name, id: routeId, steps: [] });
 
       for (const step of route.steps) {
-        const stepResult = await dataSource.query(`
+        const stepResult = await dataSource.query(
+          `
           INSERT INTO route_steps (
             "routeId", "stepOrder", "fromLocationId", "toLocationId",
             "transportMode", instructions, duration, distance, "estimatedFare",
             "vehicleInfo", landmarks, "createdAt", "updatedAt"
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
           RETURNING id;
-        `, [
-          routeId,
-          step.order,
-          step.fromLocation ? locationIds[step.fromLocation] : null,
-          step.toLocation ? locationIds[step.toLocation] : null,
-          step.transportMode,
-          step.instructions,
-          step.duration,
-          step.distance,
-          step.estimatedFare,
-          step.vehicleInfo,
-          JSON.stringify(step.landmarks),
-        ]);
+        `,
+          [
+            routeId,
+            step.order,
+            step.fromLocation ? locationIds[step.fromLocation] : null,
+            step.toLocation ? locationIds[step.toLocation] : null,
+            step.transportMode,
+            step.instructions,
+            step.duration,
+            step.distance,
+            step.estimatedFare,
+            step.vehicleInfo,
+            JSON.stringify(step.landmarks),
+          ],
+        );
 
         createdRoutes[createdRoutes.length - 1].steps.push({
           order: step.order,
-          id: stepResult[0].id
+          id: stepResult[0].id,
         });
       }
 
@@ -719,11 +903,36 @@ async function seed() {
     console.log('💰 Creating Sample Fare Feedback...\n');
 
     const fareFeedbackSamples = [
-      { routeName: 'Choba to Airforce Junction via Rumuokoro', stepOrder: 1, fare: 550, mode: 'taxi' },
-      { routeName: 'Choba to Airforce Junction via Rumuokoro', stepOrder: 1, fare: 500, mode: 'taxi' },
-      { routeName: 'Choba to Airforce Junction via Rumuokoro', stepOrder: 1, fare: 600, mode: 'taxi' },
-      { routeName: 'Choba to Airforce Junction via Rumuokoro', stepOrder: 2, fare: 450, mode: 'taxi' },
-      { routeName: 'Choba to Airforce Junction via Rumuokoro', stepOrder: 2, fare: 400, mode: 'taxi' },
+      {
+        routeName: 'Choba to Airforce Junction via Rumuokoro',
+        stepOrder: 1,
+        fare: 550,
+        mode: 'taxi',
+      },
+      {
+        routeName: 'Choba to Airforce Junction via Rumuokoro',
+        stepOrder: 1,
+        fare: 500,
+        mode: 'taxi',
+      },
+      {
+        routeName: 'Choba to Airforce Junction via Rumuokoro',
+        stepOrder: 1,
+        fare: 600,
+        mode: 'taxi',
+      },
+      {
+        routeName: 'Choba to Airforce Junction via Rumuokoro',
+        stepOrder: 2,
+        fare: 450,
+        mode: 'taxi',
+      },
+      {
+        routeName: 'Choba to Airforce Junction via Rumuokoro',
+        stepOrder: 2,
+        fare: 400,
+        mode: 'taxi',
+      },
       { routeName: 'Choba to Mile 1 Market', stepOrder: 1, fare: 650, mode: 'bus' },
       { routeName: 'Choba to Mile 1 Market', stepOrder: 1, fare: 600, mode: 'bus' },
       { routeName: 'Choba to Mile 1 Market', stepOrder: 1, fare: 700, mode: 'bus' },
@@ -746,7 +955,8 @@ async function seed() {
         continue;
       }
 
-      await dataSource.query(`
+      await dataSource.query(
+        `
         INSERT INTO fare_feedbacks (
           "userId", 
           "routeId", 
@@ -757,14 +967,9 @@ async function seed() {
           "createdAt", 
           "updatedAt"
         ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW());
-      `, [
-        testUserId,
-        route.id,
-        step.id,
-        feedback.fare,
-        feedback.mode,
-        false
-      ]);
+      `,
+        [testUserId, route.id, step.id, feedback.fare, feedback.mode, false],
+      );
 
       feedbackCount++;
     }
@@ -808,7 +1013,6 @@ async function seed() {
     console.log(`✨ All admin accounts are ready to use immediately`);
     console.log(`✨ Super admin can enable 2FA after first login`);
     console.log('='.repeat(60) + '\n');
-
   } catch (error) {
     console.error('❌ Seed failed:', error);
     throw error;

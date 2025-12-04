@@ -321,182 +321,182 @@ export class RouteMatchingService {
 Tell the driver to stop at ${dropOffName}. This is where you'll walk from to reach your final destination.`;
   }
 
+  /**
+   * ENHANCED: Handle street-level destinations
+   * Example: Hotel on Kala Street from Choba
+   */
+  async findRouteWithStreetLevelGuidance(
+    startLat: number,
+    startLng: number,
+    endLat: number,
+    endLng: number,
+    endLocationName: string,
+  ): Promise<EnhancedRouteResult> {
+    logger.info('Finding route with street-level guidance', {
+      destination: endLocationName,
+    });
 
-/**
- * ENHANCED: Handle street-level destinations
- * Example: Hotel on Kala Street from Choba
- */
-async findRouteWithStreetLevelGuidance(
-  startLat: number,
-  startLng: number,
-  endLat: number,
-  endLng: number,
-  endLocationName: string,
-): Promise<EnhancedRouteResult> {
-  logger.info('Finding route with street-level guidance', {
-    destination: endLocationName,
-  });
+    // 1. Get address details from Google
+    const endAddress = await this.googleMapsService.reverseGeocode(endLat, endLng);
+    const streetInfo = this.extractStreetInfo(endAddress);
 
-  // 1. Get address details from Google
-  const endAddress = await this.googleMapsService.reverseGeocode(endLat, endLng);
-  const streetInfo = this.extractStreetInfo(endAddress);
+    // 2. Find nearest major stop on main road
+    const nearestMainRoadStop = await this.findNearestMainRoadStop(endLat, endLng);
 
-  // 2. Find nearest major stop on main road
-  const nearestMainRoadStop = await this.findNearestMainRoadStop(endLat, endLng);
+    if (!nearestMainRoadStop) {
+      return this.findEnhancedRoutes(startLat, startLng, endLat, endLng, endLocationName);
+    }
 
-  if (!nearestMainRoadStop) {
-    return this.findEnhancedRoutes(startLat, startLng, endLat, endLng, endLocationName);
-  }
-
-  // 3. Get route to main road stop
-  const routeToMainRoad = await this.findEnhancedRoutes(
-    startLat,
-    startLng,
-    nearestMainRoadStop.lat,
-    nearestMainRoadStop.lng,
-    nearestMainRoadStop.name,
-  );
-
-  if (!routeToMainRoad.routes.length) {
-    return routeToMainRoad;
-  }
-
-  // 4. Calculate distance from main road to destination
-  const distanceToDestination = this.geofencingService.calculateDistance(
-    { lat: nearestMainRoadStop.lat, lng: nearestMainRoadStop.lng },
-    { lat: endLat, lng: endLng },
-  );
-
-  // 5. Get walking directions
-  const walkingDirections = await this.googleMapsService.getDirections(
-    { lat: nearestMainRoadStop.lat, lng: nearestMainRoadStop.lng },
-    { lat: endLat, lng: endLng },
-    'walking',
-  );
-
-  // 6. Find nearest landmark for drop-off guidance
-  const dropOffLandmark = await this.findNearestLandmark(
-    nearestMainRoadStop.lat,
-    nearestMainRoadStop.lng,
-  );
-
-  // 7. Build street-level instructions
-  const streetInstructions = this.buildStreetLevelInstructions(
-    nearestMainRoadStop.name,
-    endLocationName,
-    streetInfo,
-    distanceToDestination,
-    walkingDirections,
-    dropOffLandmark,
-  );
-
-  // 8. Enhance first route with street guidance
-  const enhancedRoute = routeToMainRoad.routes[0];
-  enhancedRoute.steps.push({
-    order: enhancedRoute.steps.length + 1,
-    fromLocation: nearestMainRoadStop.name,
-    toLocation: endLocationName,
-    transportMode: distanceToDestination > 500 ? 'keke/okada' : 'walk',
-    instructions: streetInstructions,
-    duration: distanceToDestination > 500 ? 5 : Math.round(walkingDirections.duration),
-    distance: distanceToDestination / 1000,
-    estimatedFare: distanceToDestination > 500 ? 200 : 0,
-    walkingDirections: walkingDirections,
-    alternativeTransport: distanceToDestination > 200 ? {
-      type: 'okada' as const,
-      estimatedFare: Math.min(200, Math.max(100, Math.round(distanceToDestination / 10))),
-      instructions: `At ${nearestMainRoadStop.name}, look for okada or keke riders. Tell them: "Take me go ${endLocationName} for ${streetInfo.street}"`,
-    } : undefined,
-  });
-
-  return {
-    hasDirectRoute: false,
-    hasIntermediateStop: false,
-    requiresWalking: distanceToDestination <= 500,
-    routes: [enhancedRoute],
-  };
-}
-
-/**
- * Extract street information from address
- */
-private extractStreetInfo(address: string | null): { street?: string; area?: string } {
-  if (!address) return {};
-
-  const parts = address.split(',').map(p => p.trim());
-  
-  return {
-    street: parts[0], // "Kala Street"
-    area: parts[1],   // "Rumuobiakani"
-  };
-}
-
-/**
- * Find nearest major stop on main road
- */
-private async findNearestMainRoadStop(
-  lat: number,
-  lng: number,
-): Promise<{ name: string; lat: number; lng: number; locationId: string } | null> {
-  // Find locations on major roads (Ikwerre Road, East-West Road)
-  const majorStops = await this.locationRepository
-    .createQueryBuilder('location')
-    .where('location.isActive = :isActive', { isActive: true })
-    .andWhere('location.isVerified = :isVerified', { isVerified: true })
-    .andWhere(
-      `location.description ILIKE '%major%' 
-       OR location.description ILIKE '%junction%'
-       OR location.description ILIKE '%roundabout%'`,
-    )
-    .getMany();
-
-  let nearest: typeof majorStops[0] | null = null;
-  let minDistance = Infinity;
-
-  for (const stop of majorStops) {
-    const distance = this.geofencingService.calculateDistance(
-      { lat, lng },
-      { lat: Number(stop.latitude), lng: Number(stop.longitude) },
+    // 3. Get route to main road stop
+    const routeToMainRoad = await this.findEnhancedRoutes(
+      startLat,
+      startLng,
+      nearestMainRoadStop.lat,
+      nearestMainRoadStop.lng,
+      nearestMainRoadStop.name,
     );
 
-    if (distance < minDistance && distance < 2000) { // Within 2km
-      minDistance = distance;
-      nearest = stop;
+    if (!routeToMainRoad.routes.length) {
+      return routeToMainRoad;
     }
+
+    // 4. Calculate distance from main road to destination
+    const distanceToDestination = this.geofencingService.calculateDistance(
+      { lat: nearestMainRoadStop.lat, lng: nearestMainRoadStop.lng },
+      { lat: endLat, lng: endLng },
+    );
+
+    // 5. Get walking directions
+    const walkingDirections = await this.googleMapsService.getDirections(
+      { lat: nearestMainRoadStop.lat, lng: nearestMainRoadStop.lng },
+      { lat: endLat, lng: endLng },
+      'walking',
+    );
+
+    // 6. Find nearest landmark for drop-off guidance
+    const dropOffLandmark = await this.findNearestLandmark(
+      nearestMainRoadStop.lat,
+      nearestMainRoadStop.lng,
+    );
+
+    // 7. Build street-level instructions
+    const streetInstructions = this.buildStreetLevelInstructions(
+      nearestMainRoadStop.name,
+      endLocationName,
+      streetInfo,
+      distanceToDestination,
+      walkingDirections,
+      dropOffLandmark,
+    );
+
+    // 8. Enhance first route with street guidance
+    const enhancedRoute = routeToMainRoad.routes[0];
+    enhancedRoute.steps.push({
+      order: enhancedRoute.steps.length + 1,
+      fromLocation: nearestMainRoadStop.name,
+      toLocation: endLocationName,
+      transportMode: distanceToDestination > 500 ? 'keke/okada' : 'walk',
+      instructions: streetInstructions,
+      duration: distanceToDestination > 500 ? 5 : Math.round(walkingDirections.duration),
+      distance: distanceToDestination / 1000,
+      estimatedFare: distanceToDestination > 500 ? 200 : 0,
+      walkingDirections: walkingDirections,
+      alternativeTransport:
+        distanceToDestination > 200
+          ? {
+              type: 'okada' as const,
+              estimatedFare: Math.min(200, Math.max(100, Math.round(distanceToDestination / 10))),
+              instructions: `At ${nearestMainRoadStop.name}, look for okada or keke riders. Tell them: "Take me go ${endLocationName} for ${streetInfo.street}"`,
+            }
+          : undefined,
+    });
+
+    return {
+      hasDirectRoute: false,
+      hasIntermediateStop: false,
+      requiresWalking: distanceToDestination <= 500,
+      routes: [enhancedRoute],
+    };
   }
 
-  if (!nearest) return null;
+  /**
+   * Extract street information from address
+   */
+  private extractStreetInfo(address: string | null): { street?: string; area?: string } {
+    if (!address) return {};
 
-  return {
-    name: nearest.name,
-    lat: Number(nearest.latitude),
-    lng: Number(nearest.longitude),
-    locationId: nearest.id,
-  };
-}
+    const parts = address.split(',').map(p => p.trim());
 
-/**
- * Find nearest landmark to help with drop-off
- */
-private async findNearestLandmark(
-  lat: number,
-  lng: number,
-): Promise<string | null> {
-  const landmarks = await this.landmarkRepository
-    .createQueryBuilder('landmark')
-    .where('landmark.isVerified = :isVerified', { isVerified: true })
-    .andWhere(
-      `(6371000 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude)))) < 200`,
-      { lat, lng },
-    )
-    .orderBy(
-      `(6371000 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude))))`,
-    )
-    .limit(1)
-    .getOne();
+    return {
+      street: parts[0], // "Kala Street"
+      area: parts[1], // "Rumuobiakani"
+    };
+  }
 
-  return landmarks?.name || null;
-}
+  /**
+   * Find nearest major stop on main road
+   */
+  private async findNearestMainRoadStop(
+    lat: number,
+    lng: number,
+  ): Promise<{ name: string; lat: number; lng: number; locationId: string } | null> {
+    // Find locations on major roads (Ikwerre Road, East-West Road)
+    const majorStops = await this.locationRepository
+      .createQueryBuilder('location')
+      .where('location.isActive = :isActive', { isActive: true })
+      .andWhere('location.isVerified = :isVerified', { isVerified: true })
+      .andWhere(
+        `location.description ILIKE '%major%' 
+       OR location.description ILIKE '%junction%'
+       OR location.description ILIKE '%roundabout%'`,
+      )
+      .getMany();
+
+    let nearest: (typeof majorStops)[0] | null = null;
+    let minDistance = Infinity;
+
+    for (const stop of majorStops) {
+      const distance = this.geofencingService.calculateDistance(
+        { lat, lng },
+        { lat: Number(stop.latitude), lng: Number(stop.longitude) },
+      );
+
+      if (distance < minDistance && distance < 2000) {
+        // Within 2km
+        minDistance = distance;
+        nearest = stop;
+      }
+    }
+
+    if (!nearest) return null;
+
+    return {
+      name: nearest.name,
+      lat: Number(nearest.latitude),
+      lng: Number(nearest.longitude),
+      locationId: nearest.id,
+    };
+  }
+
+  /**
+   * Find nearest landmark to help with drop-off
+   */
+  private async findNearestLandmark(lat: number, lng: number): Promise<string | null> {
+    const landmarks = await this.landmarkRepository
+      .createQueryBuilder('landmark')
+      .where('landmark.isVerified = :isVerified', { isVerified: true })
+      .andWhere(
+        `(6371000 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude)))) < 200`,
+        { lat, lng },
+      )
+      .orderBy(
+        `(6371000 * acos(cos(radians(:lat)) * cos(radians(latitude)) * cos(radians(longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(latitude))))`,
+      )
+      .limit(1)
+      .getOne();
+
+    return landmarks?.name || null;
+  }
 
   /**
    * Find nearest location (existing method)
@@ -561,24 +561,24 @@ private async findNearestLandmark(
     return this.findEnhancedRoutes(startLat, startLng, endLat, endLng, endLocationName);
   }
 
-/**
- * UPDATED: Generate last-mile instructions with honest communication
- */
-private generateEnhancedLastMileInstructions(
-  dropOffPoint: string,
-  landmarkBefore: string | undefined,
-  destination: string,
-  streetInfo: { street?: string; area?: string },
-  distanceMeters: number,
-  walkingDirections: any,
-): string {
-  const landmarkText = landmarkBefore ? ` after ${landmarkBefore}` : '';
-  const streetText = streetInfo.street ? ` on ${streetInfo.street}` : '';
-  const walkingMin = Math.ceil(walkingDirections.duration);
+  /**
+   * UPDATED: Generate last-mile instructions with honest communication
+   */
+  private generateEnhancedLastMileInstructions(
+    dropOffPoint: string,
+    landmarkBefore: string | undefined,
+    destination: string,
+    streetInfo: { street?: string; area?: string },
+    distanceMeters: number,
+    walkingDirections: any,
+  ): string {
+    const landmarkText = landmarkBefore ? ` after ${landmarkBefore}` : '';
+    const streetText = streetInfo.street ? ` on ${streetInfo.street}` : '';
+    const walkingMin = Math.ceil(walkingDirections.duration);
 
-  // CASE 1: Very close (≤ 200m) - driver can take you there directly!
-  if (distanceMeters <= 200) {
-    return `
+    // CASE 1: Very close (≤ 200m) - driver can take you there directly!
+    if (distanceMeters <= 200) {
+      return `
 **Final Step: Direct to ${destination}**
 
 Great news! ${destination} is on the main road - drivers know this area well!
@@ -600,11 +600,11 @@ ${landmarkBefore ? `OR "Driver, stop for ${landmarkBefore}"` : ''}
 **Data Availability: HIGH**
 This location is on a known route with regular vehicle service.
     `.trim();
-  }
+    }
 
-  // CASE 2: Moderate distance (200-800m) - might need local transport
-  if (distanceMeters <= 800) {
-    return `
+    // CASE 2: Moderate distance (200-800m) - might need local transport
+    if (distanceMeters <= 800) {
+      return `
 **Final Step: Getting to ${destination}${streetText}**
 
 Drop off at ${dropOffPoint}${landmarkText}. ${destination} is ${Math.round(distanceMeters)}m away (about ${walkingMin} minutes walk).
@@ -629,17 +629,20 @@ Locals know the area best!
 - Tap "Walk" button below for turn-by-turn directions
 
 **Walking Preview:**
-${walkingDirections.steps.slice(0, 3).map((s: any, i: number) => `${i + 1}. ${s.instruction}`).join('\n')}
+${walkingDirections.steps
+  .slice(0, 3)
+  .map((s: any, i: number) => `${i + 1}. ${s.instruction}`)
+  .join('\n')}
 
 **Data Availability: LOW**
 Side street - local knowledge recommended
     `.trim();
-  }
+    }
 
-  // CASE 3: Far (>800m) - definitely need local transport or walking
-  const estimatedFare = this.calculateLastMileFare(distanceMeters);
-  
-  return `
+    // CASE 3: Far (>800m) - definitely need local transport or walking
+    const estimatedFare = this.calculateLastMileFare(distanceMeters);
+
+    return `
 **Final Step: Getting to ${destination}${streetText}**
 
 Drop off at ${dropOffPoint}${landmarkText}. ${destination} is ${Math.round(distanceMeters)}m away.
@@ -665,430 +668,435 @@ Check for keke or okada entering the street
 - Tap "Walk" button below for step-by-step guidance
 
 **Walking Preview:**
-${walkingDirections.steps.slice(0, 3).map((s: any, i: number) => `${i + 1}. ${s.instruction}`).join('\n')}
+${walkingDirections.steps
+  .slice(0, 3)
+  .map((s: any, i: number) => `${i + 1}. ${s.instruction}`)
+  .join('\n')}
 
 **Remember:** Locals know shortcuts Avigate doesn't! Don't hesitate to ask for help.
 
 **Data Availability: LOW**
 Side street - local knowledge recommended
     `.trim();
-}
-
-/**
- * NEW: Build enhanced route step with data availability info
- */
-private buildEnhancedRouteStep(
-  order: number,
-  fromLocation: string,
-  toLocation: string,
-  transportMode: 'bus' | 'taxi' | 'keke' | 'okada' | 'walk',
-  instructions: string,
-  duration: number,
-  distance: number,
-  estimatedFare: number | undefined,
-  walkingDirections: any,
-  distanceMeters: number,
-): EnhancedRouteStep {
-  // Determine if we have vehicle data for this area
-  const hasVehicleData = distanceMeters <= 200; // We only have data for immediate vicinity
-  
-  const step: EnhancedRouteStep = {
-    order,
-    fromLocation,
-    toLocation,
-    transportMode,
-    instructions,
-    duration,
-    distance,
-    estimatedFare,
-    
-    // Data availability
-    dataAvailability: {
-      hasVehicleData,
-      confidence: hasVehicleData ? 'high' : 'low',
-      reason: hasVehicleData 
-        ? 'Destination is on a major road with known routes'
-        : 'Destination is on a side street - local knowledge recommended',
-    },
-    
-    walkingDirections,
-  };
-
-  // Add alternative options if no vehicle data
-  if (!hasVehicleData) {
-    step.alternativeOptions = {
-      askLocals: true,
-      localPhrases: [
-        `Which motor dey go ${toLocation}?`,
-        `You fit carry me go ${toLocation}?`,
-        `Where ${toLocation} dey?`,
-        `How much to ${toLocation}?`,
-      ],
-      walkable: distanceMeters <= 1500,
-    };
-
-    // Add alternative transport if distance is moderate
-    if (distanceMeters > 200 && distanceMeters <= 2000) {
-      step.alternativeTransport = {
-        type: distanceMeters > 800 ? 'keke' : 'okada',
-        estimatedFare: this.calculateLastMileFare(distanceMeters),
-        instructions: `Look for ${distanceMeters > 800 ? 'keke' : 'okada'} riders at ${fromLocation}. Tell them: "Take me go ${toLocation}"`,
-      };
-    }
   }
 
-  return step;
-}
+  /**
+   * NEW: Build enhanced route step with data availability info
+   */
+  private buildEnhancedRouteStep(
+    order: number,
+    fromLocation: string,
+    toLocation: string,
+    transportMode: 'bus' | 'taxi' | 'keke' | 'okada' | 'walk',
+    instructions: string,
+    duration: number,
+    distance: number,
+    estimatedFare: number | undefined,
+    walkingDirections: any,
+    distanceMeters: number,
+  ): EnhancedRouteStep {
+    // Determine if we have vehicle data for this area
+    const hasVehicleData = distanceMeters <= 200; // We only have data for immediate vicinity
 
-/**
- * NEW: Check if segment has vehicle data for destination
- * FIXED: Added lat and lng to nearestLandmark type
- */
-private hasVehicleDataForDestination(
-  segment: RouteSegment,
-  endLat: number,
-  endLng: number,
-): {
-  hasData: boolean;
-  confidence: 'high' | 'medium' | 'low';
-  reason: string;
-  nearestLandmark?: { name: string; lat: number; lng: number; distance: number };
-} {
-  // Check 1: Does segment have explicit vehicle service info?
-  if (segment.vehicleService) {
-    if (segment.vehicleService.serviceType === 'main_road') {
-      return {
-        hasData: true,
-        confidence: 'high',
-        reason: 'Main road with regular vehicle service',
+    const step: EnhancedRouteStep = {
+      order,
+      fromLocation,
+      toLocation,
+      transportMode,
+      instructions,
+      duration,
+      distance,
+      estimatedFare,
+
+      // Data availability
+      dataAvailability: {
+        hasVehicleData,
+        confidence: hasVehicleData ? 'high' : 'low',
+        reason: hasVehicleData
+          ? 'Destination is on a major road with known routes'
+          : 'Destination is on a side street - local knowledge recommended',
+      },
+
+      walkingDirections,
+    };
+
+    // Add alternative options if no vehicle data
+    if (!hasVehicleData) {
+      step.alternativeOptions = {
+        askLocals: true,
+        localPhrases: [
+          `Which motor dey go ${toLocation}?`,
+          `You fit carry me go ${toLocation}?`,
+          `Where ${toLocation} dey?`,
+          `How much to ${toLocation}?`,
+        ],
+        walkable: distanceMeters <= 1500,
       };
+
+      // Add alternative transport if distance is moderate
+      if (distanceMeters > 200 && distanceMeters <= 2000) {
+        step.alternativeTransport = {
+          type: distanceMeters > 800 ? 'keke' : 'okada',
+          estimatedFare: this.calculateLastMileFare(distanceMeters),
+          instructions: `Look for ${distanceMeters > 800 ? 'keke' : 'okada'} riders at ${fromLocation}. Tell them: "Take me go ${toLocation}"`,
+        };
+      }
     }
-    
-    if ((segment.vehicleService.serviceType === 'side_street' || 
-         segment.vehicleService.serviceType === 'residential') && 
-        segment.vehicleService.hasRegularService) {
-      // Side street or residential but WITH regular service (keke/okada)
-      const nearestLandmark = this.findNearestLandmarkOnSegmentSync(segment, endLat, endLng);
-      
-      if (nearestLandmark && nearestLandmark.distance <= 200) {
+
+    return step;
+  }
+
+  /**
+   * NEW: Check if segment has vehicle data for destination
+   * FIXED: Added lat and lng to nearestLandmark type
+   */
+  private hasVehicleDataForDestination(
+    segment: RouteSegment,
+    endLat: number,
+    endLng: number,
+  ): {
+    hasData: boolean;
+    confidence: 'high' | 'medium' | 'low';
+    reason: string;
+    nearestLandmark?: { name: string; lat: number; lng: number; distance: number };
+  } {
+    // Check 1: Does segment have explicit vehicle service info?
+    if (segment.vehicleService) {
+      if (segment.vehicleService.serviceType === 'main_road') {
         return {
           hasData: true,
           confidence: 'high',
-          reason: `${segment.vehicleService.vehicleTypes.join('/')} service available on this street`,
+          reason: 'Main road with regular vehicle service',
+        };
+      }
+
+      if (
+        (segment.vehicleService.serviceType === 'side_street' ||
+          segment.vehicleService.serviceType === 'residential') &&
+        segment.vehicleService.hasRegularService
+      ) {
+        // Side street or residential but WITH regular service (keke/okada)
+        const nearestLandmark = this.findNearestLandmarkOnSegmentSync(segment, endLat, endLng);
+
+        if (nearestLandmark && nearestLandmark.distance <= 200) {
+          return {
+            hasData: true,
+            confidence: 'high',
+            reason: `${segment.vehicleService.vehicleTypes.join('/')} service available on this street`,
+            nearestLandmark,
+          };
+        }
+
+        return {
+          hasData: true,
+          confidence: 'medium',
+          reason: `${segment.vehicleService.vehicleTypes.join('/')} available but may need to ask locals`,
+        };
+      }
+    }
+
+    // Check 2: Fallback to landmark proximity (existing logic)
+    const nearestLandmark = this.findNearestLandmarkOnSegmentSync(segment, endLat, endLng);
+
+    if (nearestLandmark) {
+      if (nearestLandmark.distance <= 200) {
+        return {
+          hasData: true,
+          confidence: 'high',
+          reason: 'Destination is on main road near known landmark',
           nearestLandmark,
         };
       }
-      
-      return {
-        hasData: true,
-        confidence: 'medium',
-        reason: `${segment.vehicleService.vehicleTypes.join('/')} available but may need to ask locals`,
-      };
+
+      if (nearestLandmark.distance <= 500) {
+        return {
+          hasData: true,
+          confidence: 'medium',
+          reason: 'Close to known landmark - driver can find it',
+          nearestLandmark,
+        };
+      }
     }
+
+    // Check 3: No data available
+    return {
+      hasData: false,
+      confidence: 'low',
+      reason: 'Side street - local knowledge recommended',
+    };
   }
 
-  // Check 2: Fallback to landmark proximity (existing logic)
-  const nearestLandmark = this.findNearestLandmarkOnSegmentSync(segment, endLat, endLng);
-  
-  if (nearestLandmark) {
-    if (nearestLandmark.distance <= 200) {
-      return {
-        hasData: true,
-        confidence: 'high',
-        reason: 'Destination is on main road near known landmark',
-        nearestLandmark,
-      };
+  /**
+   * Helper: Find nearest landmark synchronously
+   */
+  private findNearestLandmarkOnSegmentSync(
+    segment: RouteSegment,
+    endLat: number,
+    endLng: number,
+  ): { name: string; lat: number; lng: number; distance: number } | null {
+    if (!segment.landmarks || segment.landmarks.length === 0) {
+      return null;
     }
-    
-    if (nearestLandmark.distance <= 500) {
-      return {
-        hasData: true,
-        confidence: 'medium',
-        reason: 'Close to known landmark - driver can find it',
-        nearestLandmark,
-      };
-    }
-  }
 
-  // Check 3: No data available
-  return {
-    hasData: false,
-    confidence: 'low',
-    reason: 'Side street - local knowledge recommended',
-  };
-}
+    let nearest: { name: string; lat: number; lng: number; distance: number } | null = null;
+    let minDistance = Infinity;
 
-/**
- * Helper: Find nearest landmark synchronously
- */
-private findNearestLandmarkOnSegmentSync(
-  segment: RouteSegment,
-  endLat: number,
-  endLng: number,
-): { name: string; lat: number; lng: number; distance: number } | null {
-  if (!segment.landmarks || segment.landmarks.length === 0) {
-    return null;
-  }
-
-  let nearest: { name: string; lat: number; lng: number; distance: number } | null = null;
-  let minDistance = Infinity;
-
-  for (const landmark of segment.landmarks) {
-    const distance = this.geofencingService.calculateDistance(
-      { lat: endLat, lng: endLng },
-      { lat: landmark.lat, lng: landmark.lng },
-    );
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearest = {
-        name: landmark.name,
-        lat: landmark.lat,
-        lng: landmark.lng,
-        distance,
-      };
-    }
-  }
-
-  return nearest;
-}
-
-/**
- * Calculate last mile fare
- */
-private calculateLastMileFare(distanceMeters: number): number {
-  const baseFare = 100;
-  const perMeterRate = 0.10;
-  const calculatedFare = baseFare + (distanceMeters * perMeterRate);
-  return Math.min(500, Math.max(100, Math.round(calculatedFare / 50) * 50)); // Round to nearest 50
-}
-
-/**
- * IMPROVED: Check if destination is near ANY landmark on the segment
- */
-/**
- * UPDATED: More intelligent route with walking detection
- */
-private async findRouteWithWalking(
-  startLat: number,
-  startLng: number,
-  endLat: number,
-  endLng: number,
-  endLocationName: string | undefined,
-  startLocation: Location | null,
-): Promise<any | null> {
-  const nearbySegments = await this.findSegmentsNearDestination(endLat, endLng, 1.5);
-
-  if (nearbySegments.length === 0) {
-    return null;
-  }
-
-  let bestRoute: any = null;
-  let shortestWalkingDistance = Infinity;
-
-  for (const segment of nearbySegments) {
-    // NEW: Use intelligent vehicle data check
-    const vehicleDataCheck = this.hasVehicleDataForDestination(segment, endLat, endLng);
-    
-    let dropOffPoint: any;
-    let walkingDistance: number;
-
-    if (vehicleDataCheck.hasData && vehicleDataCheck.nearestLandmark) {
-      // ✅ Destination HAS vehicle data
-      dropOffPoint = {
-        dropOffLat: vehicleDataCheck.nearestLandmark.lat,
-        dropOffLng: vehicleDataCheck.nearestLandmark.lng,
-        dropOffName: vehicleDataCheck.nearestLandmark.name,
-        landmark: vehicleDataCheck.nearestLandmark.name,
-      };
-      walkingDistance = vehicleDataCheck.nearestLandmark.distance;
-    } else {
-      // ❌ NO vehicle data - find best drop-off on main road
-      dropOffPoint = await this.finalDestinationHandler.findBestDropOffPoint(
-        segment.id,
-        endLat,
-        endLng,
-      );
-
-      if (!dropOffPoint) continue;
-
-      walkingDistance = this.geofencingService.calculateDistance(
-        { lat: dropOffPoint.dropOffLat, lng: dropOffPoint.dropOffLng },
+    for (const landmark of segment.landmarks) {
+      const distance = this.geofencingService.calculateDistance(
         { lat: endLat, lng: endLng },
+        { lat: landmark.lat, lng: landmark.lng },
       );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = {
+          name: landmark.name,
+          lat: landmark.lat,
+          lng: landmark.lng,
+          distance,
+        };
+      }
     }
 
-    if (walkingDistance > 2000) continue;
+    return nearest;
+  }
 
-    if (walkingDistance < shortestWalkingDistance) {
-      shortestWalkingDistance = walkingDistance;
+  /**
+   * Calculate last mile fare
+   */
+  private calculateLastMileFare(distanceMeters: number): number {
+    const baseFare = 100;
+    const perMeterRate = 0.1;
+    const calculatedFare = baseFare + distanceMeters * perMeterRate;
+    return Math.min(500, Math.max(100, Math.round(calculatedFare / 50) * 50)); // Round to nearest 50
+  }
 
-      const finalDestInfo = await this.finalDestinationHandler.handleFinalDestination(
-        dropOffPoint.dropOffLat,
-        dropOffPoint.dropOffLng,
-        endLat,
-        endLng,
-        endLocationName || 'your destination',
-        dropOffPoint.landmark || undefined,
-      );
+  /**
+   * IMPROVED: Check if destination is near ANY landmark on the segment
+   */
+  /**
+   * UPDATED: More intelligent route with walking detection
+   */
+  private async findRouteWithWalking(
+    startLat: number,
+    startLng: number,
+    endLat: number,
+    endLng: number,
+    endLocationName: string | undefined,
+    startLocation: Location | null,
+  ): Promise<any | null> {
+    const nearbySegments = await this.findSegmentsNearDestination(endLat, endLng, 1.5);
 
-      const routeToSegmentStart = startLocation
-        ? await this.findRouteToLocation(startLat, startLng, segment.startLocationId)
-        : null;
+    if (nearbySegments.length === 0) {
+      return null;
+    }
 
-      const endAddress = await this.googleMapsService.reverseGeocode(endLat, endLng);
-      const streetInfo = this.extractStreetInfo(endAddress);
+    let bestRoute: any = null;
+    let shortestWalkingDistance = Infinity;
 
-      // Generate instructions based on vehicle data availability
-      const enhancedInstructions = vehicleDataCheck.hasData
-        ? this.generateDirectNavigationInstructions(
-            dropOffPoint.dropOffName,
-            endLocationName || 'your destination',
-            streetInfo,
-            walkingDistance,
-            segment.vehicleService?.vehicleTypes || ['taxi'],
-          )
-        : this.generateEnhancedLastMileInstructions(
-            dropOffPoint.dropOffName,
-            dropOffPoint.landmark || undefined,
-            endLocationName || 'your destination',
-            streetInfo,
-            walkingDistance,
-            finalDestInfo.walkingDirections,
-          );
+    for (const segment of nearbySegments) {
+      // NEW: Use intelligent vehicle data check
+      const vehicleDataCheck = this.hasVehicleDataForDestination(segment, endLat, endLng);
 
-      const walkingStep = this.buildEnhancedRouteStep(
-        (routeToSegmentStart?.steps.length || 0) + 2,
-        dropOffPoint.dropOffName,
-        endLocationName || 'Your Destination',
-        this.determineTransportMode(walkingDistance, segment.vehicleService),
-        enhancedInstructions,
-        finalDestInfo.walkingDirections?.duration || 0,
-        (finalDestInfo.walkingDirections?.distance || 0) / 1000,
-        this.calculateFareForStep(walkingDistance, segment.vehicleService),
-        finalDestInfo.walkingDirections,
-        walkingDistance,
-      );
+      let dropOffPoint: any;
+      let walkingDistance: number;
 
-      // Add data availability to step
-      walkingStep.dataAvailability = {
-        hasVehicleData: vehicleDataCheck.hasData,
-        confidence: vehicleDataCheck.confidence,
-        reason: vehicleDataCheck.reason,
-      };
+      if (vehicleDataCheck.hasData && vehicleDataCheck.nearestLandmark) {
+        // ✅ Destination HAS vehicle data
+        dropOffPoint = {
+          dropOffLat: vehicleDataCheck.nearestLandmark.lat,
+          dropOffLng: vehicleDataCheck.nearestLandmark.lng,
+          dropOffName: vehicleDataCheck.nearestLandmark.name,
+          landmark: vehicleDataCheck.nearestLandmark.name,
+        };
+        walkingDistance = vehicleDataCheck.nearestLandmark.distance;
+      } else {
+        // ❌ NO vehicle data - find best drop-off on main road
+        dropOffPoint = await this.finalDestinationHandler.findBestDropOffPoint(
+          segment.id,
+          endLat,
+          endLng,
+        );
 
-      bestRoute = {
-        routeName: `${startLocation?.name || 'Your Location'} to ${endLocationName || 'Destination'}`,
-        source: 'with_walking',
-        distance:
-          Number(segment.distance) +
-          (routeToSegmentStart?.distance || 0) +
-          (finalDestInfo.walkingDirections?.distance || 0) / 1000,
-        duration:
-          Number(segment.estimatedDuration) +
-          (routeToSegmentStart?.duration || 0) +
-          (finalDestInfo.walkingDirections?.duration || 0),
-        minFare:
-          (segment.minFare ? Number(segment.minFare) : 0) + (routeToSegmentStart?.minFare || 0),
-        maxFare:
-          (segment.maxFare ? Number(segment.maxFare) : 0) + (routeToSegmentStart?.maxFare || 0),
-        steps: [
-          ...(routeToSegmentStart?.steps.map(s => ({
-            ...s,
-            dataAvailability: {
-              hasVehicleData: true,
-              confidence: 'high' as const,
-              reason: 'Main road segment with known transport routes',
-            },
-          })) || []),
-          {
-            order: (routeToSegmentStart?.steps.length || 0) + 1,
-            fromLocation: segment.startLocation?.name,
-            toLocation: dropOffPoint.dropOffName,
-            transportMode: segment.transportModes[0],
-            instructions: this.enhanceInstructionsWithDropOff(
-              segment.instructions,
+        if (!dropOffPoint) continue;
+
+        walkingDistance = this.geofencingService.calculateDistance(
+          { lat: dropOffPoint.dropOffLat, lng: dropOffPoint.dropOffLng },
+          { lat: endLat, lng: endLng },
+        );
+      }
+
+      if (walkingDistance > 2000) continue;
+
+      if (walkingDistance < shortestWalkingDistance) {
+        shortestWalkingDistance = walkingDistance;
+
+        const finalDestInfo = await this.finalDestinationHandler.handleFinalDestination(
+          dropOffPoint.dropOffLat,
+          dropOffPoint.dropOffLng,
+          endLat,
+          endLng,
+          endLocationName || 'your destination',
+          dropOffPoint.landmark || undefined,
+        );
+
+        const routeToSegmentStart = startLocation
+          ? await this.findRouteToLocation(startLat, startLng, segment.startLocationId)
+          : null;
+
+        const endAddress = await this.googleMapsService.reverseGeocode(endLat, endLng);
+        const streetInfo = this.extractStreetInfo(endAddress);
+
+        // Generate instructions based on vehicle data availability
+        const enhancedInstructions = vehicleDataCheck.hasData
+          ? this.generateDirectNavigationInstructions(
               dropOffPoint.dropOffName,
-            ),
-            duration: Number(segment.estimatedDuration),
-            distance: Number(segment.distance),
-            estimatedFare: segment.maxFare ? Number(segment.maxFare) : undefined,
-            dataAvailability: {
-              hasVehicleData: true,
-              confidence: 'high' as const,
-              reason: 'Main road segment with known transport routes',
+              endLocationName || 'your destination',
+              streetInfo,
+              walkingDistance,
+              segment.vehicleService?.vehicleTypes || ['taxi'],
+            )
+          : this.generateEnhancedLastMileInstructions(
+              dropOffPoint.dropOffName,
+              dropOffPoint.landmark || undefined,
+              endLocationName || 'your destination',
+              streetInfo,
+              walkingDistance,
+              finalDestInfo.walkingDirections,
+            );
+
+        const walkingStep = this.buildEnhancedRouteStep(
+          (routeToSegmentStart?.steps.length || 0) + 2,
+          dropOffPoint.dropOffName,
+          endLocationName || 'Your Destination',
+          this.determineTransportMode(walkingDistance, segment.vehicleService),
+          enhancedInstructions,
+          finalDestInfo.walkingDirections?.duration || 0,
+          (finalDestInfo.walkingDirections?.distance || 0) / 1000,
+          this.calculateFareForStep(walkingDistance, segment.vehicleService),
+          finalDestInfo.walkingDirections,
+          walkingDistance,
+        );
+
+        // Add data availability to step
+        walkingStep.dataAvailability = {
+          hasVehicleData: vehicleDataCheck.hasData,
+          confidence: vehicleDataCheck.confidence,
+          reason: vehicleDataCheck.reason,
+        };
+
+        bestRoute = {
+          routeName: `${startLocation?.name || 'Your Location'} to ${endLocationName || 'Destination'}`,
+          source: 'with_walking',
+          distance:
+            Number(segment.distance) +
+            (routeToSegmentStart?.distance || 0) +
+            (finalDestInfo.walkingDirections?.distance || 0) / 1000,
+          duration:
+            Number(segment.estimatedDuration) +
+            (routeToSegmentStart?.duration || 0) +
+            (finalDestInfo.walkingDirections?.duration || 0),
+          minFare:
+            (segment.minFare ? Number(segment.minFare) : 0) + (routeToSegmentStart?.minFare || 0),
+          maxFare:
+            (segment.maxFare ? Number(segment.maxFare) : 0) + (routeToSegmentStart?.maxFare || 0),
+          steps: [
+            ...(routeToSegmentStart?.steps.map(s => ({
+              ...s,
+              dataAvailability: {
+                hasVehicleData: true,
+                confidence: 'high' as const,
+                reason: 'Main road segment with known transport routes',
+              },
+            })) || []),
+            {
+              order: (routeToSegmentStart?.steps.length || 0) + 1,
+              fromLocation: segment.startLocation?.name,
+              toLocation: dropOffPoint.dropOffName,
+              transportMode: segment.transportModes[0],
+              instructions: this.enhanceInstructionsWithDropOff(
+                segment.instructions,
+                dropOffPoint.dropOffName,
+              ),
+              duration: Number(segment.estimatedDuration),
+              distance: Number(segment.distance),
+              estimatedFare: segment.maxFare ? Number(segment.maxFare) : undefined,
+              dataAvailability: {
+                hasVehicleData: true,
+                confidence: 'high' as const,
+                reason: 'Main road segment with known transport routes',
+              },
             },
-          },
-          walkingStep,
-        ],
-        confidence: vehicleDataCheck.hasData ? 90 : 75,
-        finalDestinationInfo: finalDestInfo,
-      };
+            walkingStep,
+          ],
+          confidence: vehicleDataCheck.hasData ? 90 : 75,
+          finalDestinationInfo: finalDestInfo,
+        };
+      }
     }
+
+    return bestRoute;
   }
 
-  return bestRoute;
-}
+  /**
+   * NEW: Determine appropriate transport mode based on distance and vehicle service
+   */
+  private determineTransportMode(
+    distanceMeters: number,
+    vehicleService?: VehicleServiceInfo,
+  ): 'bus' | 'taxi' | 'keke' | 'okada' | 'walk' {
+    if (distanceMeters <= 200) return 'walk';
 
-/**
- * NEW: Determine appropriate transport mode based on distance and vehicle service
- */
-private determineTransportMode(
-  distanceMeters: number,
-  vehicleService?: VehicleServiceInfo,
-): 'bus' | 'taxi' | 'keke' | 'okada' | 'walk' {
-  if (distanceMeters <= 200) return 'walk';
-  
-  if (vehicleService?.hasRegularService) {
-    // Has vehicle service - use appropriate type
-    if (vehicleService.vehicleTypes.includes('keke')) return 'keke';
-    if (vehicleService.vehicleTypes.includes('okada')) return 'okada';
-    if (vehicleService.vehicleTypes.includes('taxi')) return 'taxi';
-  }
-  
-  // No vehicle service - smart fallback
-  if (distanceMeters <= 500) return 'walk';
-  if (distanceMeters <= 1500) return 'okada';
-  return 'keke';
-}
-
-/**
- * NEW: Calculate fare based on vehicle service availability
- */
-private calculateFareForStep(
-  distanceMeters: number,
-  vehicleService?: VehicleServiceInfo,
-): number {
-  if (distanceMeters <= 200) return 0; // Walking distance
-  
-  if (vehicleService?.hasRegularService) {
-    // Has vehicle service - calculate based on type
-    if (vehicleService.vehicleTypes.includes('keke')) {
-      return Math.min(300, Math.max(100, Math.round(distanceMeters / 10)));
+    if (vehicleService?.hasRegularService) {
+      // Has vehicle service - use appropriate type
+      if (vehicleService.vehicleTypes.includes('keke')) return 'keke';
+      if (vehicleService.vehicleTypes.includes('okada')) return 'okada';
+      if (vehicleService.vehicleTypes.includes('taxi')) return 'taxi';
     }
-    if (vehicleService.vehicleTypes.includes('okada')) {
-      return Math.min(250, Math.max(100, Math.round(distanceMeters / 12)));
-    }
-  }
-  
-  // Fallback fare calculation
-  return this.calculateLastMileFare(distanceMeters);
-}
 
-/**
- * NEW: Generate instructions for destinations WITH vehicle data
- */
-private generateDirectNavigationInstructions(
-  dropOffPoint: string,
-  destination: string,
-  streetInfo: { street?: string; area?: string },
-  distanceMeters: number,
-  vehicleTypes: ('bus' | 'taxi' | 'keke' | 'okada')[],
-): string {
-  const streetText = streetInfo.street ? ` on ${streetInfo.street}` : '';
-  const vehicleText = vehicleTypes.join(' or ');
-  
-  return `
+    // No vehicle service - smart fallback
+    if (distanceMeters <= 500) return 'walk';
+    if (distanceMeters <= 1500) return 'okada';
+    return 'keke';
+  }
+
+  /**
+   * NEW: Calculate fare based on vehicle service availability
+   */
+  private calculateFareForStep(
+    distanceMeters: number,
+    vehicleService?: VehicleServiceInfo,
+  ): number {
+    if (distanceMeters <= 200) return 0; // Walking distance
+
+    if (vehicleService?.hasRegularService) {
+      // Has vehicle service - calculate based on type
+      if (vehicleService.vehicleTypes.includes('keke')) {
+        return Math.min(300, Math.max(100, Math.round(distanceMeters / 10)));
+      }
+      if (vehicleService.vehicleTypes.includes('okada')) {
+        return Math.min(250, Math.max(100, Math.round(distanceMeters / 12)));
+      }
+    }
+
+    // Fallback fare calculation
+    return this.calculateLastMileFare(distanceMeters);
+  }
+
+  /**
+   * NEW: Generate instructions for destinations WITH vehicle data
+   */
+  private generateDirectNavigationInstructions(
+    dropOffPoint: string,
+    destination: string,
+    streetInfo: { street?: string; area?: string },
+    distanceMeters: number,
+    vehicleTypes: ('bus' | 'taxi' | 'keke' | 'okada')[],
+  ): string {
+    const streetText = streetInfo.street ? ` on ${streetInfo.street}` : '';
+    const vehicleText = vehicleTypes.join(' or ');
+
+    return `
 **Final Step: Direct to ${destination}**
 
 Good news! ${vehicleText.toUpperCase()} service available to ${destination}!
@@ -1111,59 +1119,59 @@ Look for ${vehicleText} going into ${streetInfo.street || 'the street'}
 **Data Availability: HIGH**
 Regular ${vehicleText} service confirmed for this location.
   `.trim();
-}
-/**
- * NEW: Find nearest landmark on a specific segment
- */
-private async findNearestLandmarkOnSegment(
-  segment: RouteSegment,
-  endLat: number,
-  endLng: number,
-): Promise<{ name: string; lat: number; lng: number; distance: number } | null> {
-  if (!segment.landmarks || segment.landmarks.length === 0) {
-    return null;
   }
-
-  let nearest: { name: string; lat: number; lng: number; distance: number } | null = null;
-  let minDistance = Infinity;
-
-  for (const landmark of segment.landmarks) {
-    const distance = this.geofencingService.calculateDistance(
-      { lat: endLat, lng: endLng },
-      { lat: landmark.lat, lng: landmark.lng },
-    );
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      nearest = {
-        name: landmark.name,
-        lat: landmark.lat,
-        lng: landmark.lng,
-        distance,
-      };
+  /**
+   * NEW: Find nearest landmark on a specific segment
+   */
+  private async findNearestLandmarkOnSegment(
+    segment: RouteSegment,
+    endLat: number,
+    endLng: number,
+  ): Promise<{ name: string; lat: number; lng: number; distance: number } | null> {
+    if (!segment.landmarks || segment.landmarks.length === 0) {
+      return null;
     }
+
+    let nearest: { name: string; lat: number; lng: number; distance: number } | null = null;
+    let minDistance = Infinity;
+
+    for (const landmark of segment.landmarks) {
+      const distance = this.geofencingService.calculateDistance(
+        { lat: endLat, lng: endLng },
+        { lat: landmark.lat, lng: landmark.lng },
+      );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = {
+          name: landmark.name,
+          lat: landmark.lat,
+          lng: landmark.lng,
+          distance,
+        };
+      }
+    }
+
+    return nearest;
   }
 
-  return nearest;
-}
-
-// UPDATE buildStreetLevelInstructions to use the enhanced version
-private buildStreetLevelInstructions(
-  mainRoadStop: string,
-  destination: string,
-  streetInfo: { street?: string; area?: string },
-  distance: number,
-  walkingDirections: any,
-  landmark: string | null,
-): string {
-  // Use the enhanced version
-  return this.generateEnhancedLastMileInstructions(
-    mainRoadStop,
-    landmark || undefined, // FIX: Convert null to undefined
-    destination,
-    streetInfo,
-    distance,
-    walkingDirections,
-  );
-}
+  // UPDATE buildStreetLevelInstructions to use the enhanced version
+  private buildStreetLevelInstructions(
+    mainRoadStop: string,
+    destination: string,
+    streetInfo: { street?: string; area?: string },
+    distance: number,
+    walkingDirections: any,
+    landmark: string | null,
+  ): string {
+    // Use the enhanced version
+    return this.generateEnhancedLastMileInstructions(
+      mainRoadStop,
+      landmark || undefined, // FIX: Convert null to undefined
+      destination,
+      streetInfo,
+      distance,
+      walkingDirections,
+    );
+  }
 }

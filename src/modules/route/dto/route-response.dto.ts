@@ -37,13 +37,13 @@ export interface EnhancedRouteStep {
   duration: number;
   distance: number;
   estimatedFare?: number;
-  
+
   // NEW: Data availability indicator
   dataAvailability: DataAvailability;
-  
+
   walkingDirections?: WalkingDirections;
   alternativeTransport?: AlternativeTransport;
-  
+
   // NEW: Alternative options for when no vehicle data
   alternativeOptions?: AlternativeOptions;
 }
@@ -73,7 +73,7 @@ export interface TransferPoint {
   locationId: string;
   order: number;
   instructions: string;
-  estimatedWaitTime: number; 
+  estimatedWaitTime: number;
   minFare: number;
   maxFare: number;
 }
