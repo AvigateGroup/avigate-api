@@ -5,15 +5,13 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from '../user/dto/register.dto';
-import { LoginDto } from '../user/dto/login.dto';
+import { RequestLoginOtpDto } from '../user/dto/request-login-otp.dto';
 import { VerifyLoginOtpDto } from '../user/dto/verify-login-otp.dto';
 import { ResendLoginOtpDto } from '../user/dto/resend-login-otp.dto';
 import { VerifyEmailDto } from '../user/dto/verify-email.dto';
 import { RefreshTokenDto } from '../user/dto/refresh-token.dto';
 import { GoogleAuthDto } from '../user/dto/google-auth.dto';
 import { CapturePhoneDto } from '../user/dto/capture-phone.dto';
-import { ForgotPasswordDto } from '../user/dto/forgot-password.dto';
-import { ResetPasswordDto } from '../user/dto/reset-password.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from '../user/entities/user.entity';
@@ -24,18 +22,18 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Register new user' })
+  @ApiOperation({ summary: 'Register new user ' })
   async register(@Body() registerDto: RegisterDto, @Req() req: Request) {
     return this.authService.register(registerDto, req);
   }
 
-  @Post('login')
+  @Post('login/request-otp')
   @ApiOperation({
-    summary: 'Step 1: Login with email and password',
-    description: 'Validates credentials and sends OTP to email for verification',
+    summary: 'Step 1: Request login OTP',
+    description: 'Sends OTP to email for login',
   })
-  async login(@Body() loginDto: LoginDto, @Req() req: Request) {
-    return this.authService.login(loginDto, req);
+  async requestLoginOtp(@Body() requestLoginOtpDto: RequestLoginOtpDto, @Req() req: Request) {
+    return this.authService.requestLoginOtp(requestLoginOtpDto, req);
   }
 
   @Post('login/verify-otp')
@@ -80,18 +78,6 @@ export class AuthController {
   @ApiOperation({ summary: 'Resend verification email' })
   async resendVerification(@Body('email') email: string, @Req() req: Request) {
     return this.authService.resendVerification(email, req);
-  }
-
-  @Post('forgot-password')
-  @ApiOperation({ summary: 'Request password reset' })
-  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto, @Req() req: Request) {
-    return this.authService.forgotPassword(forgotPasswordDto, req);
-  }
-
-  @Post('reset-password')
-  @ApiOperation({ summary: 'Reset password with OTP' })
-  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto);
   }
 
   @Post('refresh-token')

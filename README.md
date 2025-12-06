@@ -236,7 +236,6 @@ curl -X POST http://localhost:3000/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
-    "password": "SecurePassword123!",
     "firstName": "John",
     "lastName": "Doe",
     "phoneNumber": "+2348012345678"
@@ -247,7 +246,6 @@ curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
-    "password": "SecurePassword123!"
   }'
 
 # Login (Step 2: Verify OTP)
@@ -312,7 +310,6 @@ npm run migration:revert
 ## 🔒 Security Features
 
 ### User Security
-- Bcrypt password hashing (12 rounds)
 - JWT with short-lived access tokens (15m)
 - Refresh token rotation (7 days)
 - Email OTP verification for login

@@ -14,7 +14,6 @@ export class CompleteDatabaseSchema1763401493480 implements MigrationInterface {
                 "phoneNumberCaptured" boolean NOT NULL DEFAULT false,
                 "firstName" character varying,
                 "lastName" character varying,
-                "password" character varying,
                 "isEmailVerified" boolean NOT NULL DEFAULT false,
                 "isPhoneVerified" boolean NOT NULL DEFAULT false,
                 "profilePicture" character varying,

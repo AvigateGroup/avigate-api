@@ -71,10 +71,6 @@ export class UserController {
   @Delete('account')
   @ApiOperation({ summary: 'Delete user account' })
   async deleteAccount(@CurrentUser() user: User, @Body() deleteAccountDto: DeleteAccountDto) {
-    return this.userService.deleteAccount(
-      user,
-      deleteAccountDto.password,
-      deleteAccountDto.confirmDelete,
-    );
+    return this.userService.deleteAccount(user, deleteAccountDto.confirmDelete);
   }
 }

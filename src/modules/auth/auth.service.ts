@@ -8,18 +8,15 @@ import { User } from '../user/entities/user.entity';
 import { UserDevice } from '../user/entities/user-device.entity';
 import { UserOTP } from '../user/entities/user-otp.entity';
 import { RegisterDto } from '../user/dto/register.dto';
-import { LoginDto } from '../user/dto/login.dto';
+import { RequestLoginOtpDto } from '../user/dto/request-login-otp.dto';
 import { VerifyLoginOtpDto } from '../user/dto/verify-login-otp.dto';
 import { VerifyEmailDto } from '../user/dto/verify-email.dto';
 import { GoogleAuthDto } from '../user/dto/google-auth.dto';
 import { CapturePhoneDto } from '../user/dto/capture-phone.dto';
-import { ForgotPasswordDto } from '../user/dto/forgot-password.dto';
-import { ResetPasswordDto } from '../user/dto/reset-password.dto';
 import { RegistrationService } from './services/registration.service';
 import { LoginService } from './services/login.service';
 import { VerificationService } from './services/verification.service';
 import { GoogleAuthService } from './services/google-auth.service';
-import { PasswordResetService } from './services/password-reset.service';
 import { TokenService } from './services/token.service';
 import { DeviceService } from './services/device.service';
 
@@ -36,7 +33,6 @@ export class AuthService {
     private loginService: LoginService,
     private verificationService: VerificationService,
     private googleAuthService: GoogleAuthService,
-    private passwordResetService: PasswordResetService,
     private tokenService: TokenService,
     private deviceService: DeviceService,
   ) {}
@@ -46,10 +42,10 @@ export class AuthService {
   }
 
   /**
-   * Step 1: Validate credentials and send OTP
+   * Step 1: Request login OTP 
    */
-  async login(loginDto: LoginDto, req: Request) {
-    return this.loginService.login(loginDto, req);
+  async requestLoginOtp(requestLoginOtpDto: RequestLoginOtpDto, req: Request) {
+    return this.loginService.requestLoginOtp(requestLoginOtpDto, req);
   }
 
   /**
@@ -80,14 +76,6 @@ export class AuthService {
 
   async resendVerification(email: string, req: Request) {
     return this.verificationService.resendVerification(email, req);
-  }
-
-  async forgotPassword(forgotPasswordDto: ForgotPasswordDto, req: Request) {
-    return this.passwordResetService.forgotPassword(forgotPasswordDto, req);
-  }
-
-  async resetPassword(resetPasswordDto: ResetPasswordDto) {
-    return this.passwordResetService.resetPassword(resetPasswordDto);
   }
 
   async refreshToken(refreshToken: string) {

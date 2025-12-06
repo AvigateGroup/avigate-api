@@ -53,7 +53,7 @@ export class AddAllMissingTables1763401600000 implements MigrationInterface {
 
     // Create OTP type enum
     await queryRunner.query(
-      `CREATE TYPE "public"."user_otps_otptype_enum" AS ENUM('email_verification', 'login_verification', 'login', 'password_reset', 'phone_verification')`,
+      `CREATE TYPE "public"."user_otps_otptype_enum" AS ENUM('email_verification', 'login_verification', 'login', 'phone_verification')`,
     );
 
     // Create user_otps table
@@ -97,13 +97,9 @@ export class AddAllMissingTables1763401600000 implements MigrationInterface {
                 "email" character varying NOT NULL UNIQUE,
                 "firstName" character varying NOT NULL,
                 "lastName" character varying NOT NULL,
-                "passwordHash" character varying NOT NULL,
                 "role" "public"."admins_role_enum" NOT NULL DEFAULT 'admin',
                 "permissions" jsonb NOT NULL DEFAULT '[]',
                 "isActive" boolean NOT NULL DEFAULT true,
-                "passwordHistory" jsonb,
-                "mustChangePassword" boolean NOT NULL DEFAULT false,
-                "passwordChangedAt" TIMESTAMP,
                 "lastLoginAt" TIMESTAMP,
                 "lastLoginIP" character varying,
                 "lastUserAgent" text,

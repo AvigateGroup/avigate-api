@@ -1,5 +1,5 @@
 // src/modules/user/dto/register.dto.ts
-import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsEnum } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsOptional, IsEnum } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { UserSex } from '../entities/user.entity';
 
@@ -38,12 +38,6 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   language?: string;
-
-  @ApiProperty({ example: 'password123' })
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(8)
-  password: string;
 
   @ApiProperty({ example: 'fcm-token-here', required: false })
   @IsString()

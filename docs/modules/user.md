@@ -91,7 +91,7 @@ deactivateDevice(user: User, deviceId: string)
 getUserStats(user: User)
 
 // Account Management
-deleteAccount(user: User, password: string, confirmDelete: string)
+deleteAccount(user: User, confirmDelete: string)
 ```
 
 ### Profile Update Process
@@ -160,9 +160,8 @@ When a user updates their profile:
 ### Account Deletion
 
 **Requirements:**
-1. Password verification (for local accounts)
-2. Confirmation string: `"DELETE_MY_ACCOUNT"`
-3. Cannot be undone
+1. Confirmation string: `"DELETE_MY_ACCOUNT"`
+2. Cannot be undone
 
 **Cascade Deletion:**
 - User devices
@@ -171,8 +170,8 @@ When a user updates their profile:
 - User account record
 
 **Exceptions:**
-- Test accounts: Skip password verification
-- Google OAuth without password: Skip password verification
+- Test accounts: Skip  verification
+- Google OAuth: Skip verification
 
 ## Usage Examples
 
@@ -388,7 +387,6 @@ Authorization: Bearer {ACCESS_TOKEN}
 Content-Type: application/json
 
 {
-  "password": "YourPassword123!",
   "confirmDelete": "DELETE_MY_ACCOUNT"
 }
 
@@ -435,7 +433,6 @@ Content-Type: application/json
 
 ```typescript
 {
-  password: string;         // User's current password
   confirmDelete: string;    // Must be "DELETE_MY_ACCOUNT"
 }
 ```
@@ -529,9 +526,6 @@ Avigate Team
    - Update all related records
    - Send confirmation notification
 
-3. **Password Verification**
-   - Required for sensitive operations
-   - Not required for basic profile updates
 
 ### Device Management
 
@@ -548,7 +542,6 @@ Avigate Team
 ### Account Deletion
 
 1. **Verification**
-   - Password required (for non-OAuth accounts)
    - Confirmation string required
    - Cannot be undone
 
@@ -590,12 +583,6 @@ Common error scenarios:
   "error": "Bad Request"
 }
 
-// Incorrect password
-{
-  "statusCode": 400,
-  "message": "Password is incorrect",
-  "error": "Bad Request"
-}
 
 // Invalid confirmation string
 {

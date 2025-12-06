@@ -11,7 +11,6 @@ import { RegistrationService } from './services/registration.service';
 import { LoginService } from './services/login.service';
 import { VerificationService } from './services/verification.service';
 import { GoogleAuthService } from './services/google-auth.service';
-import { PasswordResetService } from './services/password-reset.service';
 import { TokenService } from './services/token.service';
 import { DeviceService } from './services/device.service';
 import { OtpService } from './services/otp.service';
@@ -47,7 +46,6 @@ import { UserModule } from '../user/user.module';
     LoginService,
     VerificationService,
     GoogleAuthService,
-    PasswordResetService,
     TokenService,
     DeviceService,
     OtpService,

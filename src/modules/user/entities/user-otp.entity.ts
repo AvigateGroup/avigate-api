@@ -15,7 +15,6 @@ export enum OTPType {
   EMAIL_VERIFICATION = 'email_verification',
   LOGIN_VERIFICATION = 'login_verification',
   LOGIN = 'login',
-  PASSWORD_RESET = 'password_reset',
   PHONE_VERIFICATION = 'phone_verification',
 }
 

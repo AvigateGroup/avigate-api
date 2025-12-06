@@ -1,19 +1,11 @@
 // src/modules/user/dto/delete-account.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
 import { IsString, IsNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class DeleteAccountDto {
-  @ApiProperty({
-    description: 'User password for verification',
-    example: 'MySecurePassword123!',
-  })
-  @IsString()
-  @IsNotEmpty()
-  password: string;
-
-  @ApiProperty({
-    description: 'Confirmation text - must be exactly "DELETE_MY_ACCOUNT"',
+  @ApiProperty({ 
     example: 'DELETE_MY_ACCOUNT',
+    description: 'Type "DELETE_MY_ACCOUNT" to confirm account deletion'
   })
   @IsString()
   @IsNotEmpty()

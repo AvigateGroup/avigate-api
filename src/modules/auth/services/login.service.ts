@@ -6,7 +6,7 @@ import { Repository, MoreThan } from 'typeorm';
 import { Request } from 'express';
 import { User } from '../../user/entities/user.entity';
 import { UserOTP, OTPType } from '../../user/entities/user-otp.entity';
-import { LoginDto } from '../../user/dto/login.dto';
+import { RequestLoginOtpDto } from '../../user/dto/request-login-otp.dto';
 import { VerifyLoginOtpDto } from '../../user/dto/verify-login-otp.dto';
 import { UserEmailService } from '../../email/user-email.service';
 import { TokenService } from './token.service';
@@ -29,13 +29,28 @@ export class LoginService {
   ) {}
 
   /**
-   * Step 1: Validate credentials and send OTP
+   * Step 1: Request login OTP
    */
-  async login(loginDto: LoginDto, req: Request) {
-    const { email, password } = loginDto;
+  async requestLoginOtp(requestLoginOtpDto: RequestLoginOtpDto, req: Request) {
+    const { email } = requestLoginOtpDto;
 
-    // Find and validate user credentials
-    const user = await this.findAndValidateUser(email, password);
+    // Find user by email
+    const user = await this.userRepository.findOne({
+      where: { email },
+      select: ['id', 'email', 'firstName', 'lastName', 'isVerified', 'isActive', 'isTestAccount'],
+    });
+
+    // SPECIFIC ERROR: User not found
+    if (!user) {
+      throw new UnauthorizedException(
+        "No account found with this email. Please sign up if you don't have an account.",
+      );
+    }
+
+    // SPECIFIC ERROR: Account deactivated
+    if (!user.isActive) {
+      throw new UnauthorizedException('Your account has been deactivated. Please contact support.');
+    }
 
     // Check if this is a test account
     const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
@@ -63,7 +78,7 @@ export class LoginService {
     const deviceInfo = req.headers['user-agent'] || 'Unknown device';
     await this.userEmailService.sendLoginOTP(user.email, user.firstName, otpCode, deviceInfo);
 
-    logger.info('Login credentials validated, OTP sent', {
+    logger.info('Login OTP sent', {
       userId: user.id,
       email: user.email,
       isTestAccount,
@@ -71,7 +86,7 @@ export class LoginService {
 
     return {
       success: true,
-      message: 'Credentials verified. A verification code has been sent to your email.',
+      message: 'A verification code has been sent to your email.',
       data: {
         email: user.email,
         requiresOtpVerification: true,
@@ -247,55 +262,6 @@ export class LoginService {
         isTestAccount,
       },
     };
-  }
-
-  private async findAndValidateUser(email: string, password: string): Promise<User> {
-    const user = await this.userRepository.findOne({
-      where: { email },
-      select: [
-        'id',
-        'email',
-        'passwordHash',
-        'firstName',
-        'lastName',
-        'isVerified',
-        'isActive',
-        'isTestAccount',
-      ],
-    });
-
-    // SPECIFIC ERROR: User not found
-    if (!user) {
-      throw new UnauthorizedException(
-        "No account found with this email. Please sign up if you don't have an account.",
-      );
-    }
-
-    // SPECIFIC ERROR: Account deactivated
-    if (!user.isActive) {
-      throw new UnauthorizedException('Your account has been deactivated. Please contact support.');
-    }
-
-    // Check if this is a test account
-    const isTestAccount = user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
-
-    // For test accounts, also check against configured test password
-    if (isTestAccount && TEST_ACCOUNTS[email.toLowerCase()]) {
-      const testConfig = TEST_ACCOUNTS[email.toLowerCase()];
-      if (password === testConfig.password) {
-        return user;
-      }
-    }
-
-    // SPECIFIC ERROR: Wrong password
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException(
-        'Incorrect password. Please try again or reset your password.',
-      );
-    }
-
-    return user;
   }
 
   private async handleUnverifiedUser(user: User, req: Request) {

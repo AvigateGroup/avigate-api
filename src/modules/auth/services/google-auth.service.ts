@@ -115,7 +115,7 @@ export class GoogleAuthService {
         incomingGoogleId: googleId,
       });
 
-      // Case 1: User registered with local auth (email/password), now signing in with Google
+      // Case 1: User registered with local auth (email), now signing in with Google
       if (!user.googleId && user.authProvider === AuthProvider.LOCAL) {
         logger.info('Linking Google account to existing local user', {
           userId: user.id,

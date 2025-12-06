@@ -43,7 +43,7 @@ export interface IUserOTP {
   id: string;
   userId: string;
   otpCode: string;
-  otpType: 'email_verification' | 'login_verification' | 'password_reset' | 'phone_verification';
+  otpType: 'email_verification' | 'login_verification' | 'phone_verification';
   expiresAt: Date;
   isUsed: boolean;
   usedAt?: Date;

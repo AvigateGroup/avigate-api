@@ -1,6 +1,6 @@
 # Auth Module
 
-The Auth Module handles user authentication, registration, and account security for the Avigate platform. It provides multiple authentication methods including email/password and Google OAuth.
+The Auth Module handles user authentication, registration, and account security for the Avigate platform. It provides Google OAuth authentication as the primary authentication method.
 
 ## 📑 Table of Contents
 
@@ -15,34 +15,37 @@ The Auth Module handles user authentication, registration, and account security 
 ## Overview
 
 The Auth Module implements a secure, user-friendly authentication system with:
-- Email/password registration and login
+- Email registration with OTP verification
+- OTP-based login authentication
 - Google OAuth 2.0 integration
-- OTP-based email verification
-- Two-step login process for enhanced security
 - Device tracking and management
-- Password reset functionality
 - Refresh token rotation
 
 ### Key Responsibilities
 
-- User registration with email verification
-- Multi-step login with OTP verification
+- User registration with OTP verification
+- OTP-based login authentication
 - Google OAuth authentication
 - Token management (access & refresh tokens)
 - Device registration and tracking
-- Password reset via email
 - Session management
 
 ## Features
 
-### 🔐 Multi-Factor Authentication
+### 🔐 OTP-Based Authentication
 
-**Two-Step Login Process:**
-1. **Step 1**: Validate credentials (email + password)
-2. **Step 2**: Verify OTP sent to email
-3. Issue access and refresh tokens
+**Registration Process:**
+1. User provides email and basic information
+2. OTP code sent to email for verification
+3. User verifies OTP to complete registration
+4. Issue access and refresh tokens
 
-This prevents unauthorized access even if passwords are compromised.
+**Login Process:**
+1. User provides email
+2. OTP code sent to email for authentication
+3. User verifies OTP to complete login
+4. Issue access and refresh tokens
+
 
 ### 📧 Email Verification
 
@@ -83,7 +86,7 @@ This prevents unauthorized access even if passwords are compromised.
 └──────┬──────┘
        │
        │ 1. POST /auth/register
-       │    {email, password, firstName, ...}
+       │    {email, firstName, lastName, ...}
        ▼
 ┌─────────────────┐
 │ Registration    │
@@ -117,7 +120,7 @@ This prevents unauthorized access even if passwords are compromised.
 └─────────────┘
 ```
 
-### Login Flow (2-Step)
+### Login Flow (OTP-Based)
 
 ```
 ┌─────────────┐
@@ -125,13 +128,13 @@ This prevents unauthorized access even if passwords are compromised.
 └──────┬──────┘
        │
        │ 1. POST /auth/login
-       │    {email, password}
+       │    {email}
        ▼
 ┌─────────────────┐
 │  Login Service  │
 └──────┬──────────┘
        │
-       │ 2. Validate credentials
+       │ 2. Find user by email
        │ 3. Check if user verified
        │ 4. Generate login OTP
        │ 5. Send OTP email
@@ -184,7 +187,7 @@ This prevents unauthorized access even if passwords are compromised.
        │    - Create account
        │    - Auto-verify email
        │    
-       │    If EXISTING user (local):
+       │    If EXISTING user:
        │    - Link Google account
        │    
        │ 7. Generate JWT tokens
@@ -208,7 +211,7 @@ This prevents unauthorized access even if passwords are compromised.
 
 ### RegistrationService
 
-Handles new user registration.
+Handles new user registration with OTP verification.
 
 **Key Methods:**
 
@@ -219,20 +222,19 @@ register(registerDto: RegisterDto, req: Request)
 **Process:**
 1. Validate email uniqueness
 2. Validate phone uniqueness (if provided)
-3. Hash password with bcrypt (10 rounds)
-4. Create user account
-5. Register device (if FCM token provided)
-6. Generate OTP for email verification
-7. Send welcome email with OTP
+3. Create user account 
+4. Register device (if FCM token provided)
+5. Generate OTP for email verification
+6. Send welcome email with OTP
 
 ### LoginService
 
-Manages the two-step login process.
+Manages the OTP-based login process.
 
 **Key Methods:**
 
 ```typescript
-// Step 1: Validate credentials and send OTP
+// Step 1: Send OTP to email
 login(loginDto: LoginDto, req: Request)
 
 // Step 2: Verify OTP and complete login
@@ -243,7 +245,7 @@ resendLoginOtp(email: string, req: Request)
 ```
 
 **Login Step 1 Process:**
-1. Find and validate user credentials
+1. Find user by email
 2. Check account status (active, not locked)
 3. Handle unverified users
 4. Check OTP rate limit
@@ -297,36 +299,12 @@ verifyGoogleToken(idToken: string)  // Optional security
 1. Optional: Verify Google ID token
 2. Check if user exists with email
 3. **New User**: Create account, auto-verify
-4. **Existing User (Local)**: Link Google account
-5. **Existing User (Google)**: Normal login
-6. Update profile picture if missing
-7. Capture phone number if missing
-8. Generate JWT tokens
-9. Register device
-10. Return user data and tokens
-
-### PasswordResetService
-
-Password reset functionality.
-
-**Key Methods:**
-
-```typescript
-forgotPassword(forgotDto: ForgotPasswordDto, req: Request)
-resetPassword(resetDto: ResetPasswordDto)
-```
-
-**Reset Process:**
-1. Find user by email
-2. Check if using Google OAuth (reject if no password)
-3. Check rate limit
-4. Generate password reset OTP
-5. Send reset email
-6. User receives OTP
-7. Validate OTP
-8. Update password
-9. Invalidate all sessions
-10. Send confirmation email
+4. **Existing User**: Link Google account
+5. Update profile picture if missing
+6. Capture phone number if missing
+7. Generate JWT tokens
+8. Register device
+9. Return user data and tokens
 
 ### TokenService
 
@@ -398,9 +376,8 @@ generateAndSaveOTP(
 ```
 
 **OTP Types:**
-- `EMAIL_VERIFICATION`: For email verification
-- `LOGIN_VERIFICATION`: For two-step login
-- `PASSWORD_RESET`: For password resets
+- `EMAIL_VERIFICATION`: For email verification during registration
+- `LOGIN_VERIFICATION`: For OTP-based login authentication
 
 **Configuration:**
 - Length: 6 digits
@@ -417,27 +394,20 @@ generateAndSaveOTP(
 | POST | `/auth/verify-email` | Public | Verify email with OTP |
 | POST | `/auth/resend-verification` | Public | Resend verification OTP |
 
-### Login (Two-Step)
+### Login (OTP-Based)
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/login` | Public | Step 1: Validate credentials |
-| POST | `/auth/login/verify-otp` | Public | Step 2: Verify OTP |
+| POST | `/auth/login` | Public | Send OTP to email |
+| POST | `/auth/login/verify-otp` | Public | Verify OTP and login |
 | POST | `/auth/login/resend-otp` | Public | Resend login OTP |
 
 ### Google OAuth
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/auth/google` | Public | Google OAuth login |
+| POST | `/auth/google` | Public | Google OAuth login/registration |
 | PUT | `/auth/capture-phone` | Required | Capture phone number |
-
-### Password Management
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/auth/forgot-password` | Public | Request password reset |
-| POST | `/auth/reset-password` | Public | Reset password with OTP |
 
 ### Token Management
 
@@ -448,19 +418,6 @@ generateAndSaveOTP(
 | GET | `/auth/me` | Required | Get current user |
 
 ## Security
-
-### Password Security
-
-**Hashing:**
-```typescript
-const saltRounds = 10;
-const hashedPassword = await bcrypt.hash(password, saltRounds);
-```
-
-**Requirements:**
-- Minimum 8 characters recommended
-- Stored as bcrypt hash
-- Never returned in API responses
 
 ### OTP Security
 
@@ -516,7 +473,6 @@ For development and testing:
 // src/config/test-accounts.config.ts
 export const TEST_ACCOUNTS = {
   'test@example.com': {
-    password: 'TestPassword123!',
     googleId: 'google-test-id',
   },
 };
@@ -531,7 +487,7 @@ export const TEST_SETTINGS = {
 
 ## Usage Examples
 
-### Complete Registration Flow
+### Complete Registration Flow (OTP-Based)
 
 ```typescript
 // 1. Register new user
@@ -539,7 +495,6 @@ POST /api/v1/auth/register
 
 {
   "email": "user@example.com",
-  "password": "SecurePassword123!",
   "firstName": "John",
   "lastName": "Doe",
   "phoneNumber": "+2348012345678",
@@ -584,21 +539,20 @@ POST /api/v1/auth/verify-email
 // User is now logged in!
 ```
 
-### Complete Login Flow (Two-Step)
+### Complete Login Flow (OTP-Based)
 
 ```typescript
-// 1. Login - Step 1: Validate credentials
+// 1. Login - Send OTP to email
 POST /api/v1/auth/login
 
 {
-  "email": "user@example.com",
-  "password": "SecurePassword123!"
+  "email": "user@example.com"
 }
 
 // Response
 {
   "success": true,
-  "message": "Credentials verified. A verification code has been sent to your email.",
+  "message": "A verification code has been sent to your email.",
   "data": {
     "email": "user@example.com",
     "requiresOtpVerification": true
@@ -607,7 +561,7 @@ POST /api/v1/auth/login
 
 // 2. Check email for OTP (e.g., 654321)
 
-// 3. Login - Step 2: Verify OTP
+// 3. Verify OTP and complete login
 POST /api/v1/auth/login/verify-otp
 
 {
@@ -680,45 +634,6 @@ Authorization: Bearer {ACCESS_TOKEN}
 }
 ```
 
-### Password Reset Flow
-
-```typescript
-// 1. Request password reset
-POST /api/v1/auth/forgot-password
-
-{
-  "email": "user@example.com"
-}
-
-// Response (same response whether user exists or not)
-{
-  "success": true,
-  "message": "If an account exists with this email, a password reset code will be sent",
-  "data": {
-    "email": "user@example.com"
-  }
-}
-
-// 2. Check email for OTP
-
-// 3. Reset password with OTP
-POST /api/v1/auth/reset-password
-
-{
-  "email": "user@example.com",
-  "otpCode": "789012",
-  "newPassword": "NewSecurePassword123!"
-}
-
-// Response
-{
-  "success": true,
-  "message": "Password reset successfully. Please log in with your new password."
-}
-
-// 4. Login with new password (two-step login)
-```
-
 ### Token Refresh
 
 ```typescript
@@ -765,11 +680,11 @@ Authorization: Bearer {ACCESS_TOKEN}
 Common error scenarios:
 
 ```typescript
-// Invalid credentials
+// User not found
 {
-  "statusCode": 401,
-  "message": "Invalid credentials",
-  "error": "Unauthorized"
+  "statusCode": 404,
+  "message": "User not found",
+  "error": "Not Found"
 }
 
 // Email not verified
@@ -804,11 +719,11 @@ Common error scenarios:
   "error": "Unauthorized"
 }
 
-// Google OAuth user without password
+// Invalid Google token
 {
-  "statusCode": 400,
-  "message": "This account uses Google sign-in. Please log in with Google.",
-  "error": "Bad Request"
+  "statusCode": 401,
+  "message": "Invalid Google authentication",
+  "error": "Unauthorized"
 }
 ```
 
@@ -846,7 +761,6 @@ Common error scenarios:
 
 1. **Security**
    - Never expose sensitive data in responses
-   - Always hash passwords
    - Use parameterized queries
    - Implement rate limiting
    - Validate all inputs

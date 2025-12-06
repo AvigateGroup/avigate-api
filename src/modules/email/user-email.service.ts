@@ -255,7 +255,7 @@ export class UserEmailService {
       }
       
       <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.5; color: #6c757d;">
-        If you didn't request this code, please secure your account immediately.
+        If you didn't request this code, please contact support immediately.
       </p>
     `;
 
@@ -322,11 +322,11 @@ export class UserEmailService {
       </div>
       
       <p style="margin: 16px 0; font-size: 16px; line-height: 1.5; color: #555;">
-        If this wasn't you, please change your password immediately.
+        If this wasn't you, please contact our support team immediately.
       </p>
       
       <div style="text-align: center; margin: 24px 0;">
-        <a href="${this.frontendUrl}/change-password" style="display: inline-block; background-color: #86B300; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: 500;">Change Password</a>
+        <a href="${this.frontendUrl}/support" style="display: inline-block; background-color: #86B300; color: white; text-decoration: none; padding: 12px 24px; border-radius: 4px; font-weight: 500;">Contact Support</a>
       </div>
     `;
 
@@ -353,56 +353,6 @@ export class UserEmailService {
 
     await this.sendZeptoMailEmail(emailData, 'new_device_login');
     logger.info(`New device login notification sent to ${email}`);
-  }
-
-  async sendPasswordChangeConfirmation(
-    email: string,
-    firstName: string,
-    changeTime: string,
-  ): Promise<void> {
-    logger.info('Preparing password change confirmation', { email, firstName });
-
-    const content = `
-      <h1 style="margin: 0 0 24px 0; font-size: 24px; font-weight: 600; color: #198754;">Password Changed</h1>
-      
-      <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.5; color: #333;">Hi ${firstName},</p>
-      
-      <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.5; color: #555;">
-        Your password was successfully changed.
-      </p>
-      
-      <div style="background-color: #d1e7dd; border: 1px solid #badbcc; border-radius: 4px; padding: 16px; margin: 16px 0;">
-        <p style="margin: 0; font-size: 14px; color: #0f5132;">Changed: ${changeTime}</p>
-      </div>
-      
-      <p style="margin: 16px 0 0 0; font-size: 14px; line-height: 1.5; color: #6c757d;">
-        If you didn't make this change, contact our support team immediately.
-      </p>
-    `;
-
-    const emailData: EmailData = {
-      from: {
-        address: this.fromEmail,
-        name: this.fromName,
-      },
-      to: [
-        {
-          email_address: {
-            address: email,
-            name: firstName,
-          },
-        },
-      ],
-      subject: 'Password Changed - Avigate',
-      htmlbody: this.generateBaseEmailHTML(
-        'Password Changed',
-        content,
-        'This is a security confirmation from Avigate.',
-      ),
-    };
-
-    await this.sendZeptoMailEmail(emailData, 'password_change');
-    logger.info(`Password change confirmation sent to ${email}`);
   }
 
   async sendAccountDeletionConfirmation(

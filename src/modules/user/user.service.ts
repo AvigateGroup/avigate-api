@@ -31,7 +31,7 @@ export class UserService {
     private userEmailService: UserEmailService,
     private UserUpdatesEmailService: UserUpdatesEmailService,
     private uploadService: UploadService,
-    private verificationService: VerificationService, // Add this
+    private verificationService: VerificationService,
   ) {}
 
   async getProfile(user: User) {
@@ -262,36 +262,17 @@ export class UserService {
     };
   }
 
-  async deleteAccount(user: User, password: string, confirmDelete: string) {
+  async deleteAccount(user: User, confirmDelete: string) {
     if (confirmDelete !== 'DELETE_MY_ACCOUNT') {
       throw new BadRequestException(
         'Please confirm account deletion by sending "DELETE_MY_ACCOUNT"',
       );
     }
 
-    // Skip password check for test accounts and Google users without password
-    const isTestAccount =
-      user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(user.email.toLowerCase());
-
-    if (!isTestAccount && user.passwordHash) {
-      // Fetch user with password hash for verification
-      const userWithPassword = await this.userRepository.findOne({
-        where: { id: user.id },
-        select: ['id', 'email', 'firstName', 'passwordHash', 'isTestAccount'],
-      });
-
-      if (!userWithPassword || !userWithPassword.passwordHash) {
-        throw new BadRequestException('Unable to verify password');
-      }
-
-      const isPasswordValid = await userWithPassword.comparePassword(password);
-      if (!isPasswordValid) {
-        throw new BadRequestException('Password is incorrect');
-      }
-    }
-
     const userEmail = user.email;
     const userFirstName = user.firstName;
+    const isTestAccount =
+      user.isTestAccount || TEST_ACCOUNTS.hasOwnProperty(user.email.toLowerCase());
 
     // Delete profile picture if exists
     if (user.profilePicture) {

@@ -4,7 +4,6 @@ import { Injectable, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
-import * as bcrypt from 'bcrypt';
 import { User, AuthProvider } from '../../user/entities/user.entity';
 import { RegisterDto } from '../../user/dto/register.dto';
 import { UserEmailService } from '../../email/user-email.service';
@@ -32,7 +31,6 @@ export class RegistrationService {
     try {
       const {
         email,
-        password,
         firstName,
         lastName,
         sex,
@@ -61,14 +59,9 @@ export class RegistrationService {
       const isTestAccount = TEST_ACCOUNTS.hasOwnProperty(email.toLowerCase());
       const testAccountConfig = isTestAccount ? TEST_ACCOUNTS[email.toLowerCase()] : null;
 
-      // Hash the password before saving
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      // Create user with HASHED password and legal compliance tracking
+      // Create user  system
       const user = this.userRepository.create({
         email,
-        passwordHash: hashedPassword,
         firstName,
         lastName,
         sex,

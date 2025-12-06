@@ -7,10 +7,7 @@ import {
   UpdateDateColumn,
   OneToMany,
   Index,
-  BeforeInsert,
-  BeforeUpdate,
 } from 'typeorm';
-import * as bcrypt from 'bcrypt';
 import { UserDevice } from './user-device.entity';
 import { UserOTP } from './user-otp.entity';
 
@@ -68,9 +65,6 @@ export class User {
   })
   authProvider: AuthProvider;
 
-  @Column({ nullable: true, select: false })
-  passwordHash: string;
-
   @Column({ nullable: true })
   profilePicture: string;
 
@@ -101,12 +95,6 @@ export class User {
 
   @Column({ type: 'timestamp', nullable: true })
   refreshTokenExpiresAt: Date | null;
-
-  @Column({ nullable: true, select: false })
-  passwordResetToken: string;
-
-  @Column({ type: 'timestamp', nullable: true })
-  passwordResetExpiresAt: Date;
 
   @Column({ default: 100 })
   @Index()
@@ -142,26 +130,12 @@ export class User {
   @OneToMany(() => UserOTP, otp => otp.user)
   otps: UserOTP[];
 
-  @BeforeInsert()
-  @BeforeUpdate()
-  async hashPassword() {
-    if (this.passwordHash && !this.passwordHash.startsWith('$2')) {
-      const salt = await bcrypt.genSalt(12);
-      this.passwordHash = await bcrypt.hash(this.passwordHash, salt);
-    }
-  }
-
-  async comparePassword(candidatePassword: string): Promise<boolean> {
-    if (!this.passwordHash) return false;
-    return bcrypt.compare(candidatePassword, this.passwordHash);
-  }
-
   getFullName(): string {
     return `${this.firstName} ${this.lastName}`;
   }
 
   toJSON() {
-    const { passwordHash, refreshToken, passwordResetToken, ...user } = this as any;
+    const { refreshToken, ...user } = this as any;
     return user;
   }
 }
