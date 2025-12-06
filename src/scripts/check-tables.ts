@@ -20,8 +20,9 @@ async function checkTables() {
 
     // Check specifically for route_segments
     const hasRouteSegments = tables.some((row: any) => row.tablename === 'route_segments');
-    console.log(`\n${hasRouteSegments ? '✅' : '❌'} route_segments table ${hasRouteSegments ? 'EXISTS' : 'DOES NOT EXIST'}`);
-
+    console.log(
+      `\n${hasRouteSegments ? '✅' : '❌'} route_segments table ${hasRouteSegments ? 'EXISTS' : 'DOES NOT EXIST'}`,
+    );
   } catch (error) {
     console.error('❌ Error:', error);
   } finally {

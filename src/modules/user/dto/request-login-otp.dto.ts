@@ -3,9 +3,9 @@ import { IsEmail, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RequestLoginOtpDto {
-  @ApiProperty({ 
+  @ApiProperty({
     example: 'user@example.com',
-    description: 'Email address to receive login OTP'
+    description: 'Email address to receive login OTP',
   })
   @IsEmail()
   @IsNotEmpty()

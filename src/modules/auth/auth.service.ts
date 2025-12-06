@@ -42,7 +42,7 @@ export class AuthService {
   }
 
   /**
-   * Step 1: Request login OTP 
+   * Step 1: Request login OTP
    */
   async requestLoginOtp(requestLoginOtpDto: RequestLoginOtpDto, req: Request) {
     return this.loginService.requestLoginOtp(requestLoginOtpDto, req);

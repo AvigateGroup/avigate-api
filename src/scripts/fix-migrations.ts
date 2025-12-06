@@ -21,16 +21,15 @@ async function fixMigrations() {
 
     for (const migration of migrationsToMark) {
       // Check if already exists
-      const exists = await AppDataSource.query(
-        `SELECT * FROM migrations WHERE timestamp = $1`,
-        [migration.timestamp],
-      );
+      const exists = await AppDataSource.query(`SELECT * FROM migrations WHERE timestamp = $1`, [
+        migration.timestamp,
+      ]);
 
       if (exists.length === 0) {
-        await AppDataSource.query(
-          `INSERT INTO migrations (timestamp, name) VALUES ($1, $2)`,
-          [migration.timestamp, migration.name],
-        );
+        await AppDataSource.query(`INSERT INTO migrations (timestamp, name) VALUES ($1, $2)`, [
+          migration.timestamp,
+          migration.name,
+        ]);
         console.log(`✅ Marked migration as executed: ${migration.name}`);
       } else {
         console.log(`⏭️  Migration already marked: ${migration.name}`);
