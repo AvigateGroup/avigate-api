@@ -270,12 +270,9 @@ export class ReputationService {
    * Award bonus reputation points when a route contribution is approved by admin
    * Called by ContributionManagementService when admin approves a contribution
    */
-  async awardApprovedContributionBonus(
-    userId: string,
-    contributionId: string,
-  ): Promise<any> {
+  async awardApprovedContributionBonus(userId: string, contributionId: string): Promise<any> {
     const APPROVED_CONTRIBUTION_BONUS = 50; // Bonus points for approved contribution
-    
+
     return this.awardPoints(userId, ReputationAction.VERIFIED_CONTRIBUTION, {
       relatedEntityId: contributionId,
       relatedEntityType: 'route_contribution',
@@ -288,12 +285,9 @@ export class ReputationService {
    * Award bonus reputation points when a route contribution is implemented/goes live
    * Called by ContributionManagementService when contribution is marked as implemented
    */
-  async awardImplementedContributionBonus(
-    userId: string,
-    contributionId: string,
-  ): Promise<any> {
+  async awardImplementedContributionBonus(userId: string, contributionId: string): Promise<any> {
     const IMPLEMENTED_CONTRIBUTION_BONUS = 100; // Bonus points for implemented contribution
-    
+
     return this.awardPoints(userId, ReputationAction.VERIFIED_CONTRIBUTION, {
       relatedEntityId: contributionId,
       relatedEntityType: 'route_contribution',

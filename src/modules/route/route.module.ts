@@ -28,13 +28,13 @@ import { EmailModule } from '../email/email.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Route, 
-      RouteStep, 
-      RouteSegment, 
-      ActiveTrip, 
-      Location, 
-      Landmark, 
-      User
+      Route,
+      RouteStep,
+      RouteSegment,
+      ActiveTrip,
+      Location,
+      Landmark,
+      User,
     ]),
     ConfigModule,
     JwtModule.register({}),
