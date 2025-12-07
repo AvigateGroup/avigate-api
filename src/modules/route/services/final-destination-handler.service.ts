@@ -196,7 +196,7 @@ export class FinalDestinationHandlerService {
 
     // Geocode the closest landmark
     const dropOffCoords = await this.googleMapsService.geocode(
-      `${closestLandmark}, Port Harcourt, Rivers State, Nigeria`,
+      `${closestLandmark}, , Nigeria`,
     );
 
     if (!dropOffCoords) return null;
