@@ -13,7 +13,7 @@ async function seed() {
     host: process.env.DATABASE_HOST,
     port: parseInt(process.env.DATABASE_PORT || '5432', 10),
     username: process.env.DATABASE_USER || 'postgres',
-    password: String(process.env.DATABASE_PASSWORD || ''), 
+    password: String(process.env.DATABASE_PASSWORD || ''),
     database: process.env.DATABASE_NAME,
     synchronize: false,
     logging: true,

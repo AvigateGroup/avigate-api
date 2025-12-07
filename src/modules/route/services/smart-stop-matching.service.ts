@@ -100,9 +100,7 @@ export class SmartStopMatchingService {
 
         // If no exact coordinates, geocode the stop name
         if (!stopCoordinates) {
-          const geocoded = await this.googleMapsService.geocode(
-            `${stop.name}, Nigeria`,
-          );
+          const geocoded = await this.googleMapsService.geocode(`${stop.name}, Nigeria`);
           if (geocoded) {
             stopCoordinates = geocoded;
           }
@@ -319,9 +317,7 @@ If you prefer not to walk, you can ask locals at ${stop.name} for okada (motorcy
       }
 
       if (!coordinates) {
-        coordinates = await this.googleMapsService.geocode(
-          `${stop.name}, Nigeria`,
-        );
+        coordinates = await this.googleMapsService.geocode(`${stop.name}, Nigeria`);
       }
 
       if (coordinates) {
