@@ -47,7 +47,7 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
   isVerified: true,
 },
 {
-  name: 'Stadium Road',
+  name: 'c',
   city: 'Port Harcourt',
   state: 'Rivers',
   country: 'Nigeria',
@@ -308,16 +308,6 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
     description: 'Popular bus stop near educational institutions in central Port Harcourt',
     isVerified: true,
   },
-    {
-      name: 'Education Bus Stop',
-      city: 'Port Harcourt',
-      state: 'Rivers',
-      country: 'Nigeria',
-      latitude: 4.789061,
-      longitude: 7.001091,
-      description: 'Popular bus stop near educational institutions in central Port Harcourt',
-      isVerified: true,
-    },
   ];
 
   for (const location of locations) {
