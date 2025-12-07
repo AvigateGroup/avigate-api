@@ -28,11 +28,8 @@
     "migration:show": "typeorm-ts-node-commonjs migration:show -d ormconfig.ts",
     "schema:sync": "typeorm-ts-node-commonjs schema:sync -d ormconfig.ts",
     "schema:drop": "typeorm-ts-node-commonjs schema:drop -d ormconfig.ts",
-    "seed": "ts-node -r tsconfig-paths/register src/scripts/seed-nigerian-transport.ts",
+    "seed": "ts-node -r tsconfig-paths/register src/scripts/seed-admin-and-users.ts",
     "seed:ph": "ts-node -r tsconfig-paths/register src/scripts/run-seed.ts",
-    "check:tables": "ts-node -r tsconfig-paths/register src/scripts/check-tables.ts",
-    "fix:migrations": "ts-node -r tsconfig-paths/register src/scripts/fix-migrations.ts",
-    "create:route-segments": "ts-node -r tsconfig-paths/register src/scripts/create-route-segments-table.ts",
     "db:reset": "ts-node -r tsconfig-paths/register src/scripts/drop-and-reset-db.ts"
   },
   "dependencies": {
