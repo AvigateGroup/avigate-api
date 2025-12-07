@@ -163,7 +163,7 @@ export class FinalDestinationHandlerService {
     for (const landmark of segment.landmarks) {
       // Geocode landmark
       const landmarkCoords = await this.googleMapsService.geocode(
-        `${landmark}, Port Harcourt, Rivers State, Nigeria`,
+        `${landmark.name}, Nigeria`,
       );
 
       if (!landmarkCoords) continue;
@@ -175,7 +175,7 @@ export class FinalDestinationHandlerService {
 
       if (distance < minDistance) {
         minDistance = distance;
-        closestLandmark = landmark;
+        closestLandmark = landmark.name;
       }
     }
 
