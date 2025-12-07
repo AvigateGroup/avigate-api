@@ -19,6 +19,7 @@ import { RouteStep } from './entities/route-step.entity';
 import { RouteSegment } from './entities/route-segment.entity';
 import { ActiveTrip } from './entities/active-trip.entity';
 import { Location } from '../location/entities/location.entity';
+import { Landmark } from '../location/entities/landmark.entity';
 import { User } from '../user/entities/user.entity';
 import { LocationModule } from '../location/location.module';
 import { NotificationsModule } from '../notifications/notifications.module';
@@ -26,7 +27,15 @@ import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Route, RouteStep, RouteSegment, ActiveTrip, Location, User]),
+    TypeOrmModule.forFeature([
+      Route, 
+      RouteStep, 
+      RouteSegment, 
+      ActiveTrip, 
+      Location, 
+      Landmark, 
+      User
+    ]),
     ConfigModule,
     JwtModule.register({}),
     LocationModule,

@@ -8,7 +8,7 @@ async function seed() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const dataSource = app.get(DataSource);
 
-  console.log('🌱 Starting Nigerian Transport Data Seed...\n');
+  console.log('🌱 Starting users Data Seed...\n');
 
   try {
     // ============================================
