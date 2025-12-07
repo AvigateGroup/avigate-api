@@ -1,16 +1,31 @@
 // src/scripts/seed-admin-and-users.ts
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
+import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
-import * as bcrypt from 'bcrypt'; // Changed from bcryptjs to bcrypt
+import * as bcrypt from 'bcrypt';
+
+// Load environment variables
+config();
 
 async function seed() {
-  const app = await NestFactory.createApplicationContext(AppModule);
-  const dataSource = app.get(DataSource);
+  // Create a new DataSource instance
+  const dataSource = new DataSource({
+    type: 'postgres',
+    host: process.env.DATABASE_HOST,
+    port: parseInt(process.env.DATABASE_PORT || '5432', 10),
+    username: process.env.DATABASE_USER || 'postgres',
+    password: String(process.env.DATABASE_PASSWORD || ''), 
+    database: process.env.DATABASE_NAME,
+    synchronize: false,
+    logging: true,
+  });
 
   console.log('🌱 Starting users Data Seed...\n');
 
   try {
+    console.log('🔌 Connecting to database...');
+    await dataSource.initialize();
+    console.log('✅ Database connected!\n');
+
     // ============================================
     // 1. CREATE SUPER ADMIN
     // ============================================
@@ -71,7 +86,7 @@ async function seed() {
     console.log('   TOTP: Disabled (can be enabled after login)\n');
 
     // ============================================
-    // 2. CREATE ADDITIONAL ADMIN ACCOUNTS (Optional)
+    // 2. CREATE ADDITIONAL ADMIN ACCOUNTS
     // ============================================
     console.log('👥 Creating Additional Admin Accounts...\n');
 
@@ -143,11 +158,11 @@ async function seed() {
           adminPasswordHash,
           admin.role,
           JSON.stringify(admin.permissions),
-          true, // isActive
-          false, // mustChangePassword (false for seed data)
-          new Date(), // passwordChangedAt
-          false, // totpEnabled
-          0, // failedLoginAttempts
+          true,
+          false,
+          new Date(),
+          false,
+          0,
         ],
       );
 
@@ -200,10 +215,8 @@ async function seed() {
       },
     ];
 
-    const createdTestUsers: Array<{ email: string; id: any }> = [];
-
     for (const user of testUsers) {
-      const userResult = await dataSource.query(
+      await dataSource.query(
         `
         INSERT INTO users (
           email, 
@@ -223,7 +236,6 @@ async function seed() {
         )
         ON CONFLICT (email) DO UPDATE 
         SET email = EXCLUDED.email
-        RETURNING id;
       `,
         [
           user.email,
@@ -239,23 +251,20 @@ async function seed() {
         ],
       );
 
-      createdTestUsers.push({
-        email: user.email,
-        id: userResult[0].id,
-      });
-
       console.log(`✅ Created test user: ${user.email} - ${user.description}`);
     }
 
-    const testUserId = createdTestUsers[0].id;
     console.log(`\n✅ Created ${testUsers.length} test users\n`);
-
-   
-     } catch (error) {
+    console.log('✅ Seeding completed successfully!');
+  } catch (error) {
     console.error('❌ Seed failed:', error);
     throw error;
   } finally {
-    await app.close();
+    if (dataSource.isInitialized) {
+      await dataSource.destroy();
+      console.log('\n🔌 Database connection closed');
+    }
   }
 }
+
 seed();
