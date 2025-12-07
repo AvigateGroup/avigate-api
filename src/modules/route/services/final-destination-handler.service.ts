@@ -8,6 +8,12 @@ import { GoogleMapsService } from './google-maps.service';
 import { GeofencingService } from './geofencing.service';
 import { logger } from '@/utils/logger.util';
 
+interface LandmarkInfo {
+  name: string;
+  lat: number;
+  lng: number;
+}
+
 interface FinalDestinationResult {
   needsWalking: boolean;
   dropOffLocation: {
@@ -156,26 +162,20 @@ export class FinalDestinationHandlerService {
       return null;
     }
 
-    let closestLandmark: string | null = null;
+    // FIX: Changed from string to LandmarkInfo | null
+    let closestLandmark: LandmarkInfo | null = null;
     let minDistance = Infinity;
 
     // Check each landmark to find closest to final destination
-    for (const landmark of segment.landmarks) {
-      // Geocode landmark
-      const landmarkCoords = await this.googleMapsService.geocode(
-        `${landmark.name}, Nigeria`,
-      );
-
-      if (!landmarkCoords) continue;
-
+    for (const landmark of segment.landmarks as LandmarkInfo[]) {
       const distance = this.geofencingService.calculateDistance(
         { lat: finalDestinationLat, lng: finalDestinationLng },
-        landmarkCoords,
+        { lat: landmark.lat, lng: landmark.lng },
       );
 
       if (distance < minDistance) {
         minDistance = distance;
-        closestLandmark = landmark.name;
+        closestLandmark = landmark; // Now this works - both are LandmarkInfo
       }
     }
 
@@ -194,18 +194,12 @@ export class FinalDestinationHandlerService {
       };
     }
 
-    // Geocode the closest landmark
-    const dropOffCoords = await this.googleMapsService.geocode(
-      `${closestLandmark}, , Nigeria`,
-    );
-
-    if (!dropOffCoords) return null;
-
+    // Use the closest landmark's coordinates directly
     return {
-      dropOffName: closestLandmark,
-      dropOffLat: dropOffCoords.lat,
-      dropOffLng: dropOffCoords.lng,
-      landmark: closestLandmark,
+      dropOffName: closestLandmark.name,
+      dropOffLat: closestLandmark.lat,
+      dropOffLng: closestLandmark.lng,
+      landmark: closestLandmark.name,
     };
   }
 
