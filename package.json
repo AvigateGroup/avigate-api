@@ -32,7 +32,8 @@
     "seed:ph": "ts-node -r tsconfig-paths/register src/scripts/run-seed.ts",
     "check:tables": "ts-node -r tsconfig-paths/register src/scripts/check-tables.ts",
     "fix:migrations": "ts-node -r tsconfig-paths/register src/scripts/fix-migrations.ts",
-    "create:route-segments": "ts-node -r tsconfig-paths/register src/scripts/create-route-segments-table.ts"
+    "create:route-segments": "ts-node -r tsconfig-paths/register src/scripts/create-route-segments-table.ts",
+    "db:reset": "ts-node -r tsconfig-paths/register src/scripts/drop-and-reset-db.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.901.0",
