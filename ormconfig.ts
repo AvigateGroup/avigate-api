@@ -10,20 +10,23 @@ const databaseUrl = process.env.DATABASE_URL;
 export default new DataSource({
   type: 'postgres',
   ...(databaseUrl 
-    ? { url: databaseUrl } 
+    ? { 
+        url: databaseUrl,
+        ssl: { rejectUnauthorized: false }
+      } 
     : {
-        host: process.env.DB_HOST,
-        port: parseInt(process.env.DB_PORT || '5432', 10),
-        username: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
+        host: process.env.DATABASE_HOST,
+        port: parseInt(process.env.DATABASE_PORT || '5432', 10),
+        username: process.env.DATABASE_USERNAME,
+        password: process.env.DATABASE_PASSWORD,
+        database: process.env.DATABASE_NAME,
+        ssl: process.env.DATABASE_SSL === 'true' 
+          ? { rejectUnauthorized: false } 
+          : false,
       }
   ),
   entities: ['src/**/*.entity{.ts,.js}'],
   migrations: ['src/migrations/*{.ts,.js}'],
   synchronize: false,
   logging: true,
-  ssl: process.env.NODE_ENV === 'production' 
-    ? { rejectUnauthorized: false } 
-    : false,
 });
