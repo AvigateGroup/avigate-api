@@ -38,7 +38,7 @@ async function dropAndResetDatabase() {
       'locations',
       'refresh_tokens',
       'user_devices',
-      'otp_codes',
+      'user_otps',
       'users',
       'admin_activity_logs',
       'admins',
