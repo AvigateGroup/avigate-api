@@ -28,7 +28,7 @@
     "migration:show": "typeorm-ts-node-commonjs migration:show -d ormconfig.ts",
     "schema:sync": "typeorm-ts-node-commonjs schema:sync -d ormconfig.ts",
     "schema:drop": "typeorm-ts-node-commonjs schema:drop -d ormconfig.ts",
-    "seed": "ts-node -r tsconfig-paths/register src/scripts/seed-admin-and-users.ts",
+    "seed:users": "ts-node -r tsconfig-paths/register src/scripts/seed-admin-and-users.ts",
     "seed:ph": "ts-node -r tsconfig-paths/register src/scripts/run-seed.ts",
     "db:reset": "ts-node -r tsconfig-paths/register src/scripts/drop-and-reset-db.ts"
   },
