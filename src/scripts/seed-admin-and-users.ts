@@ -1,5 +1,4 @@
 // src/scripts/seed-admin-and-users.ts
-// src/scripts/seed-nigerian-transport.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { DataSource } from 'typeorm';
