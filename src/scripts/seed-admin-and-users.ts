@@ -1,0 +1,262 @@
+// src/scripts/seed-admin-and-users.ts
+// src/scripts/seed-nigerian-transport.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from '../app.module';
+import { DataSource } from 'typeorm';
+import * as bcrypt from 'bcrypt'; // Changed from bcryptjs to bcrypt
+
+async function seed() {
+  const app = await NestFactory.createApplicationContext(AppModule);
+  const dataSource = app.get(DataSource);
+
+  console.log('🌱 Starting Nigerian Transport Data Seed...\n');
+
+  try {
+    // ============================================
+    // 1. CREATE SUPER ADMIN
+    // ============================================
+    console.log('👤 Creating Super Admin...');
+
+    const passwordHash = await bcrypt.hash('Pampersbaby@12345!', 12);
+
+    const adminResult = await dataSource.query(
+      `
+      INSERT INTO admins (
+        email, 
+        "firstName", 
+        "lastName", 
+        "passwordHash", 
+        role, 
+        permissions, 
+        "isActive",
+        "mustChangePassword",
+        "passwordChangedAt",
+        "totpEnabled",
+        "failedLoginAttempts",
+        "createdAt",
+        "updatedAt"
+      ) VALUES (
+        'joel.emmanuel@avigate.co',
+        'Joel',
+        'Emmanuel',
+        $1,
+        'super_admin',
+        '["*"]',
+        true,
+        false,
+        NOW(),
+        false,
+        0,
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (email) DO UPDATE 
+      SET 
+        "passwordHash" = EXCLUDED."passwordHash",
+        role = EXCLUDED.role,
+        permissions = EXCLUDED.permissions,
+        "isActive" = EXCLUDED."isActive",
+        "mustChangePassword" = EXCLUDED."mustChangePassword",
+        "passwordChangedAt" = EXCLUDED."passwordChangedAt",
+        "totpEnabled" = EXCLUDED."totpEnabled",
+        "updatedAt" = NOW()
+      RETURNING id;
+    `,
+      [passwordHash],
+    );
+
+    console.log('✅ Super Admin created/updated');
+    console.log('   Email: joel.emmanuel@avigate.co');
+    console.log('   Password: Pampersbaby@12345!');
+    console.log('   Role: super_admin');
+    console.log('   TOTP: Disabled (can be enabled after login)\n');
+
+    // ============================================
+    // 2. CREATE ADDITIONAL ADMIN ACCOUNTS (Optional)
+    // ============================================
+    console.log('👥 Creating Additional Admin Accounts...\n');
+
+    const additionalAdmins = [
+      {
+        email: 'admin@avigate.co',
+        firstName: 'Test',
+        lastName: 'Admin',
+        password: 'AdminTest123!@#',
+        role: 'admin',
+        permissions: [
+          'users.view',
+          'users.create',
+          'users.edit',
+          'users.delete',
+          'analytics.view',
+          'analytics.export',
+          'content.moderate',
+          'admins.view',
+        ],
+      },
+      {
+        email: 'moderator@avigate.co',
+        firstName: 'Test',
+        lastName: 'Moderator',
+        password: 'ModeratorTest123!@#',
+        role: 'moderator',
+        permissions: ['users.view', 'users.edit', 'content.moderate', 'analytics.view'],
+      },
+    ];
+
+    for (const admin of additionalAdmins) {
+      const adminPasswordHash = await bcrypt.hash(admin.password, 12);
+
+      await dataSource.query(
+        `
+        INSERT INTO admins (
+          email, 
+          "firstName", 
+          "lastName", 
+          "passwordHash", 
+          role, 
+          permissions, 
+          "isActive",
+          "mustChangePassword",
+          "passwordChangedAt",
+          "totpEnabled",
+          "failedLoginAttempts",
+          "createdAt",
+          "updatedAt"
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW()
+        )
+        ON CONFLICT (email) DO UPDATE 
+        SET 
+          "passwordHash" = EXCLUDED."passwordHash",
+          role = EXCLUDED.role,
+          permissions = EXCLUDED.permissions,
+          "isActive" = EXCLUDED."isActive",
+          "mustChangePassword" = EXCLUDED."mustChangePassword",
+          "passwordChangedAt" = EXCLUDED."passwordChangedAt",
+          "totpEnabled" = EXCLUDED."totpEnabled",
+          "updatedAt" = NOW()
+      `,
+        [
+          admin.email,
+          admin.firstName,
+          admin.lastName,
+          adminPasswordHash,
+          admin.role,
+          JSON.stringify(admin.permissions),
+          true, // isActive
+          false, // mustChangePassword (false for seed data)
+          new Date(), // passwordChangedAt
+          false, // totpEnabled
+          0, // failedLoginAttempts
+        ],
+      );
+
+      console.log(`✅ Created admin: ${admin.email} (Role: ${admin.role})`);
+    }
+
+    console.log(`\n✅ Created ${additionalAdmins.length + 1} admin accounts\n`);
+
+    // ============================================
+    // 3. CREATE TEST USERS
+    // ============================================
+    console.log('👥 Creating Test Users...\n');
+
+    const testUsers = [
+      {
+        email: 'testuser1@avigate.co',
+        firstName: 'Test',
+        lastName: 'User One',
+        sex: 'male',
+        phoneNumber: '+2348012345671',
+        googleId: null,
+        description: 'General testing account for basic app functionality',
+      },
+      {
+        email: 'testuser2@avigate.co',
+        firstName: 'Test',
+        lastName: 'User Two',
+        sex: 'female',
+        phoneNumber: '+2348012345672',
+        googleId: null,
+        description: 'Advanced testing account with higher reputation',
+      },
+      {
+        email: 'googletest@avigate.co',
+        firstName: 'Google',
+        lastName: 'Test',
+        sex: 'male',
+        phoneNumber: '+2348012345673',
+        googleId: 'test_google_id_123',
+        description: 'Google Play Store testing account',
+      },
+      {
+        email: 'appletest@avigate.co',
+        firstName: 'Apple',
+        lastName: 'Test',
+        sex: 'female',
+        phoneNumber: '+2348012345674',
+        googleId: null,
+        description: 'Apple App Store testing account',
+      },
+    ];
+
+    const createdTestUsers: Array<{ email: string; id: any }> = [];
+
+    for (const user of testUsers) {
+      const userResult = await dataSource.query(
+        `
+        INSERT INTO users (
+          email, 
+          "firstName", 
+          "lastName", 
+          sex,
+          "phoneNumber",
+          "googleId",
+          "isVerified",
+          "isActive",
+          "isTestAccount",
+          "reputationScore",
+          "createdAt",
+          "updatedAt"
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW()
+        )
+        ON CONFLICT (email) DO UPDATE 
+        SET email = EXCLUDED.email
+        RETURNING id;
+      `,
+        [
+          user.email,
+          user.firstName,
+          user.lastName,
+          user.sex,
+          user.phoneNumber,
+          user.googleId,
+          true,
+          true,
+          true,
+          user.email === 'testuser2@avigate.co' ? 500 : 100,
+        ],
+      );
+
+      createdTestUsers.push({
+        email: user.email,
+        id: userResult[0].id,
+      });
+
+      console.log(`✅ Created test user: ${user.email} - ${user.description}`);
+    }
+
+    const testUserId = createdTestUsers[0].id;
+    console.log(`\n✅ Created ${testUsers.length} test users\n`);
+
+   
+     } catch (error) {
+    console.error('❌ Seed failed:', error);
+    throw error;
+  } finally {
+    await app.close();
+  }
+}
+seed();
