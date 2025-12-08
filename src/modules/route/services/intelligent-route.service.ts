@@ -75,6 +75,27 @@ export class IntelligentRouteService {
   }
 
   /**
+   * NEW: Compose route using routeId - fetches the route and uses its start/end locations
+   */
+  async composeRouteById(routeId: string): Promise<RouteComposition | null> {
+    logger.info('Composing route by ID', { routeId });
+
+    // Fetch the route with its location details
+    const route = await this.routeRepository.findOne({
+      where: { id: routeId, isActive: true },
+      relations: ['startLocation', 'endLocation'],
+    });
+
+    if (!route) {
+      logger.warn('Route not found', { routeId });
+      return null;
+    }
+
+    // Use the existing composeRoute method with the location IDs
+    return this.composeRoute(route.startLocationId, route.endLocationId);
+  }
+
+  /**
    * NEW: Find segment in both directions
    */
   private async findBidirectionalSegment(
@@ -279,7 +300,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * Get popular segments for a city (BIDIRECTIONAL) ✅
+   * Get popular segments for a city (BIDIRECTIONAL) 
    */
   async getPopularSegments(city: string, limit: number = 20) {
     const segments = await this.segmentRepository
@@ -301,7 +322,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * ✅ UPDATED: Multi-segment route finder with bidirectional support
+   * Multi-segment route finder with bidirectional support
    */
   private async findMultiSegmentRoute(
     startId: string,
@@ -320,7 +341,7 @@ export class IntelligentRouteService {
 
       if (usedSegments.length >= maxDepth) continue;
 
-      // Find segments starting from current location (BIDIRECTIONAL) ✅
+      // Find segments starting from current location (BIDIRECTIONAL)
       const nextSegmentResults = await this.findNextSegmentsBidirectional(currentId);
 
       for (const { segment, isReversed } of nextSegmentResults) {
@@ -367,7 +388,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * ✅ NEW: Find next segments in both directions
+   * NEW: Find next segments in both directions
    */
   private async findNextSegmentsBidirectional(
     locationId: string,
@@ -421,7 +442,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * ✅ UPDATED: Calculate partial distance with reversal support
+   * UPDATED: Calculate partial distance with reversal support
    */
   private calculatePartialDistance(
     segment: RouteSegment, 
@@ -453,7 +474,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * ✅ NEW: Get route composition summary with reversal info
+   * NEW: Get route composition summary with reversal info
    */
   async getRouteCompositionSummary(
     startLocationId: string,
@@ -486,7 +507,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * ✅ NEW: Find all possible routes between two locations (including reversed)
+   * Find all possible routes between two locations (including reversed)
    */
   async findAllPossibleRoutes(
     startLocationId: string,
@@ -522,7 +543,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * ✅ NEW: Validate if a segment can be safely reversed
+   *  Validate if a segment can be safely reversed
    */
   isSegmentSafelyReversible(segment: RouteSegment): {
     reversible: boolean;
