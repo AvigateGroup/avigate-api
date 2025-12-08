@@ -26,6 +26,7 @@ export interface EnhancedRouteResult {
     maxFare?: number;
     steps: any[];
     confidence: number;
+    isReversed?: boolean; //NEW: Indicates if route was reversed
     intermediateStopInfo?: any;
     finalDestinationInfo?: {
       needsWalking: boolean;
@@ -82,9 +83,9 @@ export class RouteMatchingService {
 
   /**
    * ENHANCED route finding with:
-   * 1. Direct routes
+   * 1. Direct routes (forward AND reverse) ✅ NEW
    * 2. Intermediate stops
-   * 3. Walking from main roads (NEW!)
+   * 3. Walking from main roads
    */
   async findEnhancedRoutes(
     startLat: number,
@@ -93,7 +94,7 @@ export class RouteMatchingService {
     endLng: number,
     endLocationName?: string,
   ): Promise<EnhancedRouteResult> {
-    logger.info('Finding enhanced routes with final destination handling', {
+    logger.info('Finding enhanced routes with bidirectional support', {
       startLat,
       startLng,
       endLat,
@@ -110,37 +111,20 @@ export class RouteMatchingService {
 
     // Step 1: Find nearest locations
     const startLocation = await this.findNearestLocation(startLat, startLng);
-    const endLocation = await this.findNearestLocation(endLat, endLng, 0.5); // Smaller radius for end
+    const endLocation = await this.findNearestLocation(endLat, endLng, 0.5);
 
-    // Step 2: Try direct routes
+    // Step 2: Try direct routes (BIDIRECTIONAL) NEW
     if (startLocation && endLocation) {
-      const dbRoutes = await this.routeRepository.find({
-        where: {
-          startLocationId: startLocation.id,
-          endLocationId: endLocation.id,
-          isActive: true,
-        },
-        relations: ['steps', 'startLocation', 'endLocation'],
-        order: { popularityScore: 'DESC' },
-        take: 3,
-      });
+      const directRoutes = await this.findBidirectionalRoutes(
+        startLocation.id,
+        endLocation.id,
+        startLocation.name,
+        endLocation.name,
+      );
 
-      if (dbRoutes.length > 0) {
+      if (directRoutes.length > 0) {
         result.hasDirectRoute = true;
-        for (const route of dbRoutes) {
-          result.routes.push({
-            routeId: route.id,
-            routeName: route.name,
-            source: 'database',
-            distance: Number(route.distance),
-            duration: Number(route.estimatedDuration),
-            minFare: route.minFare ? Number(route.minFare) : undefined,
-            maxFare: route.maxFare ? Number(route.maxFare) : undefined,
-            steps: route.steps,
-            confidence: 95,
-          });
-        }
-
+        result.routes.push(...directRoutes);
         return result; // Have direct routes, return
       }
     }
@@ -157,7 +141,7 @@ export class RouteMatchingService {
       // ... (existing intermediate stop handling code)
     }
 
-    // Step 4: NEW - Check if destination requires walking from main road
+    // Step 4: Check if destination requires walking from main road
     if (!result.hasDirectRoute && !result.hasIntermediateStop) {
       logger.info('No direct/intermediate routes found, checking if walking needed');
 
@@ -206,6 +190,238 @@ export class RouteMatchingService {
     }
 
     return result;
+  }
+
+  /**
+   * ✅ NEW: Find routes in BOTH directions
+   */
+  private async findBidirectionalRoutes(
+    startLocationId: string,
+    endLocationId: string,
+    startLocationName: string,
+    endLocationName: string,
+  ): Promise<
+    Array<{
+      routeId?: string;
+      routeName: string;
+      source: 'database';
+      distance: number;
+      duration: number;
+      minFare?: number;
+      maxFare?: number;
+      steps: any[];
+      confidence: number;
+      isReversed?: boolean;
+    }>
+  > {
+    const routes: any[] = [];
+
+    // Try forward direction (A → B)
+    const forwardRoutes = await this.routeRepository.find({
+      where: {
+        startLocationId,
+        endLocationId,
+        isActive: true,
+      },
+      relations: ['steps', 'startLocation', 'endLocation'],
+      order: { popularityScore: 'DESC' },
+      take: 3,
+    });
+
+    for (const route of forwardRoutes) {
+      routes.push({
+        routeId: route.id,
+        routeName: route.name,
+        source: 'database' as const,
+        distance: Number(route.distance),
+        duration: Number(route.estimatedDuration),
+        minFare: route.minFare ? Number(route.minFare) : undefined,
+        maxFare: route.maxFare ? Number(route.maxFare) : undefined,
+        steps: route.steps,
+        confidence: 95,
+        isReversed: false,
+      });
+    }
+
+    // ✅ Try reverse direction (B → A)
+    if (routes.length === 0) {
+      logger.info('No forward routes found, trying reverse direction', {
+        reverseStart: endLocationName,
+        reverseEnd: startLocationName,
+      });
+
+      const reverseRoutes = await this.routeRepository.find({
+        where: {
+          startLocationId: endLocationId,
+          endLocationId: startLocationId,
+          isActive: true,
+        },
+        relations: ['steps', 'startLocation', 'endLocation'],
+        order: { popularityScore: 'DESC' },
+        take: 3,
+      });
+
+      for (const route of reverseRoutes) {
+        const reversedRoute = this.reverseRoute(route, startLocationName, endLocationName);
+        routes.push(reversedRoute);
+      }
+    }
+
+    return routes;
+  }
+
+  /**
+   * ✅ NEW: Reverse a route for bidirectional support
+   */
+  private reverseRoute(
+    route: Route,
+    newStartName: string,
+    newEndName: string,
+  ): {
+    routeId?: string;
+    routeName: string;
+    source: 'database';
+    distance: number;
+    duration: number;
+    minFare?: number;
+    maxFare?: number;
+    steps: any[];
+    confidence: number;
+    isReversed: boolean;
+  } {
+    logger.info('Reversing route', {
+      originalRoute: route.name,
+      newDirection: `${newStartName} → ${newEndName}`,
+    });
+
+    // Reverse the route name
+    const reversedName = `${newStartName} to ${newEndName}`;
+
+    // Reverse steps
+    const reversedSteps = [...route.steps]
+      .reverse()
+      .map((step, index) => ({
+        ...step,
+        order: index + 1,
+        // Swap from/to locations
+        fromLocation: step.toLocation,
+        toLocation: step.fromLocation,
+        // Reverse instructions if possible
+        instructions: this.reverseInstructions(step.instructions),
+      }));
+
+    return {
+      routeId: route.id,
+      routeName: reversedName,
+      source: 'database',
+      distance: Number(route.distance),
+      duration: Number(route.estimatedDuration),
+      minFare: route.minFare ? Number(route.minFare) : undefined,
+      maxFare: route.maxFare ? Number(route.maxFare) : undefined,
+      steps: reversedSteps,
+      confidence: 92, // Slightly lower confidence for reversed routes
+      isReversed: true,
+    };
+  }
+
+  /**
+   * ✅ NEW: Reverse instructions intelligently
+   */
+  private reverseInstructions(instructions: string): string {
+    if (!instructions) return '';
+
+    // Replace directional terms
+    let reversed = instructions
+      // Swap "From X to Y" → "From Y to X"
+      .replace(/From (.+?) to (.+?):/gi, 'From $2 to $1:')
+      .replace(/from (.+?) to (.+?):/gi, 'from $2 to $1:')
+
+      // Swap start/end references
+      .replace(/At the starting point/gi, 'At the destination')
+      .replace(/At (.+?) \(start\)/gi, 'At $1 (destination)')
+
+      // Swap boarding/alighting
+      .replace(/board (at|any vehicle going to) "(.+?)"/gi, (match, prep, location) => {
+        // Keep original if it's a through-location
+        return match;
+      })
+
+      // Reverse landmark sequences
+      .replace(/after passing (.+?) and (.+?),/gi, 'after passing $2 and $1,')
+
+      // Update direction indicators
+      .replace(/heading towards (.+?)$/gim, (match, dest) => {
+        // Try to infer reverse destination
+        return match; // Keep as is for now
+      });
+
+    // Add note that route was reversed
+    reversed = `**Note:** This route has been automatically reversed from the original direction.\n\n${reversed}`;
+
+    return reversed;
+  }
+
+  /**
+   * ✅ NEW: Find segment in both directions
+   */
+  private async findBidirectionalSegment(
+    startLocationId: string,
+    endLocationId: string,
+  ): Promise<{ segment: RouteSegment; isReversed: boolean } | null> {
+    // Try forward
+    let segment = await this.segmentRepository.findOne({
+      where: {
+        startLocationId,
+        endLocationId,
+        isActive: true,
+      },
+      relations: ['startLocation', 'endLocation'],
+    });
+
+    if (segment) {
+      return { segment, isReversed: false };
+    }
+
+    // Try reverse
+    segment = await this.segmentRepository.findOne({
+      where: {
+        startLocationId: endLocationId,
+        endLocationId: startLocationId,
+        isActive: true,
+      },
+      relations: ['startLocation', 'endLocation'],
+    });
+
+    if (segment) {
+      return { segment: this.reverseSegment(segment), isReversed: true };
+    }
+
+    return null;
+  }
+
+  /**
+   * ✅ NEW: Reverse a segment
+   */
+  private reverseSegment(segment: RouteSegment): RouteSegment {
+    return {
+      ...segment,
+      name: `${segment.endLocation?.name} to ${segment.startLocation?.name}`,
+      startLocation: segment.endLocation,
+      endLocation: segment.startLocation,
+      startLocationId: segment.endLocationId,
+      endLocationId: segment.startLocationId,
+      // Reverse intermediate stops
+      intermediateStops: segment.intermediateStops
+        ? [...segment.intermediateStops].reverse().map((stop, index) => ({
+            ...stop,
+            order: index + 1,
+          }))
+        : [],
+      // Reverse landmarks
+      landmarks: segment.landmarks ? ([...segment.landmarks].reverse() as any) : [],
+      // Reverse instructions
+      instructions: this.reverseInstructions(segment.instructions),
+    };
   }
 
   /**
@@ -267,7 +483,6 @@ export class RouteMatchingService {
     lineEnd: { lat: number; lng: number },
     toleranceKm: number,
   ): boolean {
-    // Simplified check - you can use the one from IntermediateStopHandlerService
     const distanceToStart = this.geofencingService.calculateDistance(point, lineStart) / 1000;
     const distanceToEnd = this.geofencingService.calculateDistance(point, lineEnd) / 1000;
     const lineLength = this.geofencingService.calculateDistance(lineStart, lineEnd) / 1000;
@@ -323,7 +538,6 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
 
   /**
    * ENHANCED: Handle street-level destinations
-   * Example: Hotel on Kala Street from Choba
    */
   async findRouteWithStreetLevelGuidance(
     startLat: number,
@@ -347,7 +561,7 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
       return this.findEnhancedRoutes(startLat, startLng, endLat, endLng, endLocationName);
     }
 
-    // 3. Get route to main road stop
+    // 3. Get route to main road stop (BIDIRECTIONAL) ✅
     const routeToMainRoad = await this.findEnhancedRoutes(
       startLat,
       startLng,
@@ -428,8 +642,8 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
     const parts = address.split(',').map(p => p.trim());
 
     return {
-      street: parts[0], // "Kala Street"
-      area: parts[1], // "Rumuobiakani"
+      street: parts[0],
+      area: parts[1],
     };
   }
 
@@ -440,7 +654,6 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
     lat: number,
     lng: number,
   ): Promise<{ name: string; lat: number; lng: number; locationId: string } | null> {
-    // Find locations on major roads (Ikwerre Road, East-West Road)
     const majorStops = await this.locationRepository
       .createQueryBuilder('location')
       .where('location.isActive = :isActive', { isActive: true })
@@ -462,7 +675,6 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
       );
 
       if (distance < minDistance && distance < 2000) {
-        // Within 2km
         minDistance = distance;
         nearest = stop;
       }
@@ -499,7 +711,7 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
   }
 
   /**
-   * Find nearest location (existing method)
+   * Find nearest location
    */
   private async findNearestLocation(
     lat: number,
@@ -542,7 +754,7 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
     return nearest;
   }
 
-  // Geocoding methods (existing)
+  // Geocoding methods
   async geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
     return this.googleMapsService.geocode(address);
   }
@@ -562,7 +774,7 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
   }
 
   /**
-   * UPDATED: Generate last-mile instructions with honest communication
+   * Generate last-mile instructions with honest communication
    */
   private generateEnhancedLastMileInstructions(
     dropOffPoint: string,
@@ -576,7 +788,6 @@ Tell the driver to stop at ${dropOffName}. This is where you'll walk from to rea
     const streetText = streetInfo.street ? ` on ${streetInfo.street}` : '';
     const walkingMin = Math.ceil(walkingDirections.duration);
 
-    // CASE 1: Very close (≤ 200m) - driver can take you there directly!
     if (distanceMeters <= 200) {
       return `
 **Final Step: Direct to ${destination}**
@@ -602,7 +813,6 @@ This location is on a known route with regular vehicle service.
     `.trim();
     }
 
-    // CASE 2: Moderate distance (200-800m) - might need local transport
     if (distanceMeters <= 800) {
       return `
 **Final Step: Getting to ${destination}${streetText}**
@@ -639,7 +849,6 @@ Side street - local knowledge recommended
     `.trim();
     }
 
-    // CASE 3: Far (>800m) - definitely need local transport or walking
     const estimatedFare = this.calculateLastMileFare(distanceMeters);
 
     return `
@@ -651,7 +860,7 @@ Drop off at ${dropOffPoint}${landmarkText}. ${destination} is ${Math.round(dista
 1. Tell driver: "Driver, stop${landmarkText}!"
 2. Pay your fare
 
- **Note:** Avigate doesn't have data on vehicles going into ${streetInfo.street || 'this area'}.
+**Note:** Avigate doesn't have data on vehicles going into ${streetInfo.street || 'this area'}.
 
 **What to Do:**
 
@@ -681,7 +890,7 @@ Side street - local knowledge recommended
   }
 
   /**
-   * NEW: Build enhanced route step with data availability info
+   * Build enhanced route step with data availability info
    */
   private buildEnhancedRouteStep(
     order: number,
@@ -695,8 +904,7 @@ Side street - local knowledge recommended
     walkingDirections: any,
     distanceMeters: number,
   ): EnhancedRouteStep {
-    // Determine if we have vehicle data for this area
-    const hasVehicleData = distanceMeters <= 200; // We only have data for immediate vicinity
+    const hasVehicleData = distanceMeters <= 200;
 
     const step: EnhancedRouteStep = {
       order,
@@ -708,7 +916,6 @@ Side street - local knowledge recommended
       distance,
       estimatedFare,
 
-      // Data availability
       dataAvailability: {
         hasVehicleData,
         confidence: hasVehicleData ? 'high' : 'low',
@@ -720,7 +927,6 @@ Side street - local knowledge recommended
       walkingDirections,
     };
 
-    // Add alternative options if no vehicle data
     if (!hasVehicleData) {
       step.alternativeOptions = {
         askLocals: true,
@@ -733,7 +939,6 @@ Side street - local knowledge recommended
         walkable: distanceMeters <= 1500,
       };
 
-      // Add alternative transport if distance is moderate
       if (distanceMeters > 200 && distanceMeters <= 2000) {
         step.alternativeTransport = {
           type: distanceMeters > 800 ? 'keke' : 'okada',
@@ -747,8 +952,7 @@ Side street - local knowledge recommended
   }
 
   /**
-   * NEW: Check if segment has vehicle data for destination
-   * FIXED: Added lat and lng to nearestLandmark type
+   * Check if segment has vehicle data for destination
    */
   private hasVehicleDataForDestination(
     segment: RouteSegment,
@@ -760,7 +964,6 @@ Side street - local knowledge recommended
     reason: string;
     nearestLandmark?: { name: string; lat: number; lng: number; distance: number };
   } {
-    // Check 1: Does segment have explicit vehicle service info?
     if (segment.vehicleService) {
       if (segment.vehicleService.serviceType === 'main_road') {
         return {
@@ -775,7 +978,6 @@ Side street - local knowledge recommended
           segment.vehicleService.serviceType === 'residential') &&
         segment.vehicleService.hasRegularService
       ) {
-        // Side street or residential but WITH regular service (keke/okada)
         const nearestLandmark = this.findNearestLandmarkOnSegmentSync(segment, endLat, endLng);
 
         if (nearestLandmark && nearestLandmark.distance <= 200) {
@@ -795,7 +997,6 @@ Side street - local knowledge recommended
       }
     }
 
-    // Check 2: Fallback to landmark proximity (existing logic)
     const nearestLandmark = this.findNearestLandmarkOnSegmentSync(segment, endLat, endLng);
 
     if (nearestLandmark) {
@@ -818,7 +1019,6 @@ Side street - local knowledge recommended
       }
     }
 
-    // Check 3: No data available
     return {
       hasData: false,
       confidence: 'low',
@@ -868,14 +1068,11 @@ Side street - local knowledge recommended
     const baseFare = 100;
     const perMeterRate = 0.1;
     const calculatedFare = baseFare + distanceMeters * perMeterRate;
-    return Math.min(500, Math.max(100, Math.round(calculatedFare / 50) * 50)); // Round to nearest 50
+    return Math.min(500, Math.max(100, Math.round(calculatedFare / 50) * 50));
   }
 
   /**
-   * IMPROVED: Check if destination is near ANY landmark on the segment
-   */
-  /**
-   * UPDATED: More intelligent route with walking detection
+   * IMPROVED: Route with walking detection
    */
   private async findRouteWithWalking(
     startLat: number,
@@ -895,14 +1092,12 @@ Side street - local knowledge recommended
     let shortestWalkingDistance = Infinity;
 
     for (const segment of nearbySegments) {
-      // NEW: Use intelligent vehicle data check
       const vehicleDataCheck = this.hasVehicleDataForDestination(segment, endLat, endLng);
 
       let dropOffPoint: any;
       let walkingDistance: number;
 
       if (vehicleDataCheck.hasData && vehicleDataCheck.nearestLandmark) {
-        // ✅ Destination HAS vehicle data
         dropOffPoint = {
           dropOffLat: vehicleDataCheck.nearestLandmark.lat,
           dropOffLng: vehicleDataCheck.nearestLandmark.lng,
@@ -911,7 +1106,6 @@ Side street - local knowledge recommended
         };
         walkingDistance = vehicleDataCheck.nearestLandmark.distance;
       } else {
-        // ❌ NO vehicle data - find best drop-off on main road
         dropOffPoint = await this.finalDestinationHandler.findBestDropOffPoint(
           segment.id,
           endLat,
@@ -947,7 +1141,6 @@ Side street - local knowledge recommended
         const endAddress = await this.googleMapsService.reverseGeocode(endLat, endLng);
         const streetInfo = this.extractStreetInfo(endAddress);
 
-        // Generate instructions based on vehicle data availability
         const enhancedInstructions = vehicleDataCheck.hasData
           ? this.generateDirectNavigationInstructions(
               dropOffPoint.dropOffName,
@@ -978,7 +1171,6 @@ Side street - local knowledge recommended
           walkingDistance,
         );
 
-        // Add data availability to step
         walkingStep.dataAvailability = {
           hasVehicleData: vehicleDataCheck.hasData,
           confidence: vehicleDataCheck.confidence,
@@ -1039,7 +1231,7 @@ Side street - local knowledge recommended
   }
 
   /**
-   * NEW: Determine appropriate transport mode based on distance and vehicle service
+   * Determine appropriate transport mode based on distance and vehicle service
    */
   private determineTransportMode(
     distanceMeters: number,
@@ -1048,29 +1240,26 @@ Side street - local knowledge recommended
     if (distanceMeters <= 200) return 'walk';
 
     if (vehicleService?.hasRegularService) {
-      // Has vehicle service - use appropriate type
       if (vehicleService.vehicleTypes.includes('keke')) return 'keke';
       if (vehicleService.vehicleTypes.includes('okada')) return 'okada';
       if (vehicleService.vehicleTypes.includes('taxi')) return 'taxi';
     }
 
-    // No vehicle service - smart fallback
     if (distanceMeters <= 500) return 'walk';
     if (distanceMeters <= 1500) return 'okada';
     return 'keke';
   }
 
   /**
-   * NEW: Calculate fare based on vehicle service availability
+   * Calculate fare based on vehicle service availability
    */
   private calculateFareForStep(
     distanceMeters: number,
     vehicleService?: VehicleServiceInfo,
   ): number {
-    if (distanceMeters <= 200) return 0; // Walking distance
+    if (distanceMeters <= 200) return 0;
 
     if (vehicleService?.hasRegularService) {
-      // Has vehicle service - calculate based on type
       if (vehicleService.vehicleTypes.includes('keke')) {
         return Math.min(300, Math.max(100, Math.round(distanceMeters / 10)));
       }
@@ -1079,12 +1268,11 @@ Side street - local knowledge recommended
       }
     }
 
-    // Fallback fare calculation
     return this.calculateLastMileFare(distanceMeters);
   }
 
   /**
-   * NEW: Generate instructions for destinations WITH vehicle data
+   * Generate instructions for destinations WITH vehicle data
    */
   private generateDirectNavigationInstructions(
     dropOffPoint: string,
@@ -1120,8 +1308,9 @@ Look for ${vehicleText} going into ${streetInfo.street || 'the street'}
 Regular ${vehicleText} service confirmed for this location.
   `.trim();
   }
+
   /**
-   * NEW: Find nearest landmark on a specific segment
+   * Find nearest landmark on a specific segment
    */
   private async findNearestLandmarkOnSegment(
     segment: RouteSegment,
@@ -1155,7 +1344,6 @@ Regular ${vehicleText} service confirmed for this location.
     return nearest;
   }
 
-  // UPDATE buildStreetLevelInstructions to use the enhanced version
   private buildStreetLevelInstructions(
     mainRoadStop: string,
     destination: string,
@@ -1164,10 +1352,9 @@ Regular ${vehicleText} service confirmed for this location.
     walkingDirections: any,
     landmark: string | null,
   ): string {
-    // Use the enhanced version
     return this.generateEnhancedLastMileInstructions(
       mainRoadStop,
-      landmark || undefined, // FIX: Convert null to undefined
+      landmark || undefined,
       destination,
       streetInfo,
       distance,

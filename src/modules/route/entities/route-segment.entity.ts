@@ -1,97 +1,100 @@
 // src/modules/route/entities/route-segment.entity.ts
 import {
   Entity,
-  Column,
   PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  ManyToOne,
-  ManyToMany,
-  JoinColumn,
   Index,
 } from 'typeorm';
-import { Route } from './route.entity';
 import { Location } from '../../location/entities/location.entity';
 
-/**
- * RouteSegment represents a shared path between two locations
- * Example: Rumuokoro to Mile1 is a segment used by multiple routes
- */
-
-export interface VehicleServiceInfo {
-  hasRegularService: boolean; // Does this segment have regular vehicle service?
-  serviceType: 'main_road' | 'side_street' | 'residential'; // Type of service
-  vehicleTypes: ('bus' | 'taxi' | 'keke' | 'okada')[]; // What vehicles actually go here
-  frequency: 'high' | 'medium' | 'low' | 'on_demand'; // How often vehicles pass
-  notes?: string; // E.g., "Keke only during day", "Ask locals for okada"
+export interface IntermediateStop {
+  locationId?: string;
+  name: string;
+  order: number;
+  isOptional: boolean;
 }
 
-export interface LandmarkInfo {
-  name: string;
-  lat: number;
-  lng: number;
+export interface VehicleServiceInfo {
+  serviceType: 'main_road' | 'side_street' | 'residential';
+  hasRegularService: boolean;
+  vehicleTypes: ('bus' | 'taxi' | 'keke' | 'okada')[];
+  frequency?: 'high' | 'medium' | 'low';
+  operatingHours?: {
+    start: string;
+    end: string;
+  };
 }
 
 @Entity('route_segments')
+@Index(['startLocationId', 'endLocationId'])
+@Index(['isActive', 'isVerified'])
+@Index(['isBidirectional', 'isActive']) 
 export class RouteSegment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  name: string; // e.g., "Rumuokoro to Mile1 via Ikwere Road "
+  @Column({ type: 'varchar', length: 255 })
+  name: string;
 
-  @Column('uuid')
-  @Index()
+  @Column({ type: 'uuid' })
   startLocationId: string;
 
-  @Column('uuid')
-  @Index()
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'startLocationId' })
+  startLocation?: Location;
+
+  @Column({ type: 'uuid' })
   endLocationId: string;
 
-  // Intermediate stops on this segment
-  @Column({ type: 'jsonb', default: [] })
-  intermediateStops: Array<{
-    locationId?: string;
-    name: string;
-    order: number;
-    isOptional: boolean; // Some stops are optional depending on driver
-  }>;
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'endLocationId' })
+  endLocation?: Location;
+
+  @Column({ type: 'jsonb', nullable: true })
+  intermediateStops: IntermediateStop[];
 
   @Column({ type: 'simple-array' })
-  transportModes: string[]; // ['bus', 'taxi']
+  transportModes: string[];
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   distance: number;
 
-  @Column('decimal', { precision: 10, scale: 2 })
+  @Column({ type: 'int' })
   estimatedDuration: number;
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
-  minFare: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  minFare?: number;
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true })
-  maxFare: number;
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  maxFare?: number;
 
   @Column({ type: 'text' })
   instructions: string;
 
-  // NEW: Add vehicle service info
+  @Column({ type: 'jsonb', nullable: true })
+  landmarks?: Array<{ name: string; lat: number; lng: number }>;
+
   @Column({ type: 'jsonb', nullable: true })
   vehicleService?: VehicleServiceInfo;
 
-  @Column({ type: 'jsonb', default: [] })
-  landmarks: LandmarkInfo[];
-
-  // How often this segment is used (popularity)
-  @Column({ default: 0 })
+  @Column({ type: 'int', default: 0 })
   usageCount: number;
 
-  @Column({ default: true })
-  @Index()
+  //NEW: Bidirectional support fields
+  @Column({ type: 'boolean', default: true })
+  isBidirectional: boolean;
+
+  @Column({ type: 'int', default: 0 })
+  reversedUsageCount: number;
+
+  @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  @Column({ default: false })
-  @Index()
+  @Column({ type: 'boolean', default: false })
   isVerified: boolean;
 
   @CreateDateColumn()
@@ -99,16 +102,4 @@ export class RouteSegment {
 
   @UpdateDateColumn()
   updatedAt: Date;
-
-  // ADDED: Relations to Location entities
-  @ManyToOne(() => Location)
-  @JoinColumn({ name: 'startLocationId' })
-  startLocation: Location;
-
-  @ManyToOne(() => Location)
-  @JoinColumn({ name: 'endLocationId' })
-  endLocation: Location;
-
-  @ManyToMany(() => Route, route => route.segments)
-  routes: Route[];
 }
