@@ -204,12 +204,10 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
       }
     }
 
-    // Check for destination approach
+    // Check for destination approach - FIXED
     const destinationDistance = this.geofencingService.calculateDistance(
-      userLocation.latitude,
-      userLocation.longitude,
-      journey.endLatitude,
-      journey.endLongitude,
+      { lat: userLocation.latitude, lng: userLocation.longitude },
+      { lat: journey.endLatitude, lng: journey.endLongitude }
     );
 
     if (
@@ -294,7 +292,7 @@ Fare: ₦${nextLeg.minFare}-${nextLeg.maxFare}`,
     transfer: { location: string; distance: number; eta: number },
   ): Promise<void> {
     const nextLeg = this.getNextLeg(journey);
-    if (!nextLeg) return;
+    if (!nextLeg || !nextLeg.segment?.endLocation) return;
 
     await this.notificationsService.sendToUser(userId, {
       title: '🔄 TRANSFER POINT AHEAD',
@@ -324,7 +322,7 @@ Look for: ${this.formatVehicleType(nextLeg.transportMode)} to ${nextLeg.segment.
     currentLeg: JourneyLeg,
   ): Promise<void> {
     const nextLeg = this.getNextLeg(journey);
-    if (!nextLeg) return;
+    if (!nextLeg || !nextLeg.segment?.endLocation) return;
 
     // Mark current leg as completed
     await this.journeyLegRepository.update(currentLeg.id, {
@@ -498,11 +496,10 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
       const stopLocation = await this.getLocationCoordinates(stop.locationId);
       if (!stopLocation) continue;
 
+      // FIXED: Calculate distance with correct parameter format
       const distance = this.geofencingService.calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        stopLocation.latitude,
-        stopLocation.longitude,
+        { lat: userLocation.latitude, lng: userLocation.longitude },
+        { lat: stopLocation.latitude, lng: stopLocation.longitude }
       );
 
       if (distance <= this.STOP_APPROACHING_DISTANCE * 2) {
@@ -519,20 +516,26 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
     // Find upcoming transfer
     let upcomingTransfer: any = null;
     if (currentLegIndex < journey.legs.length - 1) {
-      const transferLocation = currentLeg.segment.endLocation;
-      const transferDistance = this.geofencingService.calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        transferLocation.latitude,
-        transferLocation.longitude,
-      );
+      const transferLocation = currentLeg.segment?.endLocation;
+      if (!transferLocation) {
+        logger.warn('Transfer location not found for current leg', { 
+          journeyId: journey.id, 
+          legId: currentLeg.id 
+        });
+      } else {
+        // FIXED: Calculate transfer distance with correct parameter format
+        const transferDistance = this.geofencingService.calculateDistance(
+          { lat: userLocation.latitude, lng: userLocation.longitude },
+          { lat: transferLocation.latitude, lng: transferLocation.longitude }
+        );
 
-      if (transferDistance <= this.TRANSFER_ALERT_DISTANCE) {
-        upcomingTransfer = {
-          location: transferLocation.name,
-          distance: transferDistance,
-          eta: Math.ceil(transferDistance / 250),
-        };
+        if (transferDistance <= this.TRANSFER_ALERT_DISTANCE) {
+          upcomingTransfer = {
+            location: transferLocation.name,
+            distance: transferDistance,
+            eta: Math.ceil(transferDistance / 250),
+          };
+        }
       }
     }
 
@@ -629,7 +632,6 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
       'bus': '🚌',
       'keke': '🛺',
       'okada': '🏍️',
-      'car': '🚗',
     };
     return emojis[transportMode.toLowerCase()] || '🚗';
   }
