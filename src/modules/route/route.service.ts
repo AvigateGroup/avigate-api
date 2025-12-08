@@ -15,6 +15,9 @@ export class RouteService {
     private routeStepRepository: Repository<RouteStep>,
   ) {}
 
+  /**
+   * Find routes between two locations
+   */
   async findRoutes(findRoutesDto: FindRoutesDto) {
     const { startLocationId, endLocationId } = findRoutesDto;
 
@@ -40,6 +43,9 @@ export class RouteService {
     };
   }
 
+  /**
+   * Get route by ID with all details
+   */
   async getRouteById(id: string) {
     const route = await this.routeRepository.findOne({
       where: { id, isActive: true },
@@ -59,6 +65,9 @@ export class RouteService {
     };
   }
 
+  /**
+   * Get popular routes in a city
+   */
   async getPopularRoutes(city?: string, limit: number = 20) {
     const query = this.routeRepository
       .createQueryBuilder('route')

@@ -1,4 +1,4 @@
-// src/modules/route/route.module.ts
+// src/modules/route/route.module.ts (UPDATED WITH REFACTORED SERVICES)
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
@@ -13,6 +13,11 @@ import { IntelligentRouteService } from './services/intelligent-route.service';
 import { IntermediateStopHandlerService } from './services/intermediate-stop-handler.service';
 import { SmartStopMatchingService } from './services/smart-stop-matching.service';
 import { FinalDestinationHandlerService } from './services/final-destination-handler.service';
+import { BidirectionalRouteService } from './services/bidirectional-route.service';
+import { LocationFinderService } from './services/location-finder.service';
+import { InstructionGeneratorService } from './services/instruction-generator.service';
+import { RouteDataAnalyzerService } from './services/route-data-analyzer.service';
+import { WalkingRouteService } from './services/walking-route.service';
 import { TripGateway } from './gateways/trip.gateway';
 import { Route } from './entities/route.entity';
 import { RouteStep } from './entities/route-step.entity';
@@ -44,6 +49,7 @@ import { EmailModule } from '../email/email.module';
   ],
   controllers: [RouteController],
   providers: [
+    // Existing services
     RouteService,
     TripService,
     GoogleMapsService,
@@ -54,8 +60,16 @@ import { EmailModule } from '../email/email.module';
     SmartStopMatchingService,
     FinalDestinationHandlerService,
     TripGateway,
+    
+    // Refactored modular services
+    BidirectionalRouteService,
+    LocationFinderService,
+    InstructionGeneratorService,
+    RouteDataAnalyzerService,
+    WalkingRouteService,
   ],
   exports: [
+    // Existing exports
     RouteService,
     TripService,
     GoogleMapsService,
@@ -65,6 +79,13 @@ import { EmailModule } from '../email/email.module';
     IntermediateStopHandlerService,
     SmartStopMatchingService,
     FinalDestinationHandlerService,
+    
+    //Export refactored services (available for other modules)
+    BidirectionalRouteService,
+    LocationFinderService,
+    InstructionGeneratorService,
+    RouteDataAnalyzerService,
+    WalkingRouteService,
   ],
 })
 export class RouteModule {}
