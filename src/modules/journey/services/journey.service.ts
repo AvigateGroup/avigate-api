@@ -43,9 +43,9 @@ export class JourneyService {
     const bestRoute = routeResult.routes[0];
 
     // Get route composition (segments)
-    const composition = await this.intelligentRouteService.composeRoute(
-      bestRoute.startLocationId,
-      bestRoute.endLocationId,
+    // Fix: Use routeId instead of non-existent startLocationId and endLocationId
+    const composition = await this.intelligentRouteService.composeRouteById(
+      bestRoute.routeId!,
     );
 
     if (!composition) {
@@ -308,9 +308,10 @@ export class JourneyService {
       }, 0);
     }, 0);
 
+    // Fix: Add null check for metadata
     const ratings = completed
-      .filter(j => j.metadata?.rating)
-      .map(j => j.metadata.rating);
+      .filter(j => j.metadata?.rating !== undefined)
+      .map(j => j.metadata!.rating);
     const averageRating =
       ratings.length > 0
         ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
@@ -322,9 +323,13 @@ export class JourneyService {
       const routeName = j.metadata?.routeName || 'Unknown';
       routeCounts[routeName] = (routeCounts[routeName] || 0) + 1;
     });
-    const mostUsedRoute = Object.keys(routeCounts).reduce((a, b) =>
-      routeCounts[a] > routeCounts[b] ? a : b,
-    , 'None');
+    
+    // Fix: Handle empty object case in reduce
+    const mostUsedRoute = Object.keys(routeCounts).length > 0
+      ? Object.keys(routeCounts).reduce((a, b) =>
+          routeCounts[a] > routeCounts[b] ? a : b
+        )
+      : 'None';
 
     return {
       totalJourneys: journeys.length,
