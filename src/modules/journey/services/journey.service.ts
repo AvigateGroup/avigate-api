@@ -6,6 +6,8 @@ import { Journey } from '../entities/journey.entity';
 import { JourneyLeg } from '../entities/journey-leg.entity';
 import { RouteMatchingService } from '@/modules/route/services/route-matching.service';
 import { IntelligentRouteService } from '@/modules/route/services/intelligent-route.service';
+import { CacheService } from '@/modules/cache/cache.service';
+import { WebsocketService } from '@/modules/websocket/websocket.service';
 import { logger } from '@/utils/logger.util';
 import { CreateJourneyDto, StartJourneyDto } from '../dto';
 
@@ -18,6 +20,8 @@ export class JourneyService {
     private journeyLegRepository: Repository<JourneyLeg>,
     private routeMatchingService: RouteMatchingService,
     private intelligentRouteService: IntelligentRouteService,
+    private cacheService: CacheService,
+    private websocketService: WebsocketService,
   ) {}
 
   /**
@@ -43,7 +47,6 @@ export class JourneyService {
     const bestRoute = routeResult.routes[0];
 
     // Get route composition (segments)
-    // Fix: Use routeId instead of non-existent startLocationId and endLocationId
     const composition = await this.intelligentRouteService.composeRouteById(
       bestRoute.routeId!,
     );
@@ -163,6 +166,21 @@ export class JourneyService {
 
     await this.journeyRepository.save(journey);
 
+    // Cache active journey
+    await this.cacheService.setActiveJourney(journey.userId, journey.id);
+
+    // Send WebSocket event
+    this.websocketService.sendJourneyEvent(journey.userId, {
+      type: 'start',
+      journeyId: journey.id,
+      data: {
+        startLocation: journey.startLocation,
+        endLocation: journey.endLocation,
+        totalLegs: journey.legs.length,
+        estimatedDuration: journey.estimatedDuration,
+      },
+    });
+
     logger.info('Journey started', {
       journeyId,
       actualStartTime: journey.actualStartTime,
@@ -179,21 +197,35 @@ export class JourneyService {
     journeyId: string,
     latitude: number,
     longitude: number,
+    accuracy?: number,
   ): Promise<void> {
-    // Store location in cache/database for real-time tracking
-    // This could be Redis for better performance
-    logger.info('User location updated', {
+    // Store location in Redis
+    await this.cacheService.setUserLocation({
+      userId,
+      latitude,
+      longitude,
+      timestamp: new Date(),
+      accuracy,
+      journeyId,
+    });
+
+    // Broadcast location update via WebSocket
+    this.websocketService.sendLocationUpdate({
       userId,
       journeyId,
       latitude,
       longitude,
+      accuracy,
+      timestamp: new Date(),
     });
 
-    // TODO: Implement location storage
-    // Options:
-    // 1. Redis: SET user:location:{userId} "{lat,lng}" EX 300
-    // 2. Database table: user_locations
-    // 3. In-memory cache with TTL
+    logger.debug('User location updated', {
+      userId,
+      journeyId,
+      latitude,
+      longitude,
+      accuracy,
+    });
   }
 
   /**
@@ -221,6 +253,26 @@ export class JourneyService {
    * Get active journey for user
    */
   async getActiveJourney(userId: string): Promise<Journey | null> {
+    // Try cache first
+    const cachedJourneyId = await this.cacheService.getActiveJourney(userId);
+    
+    if (cachedJourneyId) {
+      const journey = await this.journeyRepository.findOne({
+        where: { id: cachedJourneyId, userId, status: 'in_progress' },
+        relations: [
+          'legs',
+          'legs.segment',
+          'legs.segment.startLocation',
+          'legs.segment.endLocation',
+        ],
+      });
+
+      if (journey) {
+        return journey;
+      }
+    }
+
+    // Fallback to database
     const journey = await this.journeyRepository.findOne({
       where: { userId, status: 'in_progress' },
       relations: [
@@ -230,6 +282,11 @@ export class JourneyService {
         'legs.segment.endLocation',
       ],
     });
+
+    if (journey) {
+      // Update cache
+      await this.cacheService.setActiveJourney(userId, journey.id);
+    }
 
     return journey;
   }
@@ -282,6 +339,67 @@ export class JourneyService {
   }
 
   /**
+   * Complete journey
+   */
+  async completeJourney(journeyId: string, userId: string): Promise<void> {
+    const journey = await this.journeyRepository.findOne({
+      where: { id: journeyId, userId },
+      relations: ['legs'],
+    });
+
+    if (!journey) {
+      throw new NotFoundException('Journey not found');
+    }
+
+    journey.status = 'completed';
+    journey.actualEndTime = new Date();
+
+    // Mark all legs as completed
+    await this.journeyLegRepository.update(
+      { journeyId: journey.id },
+      { status: 'completed', actualEndTime: new Date() },
+    );
+
+    await this.journeyRepository.save(journey);
+
+    // Clean up cache
+    await this.cacheService.deleteActiveJourney(userId);
+    await this.cacheService.deleteUserLocation(userId);
+
+    // Send WebSocket event
+    this.websocketService.sendJourneyEvent(userId, {
+      type: 'complete',
+      journeyId: journey.id,
+    });
+
+    logger.info('Journey completed', { journeyId, userId });
+  }
+
+  /**
+   * Cancel journey
+   */
+  async cancelJourney(journeyId: string, userId: string): Promise<void> {
+    const journey = await this.journeyRepository.findOne({
+      where: { id: journeyId, userId },
+    });
+
+    if (!journey) {
+      throw new NotFoundException('Journey not found');
+    }
+
+    journey.status = 'cancelled';
+    journey.actualEndTime = new Date();
+
+    await this.journeyRepository.save(journey);
+
+    // Clean up cache
+    await this.cacheService.deleteActiveJourney(userId);
+    await this.cacheService.deleteUserLocation(userId);
+
+    logger.info('Journey cancelled', { journeyId, userId });
+  }
+
+  /**
    * Get journey statistics
    */
   async getJourneyStatistics(userId: string): Promise<{
@@ -308,7 +426,6 @@ export class JourneyService {
       }, 0);
     }, 0);
 
-    // Fix: Add null check for metadata
     const ratings = completed
       .filter(j => j.metadata?.rating !== undefined)
       .map(j => j.metadata!.rating);
@@ -324,7 +441,6 @@ export class JourneyService {
       routeCounts[routeName] = (routeCounts[routeName] || 0) + 1;
     });
     
-    // Fix: Handle empty object case in reduce
     const mostUsedRoute = Object.keys(routeCounts).length > 0
       ? Object.keys(routeCounts).reduce((a, b) =>
           routeCounts[a] > routeCounts[b] ? a : b

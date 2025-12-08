@@ -9,7 +9,6 @@ import {
   MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { logger } from '@/utils/logger.util';
 
@@ -101,10 +100,23 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     return { success: true, room };
   }
 
+  @SubscribeMessage('subscribe:journey')
+  handleJourneySubscribe(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { journeyId: string },
+  ) {
+    const room = `journey:${data.journeyId}`;
+    client.join(room);
+
+    logger.debug(`Client ${client.id} subscribed to journey updates: ${room}`);
+
+    return { success: true, room };
+  }
+
   @SubscribeMessage('share:location')
   handleLocationShare(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { lat: number; lng: number },
+    @MessageBody() data: { lat: number; lng: number; accuracy?: number; journeyId?: string },
   ) {
     const userId = client.data.userId;
 
@@ -113,8 +125,23 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
       userId,
       lat: data.lat,
       lng: data.lng,
+      accuracy: data.accuracy,
+      journeyId: data.journeyId,
       timestamp: new Date(),
     });
+
+    // If part of a journey, also emit to journey room
+    if (data.journeyId) {
+      this.server.to(`journey:${data.journeyId}`).emit('journey:location', {
+        userId,
+        lat: data.lat,
+        lng: data.lng,
+        accuracy: data.accuracy,
+        timestamp: new Date(),
+      });
+    }
+
+    logger.debug('Location shared', { userId, journeyId: data.journeyId });
 
     return { success: true };
   }
@@ -143,6 +170,11 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
     return { success: true };
   }
 
+  @SubscribeMessage('ping')
+  handlePing(@ConnectedSocket() client: Socket) {
+    return { success: true, timestamp: new Date() };
+  }
+
   // Emit real-time updates (called from services)
   emitTrafficUpdate(locationId: string, data: any) {
     this.server.to(`location:${locationId}`).emit('traffic:update', data);
@@ -162,5 +194,64 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
 
   emitNotificationToUser(userId: string, notification: any) {
     this.server.to(`user:${userId}`).emit('notification', notification);
+  }
+
+  emitLocationUpdate(update: {
+    userId: string;
+    journeyId?: string;
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    timestamp: Date;
+  }) {
+    // Emit to tracking clients
+    this.server.to(`tracking:${update.userId}`).emit('location:update', {
+      userId: update.userId,
+      lat: update.latitude,
+      lng: update.longitude,
+      accuracy: update.accuracy,
+      journeyId: update.journeyId,
+      timestamp: update.timestamp,
+    });
+
+    // If part of a journey, also emit to journey room
+    if (update.journeyId) {
+      this.server.to(`journey:${update.journeyId}`).emit('journey:location', {
+        userId: update.userId,
+        lat: update.latitude,
+        lng: update.longitude,
+        accuracy: update.accuracy,
+        timestamp: update.timestamp,
+      });
+    }
+  }
+
+  emitJourneyUpdate(journeyId: string, update: any) {
+    this.server.to(`journey:${journeyId}`).emit('journey:update', update);
+  }
+
+  emitJourneyEvent(userId: string, event: any) {
+    this.server.to(`user:${userId}`).emit('journey:event', event);
+  }
+
+  /**
+   * Check if user is connected
+   */
+  isUserConnected(userId: string): boolean {
+    return this.connectedUsers.has(userId) && this.connectedUsers.get(userId)!.size > 0;
+  }
+
+  /**
+   * Get connected user count
+   */
+  getConnectedUserCount(): number {
+    return this.connectedUsers.size;
+  }
+
+  /**
+   * Get all connected users
+   */
+  getConnectedUsers(): string[] {
+    return Array.from(this.connectedUsers.keys());
   }
 }

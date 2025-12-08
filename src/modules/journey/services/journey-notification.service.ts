@@ -4,9 +4,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
 import { GeofencingService } from '@/modules/route/services/geofencing.service';
+import { CacheService } from '@/modules/cache/cache.service';
+import { WebsocketService } from '@/modules/websocket/websocket.service';
 import { logger } from '@/utils/logger.util';
 import { Journey } from '../entities/journey.entity';
 import { JourneyLeg } from '../entities/journey-leg.entity';
+import { Location } from '@/modules/location/entities/location.entity';
 
 export interface TransferPoint {
   locationId: string;
@@ -50,15 +53,21 @@ export class JourneyNotificationService {
 
   // Timing constants
   private readonly LOCATION_UPDATE_INTERVAL = 10000; // 10 seconds
-  private readonly TRANSFER_ALERT_TIME = 5; // 5 minutes before
+
+  // Track active intervals
+  private trackingIntervals: Map<string, NodeJS.Timeout> = new Map();
 
   constructor(
     @InjectRepository(Journey)
     private journeyRepository: Repository<Journey>,
     @InjectRepository(JourneyLeg)
     private journeyLegRepository: Repository<JourneyLeg>,
+    @InjectRepository(Location)
+    private locationRepository: Repository<Location>,
     private notificationsService: NotificationsService,
     private geofencingService: GeofencingService,
+    private cacheService: CacheService,
+    private websocketService: WebsocketService,
   ) {}
 
   /**
@@ -123,19 +132,24 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
     journeyId: string,
     userId: string,
   ): Promise<void> {
+    // Clear existing interval if any
+    if (this.trackingIntervals.has(journeyId)) {
+      clearInterval(this.trackingIntervals.get(journeyId)!);
+    }
+
     const intervalId = setInterval(async () => {
       try {
         const journey = await this.journeyRepository.findOne({
           where: { id: journeyId, status: 'in_progress' },
-          relations: ['legs', 'legs.segment'],
+          relations: ['legs', 'legs.segment', 'legs.segment.startLocation', 'legs.segment.endLocation'],
         });
 
         if (!journey) {
-          clearInterval(intervalId);
+          this.stopJourneyTracking(journeyId, userId);
           return;
         }
 
-        // Get user's current location (from device/GPS)
+        // Get user's current location from Redis
         const userLocation = await this.getUserCurrentLocation(userId);
         if (!userLocation) {
           logger.warn('User location not available', { userId });
@@ -150,7 +164,12 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
       }
     }, this.LOCATION_UPDATE_INTERVAL);
 
-    // Store interval ID for cleanup (you might want to store this in Redis)
+    // Store interval
+    this.trackingIntervals.set(journeyId, intervalId);
+
+    // Also cache in Redis for persistence across restarts
+    await this.cacheService.setTrackingInterval(journeyId, intervalId.toString());
+
     logger.info('Journey tracking started', { journeyId, interval: this.LOCATION_UPDATE_INTERVAL });
   }
 
@@ -204,7 +223,7 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
       }
     }
 
-    // Check for destination approach - FIXED
+    // Check for destination approach
     const destinationDistance = this.geofencingService.calculateDistance(
       { lat: userLocation.latitude, lng: userLocation.longitude },
       { lat: journey.endLatitude, lng: journey.endLongitude }
@@ -222,6 +241,17 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
     if (destinationDistance <= 100) {
       await this.handleDestinationArrival(userId, journey);
     }
+
+    // Send progress update via WebSocket
+    this.websocketService.sendJourneyUpdate(journey.id, {
+      type: 'progress',
+      journeyId: journey.id,
+      data: {
+        progress,
+        currentLocation: userLocation,
+        destinationDistance,
+      },
+    });
   }
 
   /**
@@ -251,7 +281,7 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
   }
 
   /**
-   * Send transfer alert notification (5 minutes before)
+   * Send transfer alert notification (2km before)
    */
   private async sendTransferAlertNotification(
     userId: string,
@@ -272,6 +302,21 @@ Fare: ₦${nextLeg.minFare}-${nextLeg.maxFare}`,
         transferLocation: transfer.location,
         eta: transfer.eta.toString(),
         nextVehicle: nextLeg.transportMode,
+      },
+    });
+
+    // Send WebSocket update
+    this.websocketService.sendJourneyUpdate(journey.id, {
+      type: 'transfer',
+      journeyId: journey.id,
+      data: {
+        alertType: 'early',
+        transfer,
+        nextLeg: {
+          transportMode: nextLeg.transportMode,
+          minFare: nextLeg.minFare,
+          maxFare: nextLeg.maxFare,
+        },
       },
     });
 
@@ -381,6 +426,17 @@ Look for: ${journey.endLandmark || 'Major landmarks'}`,
       },
     });
 
+    // Send WebSocket update
+    this.websocketService.sendJourneyUpdate(journey.id, {
+      type: 'destination',
+      journeyId: journey.id,
+      data: {
+        destination: journey.endLocation,
+        distance,
+        eta,
+      },
+    });
+
     logger.info('Destination alert notification sent', {
       userId,
       journeyId: journey.id,
@@ -434,6 +490,24 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
         totalLegs: journey.legs.length.toString(),
       },
     });
+
+    // Send WebSocket event
+    this.websocketService.sendJourneyEvent(userId, {
+      type: 'complete',
+      journeyId: journey.id,
+      data: {
+        totalFare: Math.round(totalFare),
+        actualDuration,
+        totalLegs: journey.legs.length,
+      },
+    });
+
+    // Stop tracking
+    await this.stopJourneyTracking(journey.id, userId);
+
+    // Clean up cache
+    await this.cacheService.deleteActiveJourney(userId);
+    await this.cacheService.deleteUserLocation(userId);
 
     // Send rating request
     setTimeout(async () => {
@@ -496,7 +570,6 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
       const stopLocation = await this.getLocationCoordinates(stop.locationId);
       if (!stopLocation) continue;
 
-      // FIXED: Calculate distance with correct parameter format
       const distance = this.geofencingService.calculateDistance(
         { lat: userLocation.latitude, lng: userLocation.longitude },
         { lat: stopLocation.latitude, lng: stopLocation.longitude }
@@ -517,13 +590,7 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
     let upcomingTransfer: any = null;
     if (currentLegIndex < journey.legs.length - 1) {
       const transferLocation = currentLeg.segment?.endLocation;
-      if (!transferLocation) {
-        logger.warn('Transfer location not found for current leg', { 
-          journeyId: journey.id, 
-          legId: currentLeg.id 
-        });
-      } else {
-        // FIXED: Calculate transfer distance with correct parameter format
+      if (transferLocation) {
         const transferDistance = this.geofencingService.calculateDistance(
           { lat: userLocation.latitude, lng: userLocation.longitude },
           { lat: transferLocation.latitude, lng: transferLocation.longitude }
@@ -581,32 +648,46 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
   }
 
   /**
-   * Get user's current location (from device tracking)
-   * This should be implemented based on your location tracking mechanism
+   * Get user's current location from Redis cache
    */
   private async getUserCurrentLocation(
     userId: string,
   ): Promise<{ latitude: number; longitude: number } | null> {
-    // TODO: Implement based on your location tracking system
-    // Options:
-    // 1. Redis cache with latest location from mobile app
-    // 2. Database table with real-time location updates
-    // 3. WebSocket/Socket.io for real-time location streaming
+    const location = await this.cacheService.getUserLocation(userId);
     
-    // Placeholder implementation
-    logger.warn('getUserCurrentLocation not fully implemented', { userId });
-    return null;
+    if (!location) {
+      return null;
+    }
+
+    return {
+      latitude: location.latitude,
+      longitude: location.longitude,
+    };
   }
 
   /**
-   * Get location coordinates by ID
+   * Get location coordinates by ID from database
    */
   private async getLocationCoordinates(
     locationId: string,
   ): Promise<{ latitude: number; longitude: number } | null> {
-    // TODO: Fetch from location repository
-    logger.warn('getLocationCoordinates not fully implemented', { locationId });
-    return null;
+    try {
+      const location = await this.locationRepository.findOne({
+        where: { id: locationId },
+      });
+
+      if (!location) {
+        return null;
+      }
+
+      return {
+        latitude: location.latitude,
+        longitude: location.longitude,
+      };
+    } catch (error) {
+      logger.error('Error fetching location coordinates', { error, locationId });
+      return null;
+    }
   }
 
   /**
@@ -640,11 +721,14 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
    * Stop journey tracking
    */
   async stopJourneyTracking(journeyId: string, userId: string): Promise<void> {
-    // Mark journey as cancelled or completed
-    await this.journeyRepository.update(journeyId, {
-      status: 'cancelled',
-      actualEndTime: new Date(),
-    });
+    // Clear interval
+    if (this.trackingIntervals.has(journeyId)) {
+      clearInterval(this.trackingIntervals.get(journeyId)!);
+      this.trackingIntervals.delete(journeyId);
+    }
+
+    // Clean up cache
+    await this.cacheService.deleteTrackingInterval(journeyId);
 
     await this.notificationsService.sendToUser(userId, {
       title: 'Journey Stopped',
