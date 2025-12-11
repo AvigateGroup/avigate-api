@@ -10,14 +10,29 @@ import { CacheService } from './cache.service';
   imports: [
     NestCacheModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        store: redisStore,
-        host: configService.get('REDIS_HOST', 'localhost'),
-        port: configService.get('REDIS_PORT', 6379),
-        password: configService.get('REDIS_PASSWORD'),
-        ttl: 300, // 5 minutes default
-        max: 1000, // Maximum number of items in cache
-      }),
+      useFactory: async (configService: ConfigService) => {
+        const redisUrl = configService.get('REDIS_URL');
+        
+        // If REDIS_URL exists, use it (Railway format)
+        if (redisUrl) {
+          return {
+            store: redisStore,
+            url: redisUrl,
+            ttl: 300,
+            max: 1000,
+          };
+        }
+        
+        // Fallback to individual params 
+        return {
+          store: redisStore,
+          host: configService.get('REDIS_HOST'),
+          port: configService.get('REDIS_PORT', 6379),
+          password: configService.get('REDIS_PASSWORD'),
+          ttl: 300,
+          max: 1000,
+        };
+      },
       inject: [ConfigService],
     }),
   ],
