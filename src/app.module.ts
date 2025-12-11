@@ -28,6 +28,8 @@ import { Route } from './modules/route/entities/route.entity';
 import { RouteStep } from './modules/route/entities/route-step.entity';
 import { RouteSegment } from './modules/route/entities/route-segment.entity';
 import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
+import { Journey } from './modules/journey/entities/journey.entity';
+import { JourneyLeg } from './modules/journey/entities/journey-leg.entity';
 
 @Module({
   imports: [
@@ -56,6 +58,8 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
       RouteStep,
       RouteSegment,
       FareFeedback,
+      Journey,    
+      JourneyLeg,
     ],
     synchronize: false,
     logging: configService.get('NODE_ENV') === 'development',
