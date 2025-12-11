@@ -107,8 +107,7 @@ export class Route {
   @OneToMany(() => RouteStep, step => step.route)
   steps: RouteStep[];
 
-  // ADDED: Missing inverse relation for RouteSegment
-  @ManyToMany(() => RouteSegment, segment => segment.routes)
+  @ManyToMany(() => RouteSegment)
   @JoinTable({
     name: 'route_segments_mapping',
     joinColumn: { name: 'routeId', referencedColumnName: 'id' },
