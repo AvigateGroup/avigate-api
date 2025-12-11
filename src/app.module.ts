@@ -36,39 +36,37 @@ import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
       load: [databaseConfig],
     }),
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: configService.get('DB_PORT'),
-        username: configService.get('DB_USER'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_DATABASE'),
-        entities: [
-          Admin,
-          AdminSession,
-          User,
-          UserDevice,
-          UserOTP,
-          Location,
-          Landmark,
-          Route,
-          RouteStep,
-          RouteSegment,
-          FareFeedback,
-        ],
-        synchronize: false,
-        logging: configService.get('NODE_ENV') === 'development',
-        ssl: configService.get('NODE_ENV') === 'production' ? { rejectUnauthorized: false } : false,
-
-        // ADD THESE RETRY CONFIGURATIONS
-        retryAttempts: 10, // Try to connect 10 times
-        retryDelay: 3000, // Wait 3 seconds between attempts
-        connectTimeoutMS: 10000, // 10 second connection timeout
-        maxQueryExecutionTime: 5000, // Log slow queries (5 seconds)
-      }),
-      inject: [ConfigService],
-    }),
+  imports: [ConfigModule],
+  useFactory: (configService: ConfigService) => ({
+    type: 'postgres',
+    host: configService.get('DATABASE_HOST'), 
+    port: configService.get('DATABASE_PORT'), 
+    username: configService.get('DATABASE_USERNAME'), 
+    password: configService.get('DATABASE_PASSWORD'), 
+    database: configService.get('DATABASE_NAME'), 
+    entities: [
+      Admin,
+      AdminSession,
+      User,
+      UserDevice,
+      UserOTP,
+      Location,
+      Landmark,
+      Route,
+      RouteStep,
+      RouteSegment,
+      FareFeedback,
+    ],
+    synchronize: false,
+    logging: configService.get('NODE_ENV') === 'development',
+    ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false, 
+    retryAttempts: 10,
+    retryDelay: 3000,
+    connectTimeoutMS: 10000,
+    maxQueryExecutionTime: 5000,
+  }),
+  inject: [ConfigService],
+}),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => [
