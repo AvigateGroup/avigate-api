@@ -18,6 +18,14 @@ import { UploadService } from '../upload/upload.service';
 import { VerificationService } from '../auth/services/verification.service';
 import { TEST_ACCOUNTS } from '@/config/test-accounts.config';
 import { logger } from '@/utils/logger.util';
+import {
+  CURRENT_TERMS_VERSION,
+  CURRENT_PRIVACY_VERSION,
+  needsLegalUpdate,
+  needsTermsUpdate,
+  needsPrivacyUpdate,
+} from '@/common/constants/legal.constants';
+import { AcceptLegalUpdateDto } from './dto/accept-legal-update.dto';
 
 @Injectable()
 export class UserService {
@@ -304,6 +312,82 @@ export class UserService {
     return {
       success: true,
       message: 'Account deleted successfully',
+    };
+  }
+
+  /**
+   * Check if user needs to accept updated legal documents
+   */
+  async checkLegalStatus(user: User) {
+    const needsUpdate = needsLegalUpdate(user.termsVersion, user.privacyVersion);
+
+    return {
+      success: true,
+      data: {
+        needsUpdate,
+        needsTermsUpdate: needsTermsUpdate(user.termsVersion),
+        needsPrivacyUpdate: needsPrivacyUpdate(user.privacyVersion),
+        currentTermsVersion: CURRENT_TERMS_VERSION,
+        currentPrivacyVersion: CURRENT_PRIVACY_VERSION,
+        userTermsVersion: user.termsVersion,
+        userPrivacyVersion: user.privacyVersion,
+        termsAcceptedAt: user.termsAcceptedAt,
+        privacyAcceptedAt: user.privacyAcceptedAt,
+      },
+    };
+  }
+
+  /**
+   * Record user's acceptance of updated legal documents
+   */
+  async acceptLegalUpdate(user: User, acceptLegalDto: AcceptLegalUpdateDto) {
+    const { acceptTerms, acceptPrivacy } = acceptLegalDto;
+    const updates: Partial<User> = {};
+
+    if (acceptTerms && needsTermsUpdate(user.termsVersion)) {
+      updates.termsVersion = CURRENT_TERMS_VERSION;
+      updates.termsAcceptedAt = new Date();
+      logger.info('User accepted updated Terms of Service', {
+        userId: user.id,
+        oldVersion: user.termsVersion,
+        newVersion: CURRENT_TERMS_VERSION,
+      });
+    }
+
+    if (acceptPrivacy && needsPrivacyUpdate(user.privacyVersion)) {
+      updates.privacyVersion = CURRENT_PRIVACY_VERSION;
+      updates.privacyAcceptedAt = new Date();
+      logger.info('User accepted updated Privacy Policy', {
+        userId: user.id,
+        oldVersion: user.privacyVersion,
+        newVersion: CURRENT_PRIVACY_VERSION,
+      });
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return {
+        success: true,
+        message: 'No updates needed - you are already on the latest versions',
+        data: {
+          termsVersion: user.termsVersion,
+          privacyVersion: user.privacyVersion,
+        },
+      };
+    }
+
+    await this.userRepository.update(user.id, updates);
+
+    const updatedUser = await this.userRepository.findOne({ where: { id: user.id } });
+
+    return {
+      success: true,
+      message: 'Legal documents acceptance recorded successfully',
+      data: {
+        termsVersion: updatedUser.termsVersion,
+        privacyVersion: updatedUser.privacyVersion,
+        termsAcceptedAt: updatedUser.termsAcceptedAt,
+        privacyAcceptedAt: updatedUser.privacyAcceptedAt,
+      },
     };
   }
 }

@@ -17,6 +17,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nes
 import { UserService } from './user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { AcceptLegalUpdateDto } from './dto/accept-legal-update.dto';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from './entities/user.entity';
@@ -72,5 +73,17 @@ export class UserController {
   @ApiOperation({ summary: 'Delete user account' })
   async deleteAccount(@CurrentUser() user: User, @Body() deleteAccountDto: DeleteAccountDto) {
     return this.userService.deleteAccount(user, deleteAccountDto.confirmDelete);
+  }
+
+  @Post('legal/accept')
+  @ApiOperation({ summary: 'Accept updated Terms of Service and/or Privacy Policy' })
+  async acceptLegalUpdate(@CurrentUser() user: User, @Body() acceptLegalDto: AcceptLegalUpdateDto) {
+    return this.userService.acceptLegalUpdate(user, acceptLegalDto);
+  }
+
+  @Get('legal/status')
+  @ApiOperation({ summary: 'Check if user needs to accept updated legal documents' })
+  async checkLegalStatus(@CurrentUser() user: User) {
+    return this.userService.checkLegalStatus(user);
   }
 }

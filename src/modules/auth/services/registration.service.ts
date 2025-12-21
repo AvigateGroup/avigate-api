@@ -12,10 +12,10 @@ import { OtpService } from './otp.service';
 import { OTPType } from '../../user/entities/user-otp.entity';
 import { TEST_ACCOUNTS, TEST_SETTINGS } from '@/config/test-accounts.config';
 import { logger } from '@/utils/logger.util';
-
-// Legal document versions
-const CURRENT_TERMS_VERSION = '1.0';
-const CURRENT_PRIVACY_VERSION = '1.0';
+import {
+  CURRENT_TERMS_VERSION,
+  CURRENT_PRIVACY_VERSION,
+} from '@/common/constants/legal.constants';
 
 @Injectable()
 export class RegistrationService {
