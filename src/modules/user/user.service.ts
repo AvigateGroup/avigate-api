@@ -379,6 +379,10 @@ export class UserService {
 
     const updatedUser = await this.userRepository.findOne({ where: { id: user.id } });
 
+    if (!updatedUser) {
+      throw new Error('Failed to retrieve updated user');
+    }
+
     return {
       success: true,
       message: 'Legal documents acceptance recorded successfully',
