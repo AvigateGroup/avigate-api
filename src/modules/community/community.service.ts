@@ -44,21 +44,54 @@ export class CommunityService {
   }
 
   async getPosts(postType?: string, locationId?: string, page: number = 1, limit: number = 20) {
-    const where: any = { isActive: true };
-    if (postType) where.postType = postType;
-    if (locationId) where.locationId = locationId;
+    const queryBuilder = this.postRepository
+      .createQueryBuilder('post')
+      .leftJoinAndSelect('post.author', 'author')
+      .leftJoinAndSelect('post.location', 'location')
+      .where('post.isActive = :isActive', { isActive: true })
+      .orderBy('post.createdAt', 'DESC')
+      .take(limit)
+      .skip((page - 1) * limit);
 
-    const [posts, total] = await this.postRepository.findAndCount({
-      where,
-      order: { createdAt: 'DESC' },
-      take: limit,
-      skip: (page - 1) * limit,
-    });
+    if (postType) {
+      queryBuilder.andWhere('post.postType = :postType', { postType });
+    }
+
+    if (locationId) {
+      queryBuilder.andWhere('post.locationId = :locationId', { locationId });
+    }
+
+    const [posts, total] = await queryBuilder.getManyAndCount();
+
+    // Transform posts to include author information and hide sensitive fields
+    const transformedPosts = posts.map(post => ({
+      id: post.id,
+      postType: post.postType,
+      title: post.title,
+      content: post.content,
+      author: {
+        id: post.author?.id,
+        firstName: post.author?.firstName,
+        lastName: post.author?.lastName,
+        profilePicture: post.author?.profilePicture,
+        reputationScore: post.author?.reputationScore,
+      },
+      location: post.location ? {
+        id: post.location.id,
+        name: post.location.name,
+      } : null,
+      images: post.images,
+      upvotes: post.upvotes,
+      downvotes: post.downvotes,
+      isVerified: post.isVerified,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+    }));
 
     return {
       success: true,
       data: {
-        posts,
+        posts: transformedPosts,
         pagination: {
           page,
           limit,

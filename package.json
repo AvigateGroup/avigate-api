@@ -30,6 +30,7 @@
     "schema:drop": "typeorm-ts-node-commonjs schema:drop -d ormconfig.ts",
     "seed:users": "ts-node -r tsconfig-paths/register src/scripts/seed-admin-and-users.ts",
     "seed:ph": "ts-node -r tsconfig-paths/register src/scripts/run-seed.ts",
+    "seed:community": "ts-node -r tsconfig-paths/register src/scripts/seed-community-posts.ts",
     "db:reset": "ts-node -r tsconfig-paths/register src/scripts/drop-and-reset-db.ts",
     "test:legal-modal": "ts-node -r tsconfig-paths/register src/scripts/test-legal-modal.ts"
   },

@@ -6,7 +6,11 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { User } from '../../user/entities/user.entity';
+import { Location } from '../../location/entities/location.entity';
 
 export enum PostType {
   TRAFFIC_UPDATE = 'traffic_update',
@@ -25,6 +29,10 @@ export class CommunityPost {
   @Index()
   authorId: string;
 
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'authorId' })
+  author: User;
+
   @Column({
     type: 'enum',
     enum: PostType,
@@ -41,6 +49,10 @@ export class CommunityPost {
   @Column('uuid', { nullable: true })
   @Index()
   locationId: string;
+
+  @ManyToOne(() => Location)
+  @JoinColumn({ name: 'locationId' })
+  location: Location;
 
   @Column('uuid', { nullable: true })
   routeId: string;
