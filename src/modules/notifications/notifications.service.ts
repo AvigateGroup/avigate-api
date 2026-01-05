@@ -1,17 +1,21 @@
 // src/modules/notifications/notifications.service.ts
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, FindOptionsWhere } from 'typeorm';
 import * as admin from 'firebase-admin';
 import { UserDevice } from '../user/entities/user-device.entity';
+import { Notification, NotificationType } from './entities/notification.entity';
 import { logger } from '@/utils/logger.util';
+import { GetNotificationsDto } from './dto/get-notifications.dto';
 
 export interface NotificationPayload {
   title: string;
   body: string;
-  data?: Record<string, string>;
+  type: NotificationType;
+  data?: Record<string, any>;
   imageUrl?: string;
+  actionUrl?: string;
 }
 
 @Injectable()
@@ -20,6 +24,8 @@ export class NotificationsService implements OnModuleInit {
     private configService: ConfigService,
     @InjectRepository(UserDevice)
     private deviceRepository: Repository<UserDevice>,
+    @InjectRepository(Notification)
+    private notificationRepository: Repository<Notification>,
   ) {}
 
   onModuleInit() {
@@ -49,7 +55,20 @@ export class NotificationsService implements OnModuleInit {
     }
   }
 
-  async sendToUser(userId: string, notification: NotificationPayload): Promise<void> {
+  async sendToUser(userId: string, notification: NotificationPayload): Promise<Notification> {
+    // Save notification to database
+    const savedNotification = await this.notificationRepository.save({
+      userId,
+      type: notification.type,
+      title: notification.title,
+      body: notification.body,
+      data: notification.data || {},
+      imageUrl: notification.imageUrl,
+      actionUrl: notification.actionUrl,
+      isRead: false,
+    });
+
+    // Send push notification to user's devices
     const devices = await this.deviceRepository.find({
       where: { userId, isActive: true },
       select: ['fcmToken'],
@@ -59,10 +78,12 @@ export class NotificationsService implements OnModuleInit {
 
     if (tokens.length === 0) {
       logger.warn(`No active devices found for user ${userId}`);
-      return;
+      return savedNotification;
     }
 
     await this.sendToMultipleDevices(tokens, notification);
+
+    return savedNotification;
   }
 
   async sendToMultipleDevices(tokens: string[], notification: NotificationPayload): Promise<void> {
@@ -165,5 +186,71 @@ export class NotificationsService implements OnModuleInit {
     } catch (error) {
       logger.error(`Unsubscribe from topic error for ${topic}:`, error);
     }
+  }
+
+  // Get user notifications with pagination and filters
+  async getUserNotifications(userId: string, dto: GetNotificationsDto) {
+    const { page = 1, limit = 20, type, isRead } = dto;
+    const skip = (page - 1) * limit;
+
+    const where: FindOptionsWhere<Notification> = { userId };
+    if (type) where.type = type;
+    if (isRead !== undefined) where.isRead = isRead;
+
+    const [notifications, total] = await this.notificationRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip,
+      take: limit,
+    });
+
+    return {
+      notifications,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  // Get unread notification count
+  async getUnreadCount(userId: string): Promise<number> {
+    return this.notificationRepository.count({
+      where: { userId, isRead: false },
+    });
+  }
+
+  // Mark notification as read/unread
+  async markAsRead(notificationId: string, userId: string, isRead: boolean): Promise<Notification> {
+    const notification = await this.notificationRepository.findOne({
+      where: { id: notificationId, userId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException('Notification not found');
+    }
+
+    notification.isRead = isRead;
+    return this.notificationRepository.save(notification);
+  }
+
+  // Mark all notifications as read
+  async markAllAsRead(userId: string): Promise<void> {
+    await this.notificationRepository.update({ userId, isRead: false }, { isRead: true });
+    logger.info(`Marked all notifications as read for user ${userId}`);
+  }
+
+  // Delete notification
+  async deleteNotification(notificationId: string, userId: string): Promise<void> {
+    const result = await this.notificationRepository.delete({ id: notificationId, userId });
+    if (result.affected === 0) {
+      throw new NotFoundException('Notification not found');
+    }
+  }
+
+  // Delete all read notifications for user
+  async deleteReadNotifications(userId: string): Promise<void> {
+    await this.notificationRepository.delete({ userId, isRead: true });
+    logger.info(`Deleted read notifications for user ${userId}`);
   }
 }
