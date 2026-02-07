@@ -6,17 +6,18 @@ import { BidirectionalRouteService } from './bidirectional-route.service';
 import { LocationFinderService } from './location-finder.service';
 import { WalkingRouteService } from './walking-route.service';
 import { logger } from '@/utils/logger.util';
+import { roundToNearest50, floorToNearest50, ceilToNearest50 } from '@/utils/fare.util';
 
 export interface EnhancedRouteResult {
   hasDirectRoute: boolean;
   hasIntermediateStop: boolean;
   requiresWalking: boolean;
   routes: Array<{
-    routeId?: string;
+    id?: string; // Frontend expects 'id'
     routeName: string;
     source: 'database' | 'google_maps' | 'intermediate_stop' | 'with_walking';
-    distance: number;
-    duration: number;
+    distance: number; // in meters
+    duration: number; // in seconds
     minFare?: number;
     maxFare?: number;
     steps: any[];
@@ -30,6 +31,45 @@ export interface EnhancedRouteResult {
       alternativeTransport?: any;
     };
   }>;
+}
+
+/**
+ * Helper to extract clean transport mode from potentially malformed data
+ */
+function cleanTransportMode(mode: any): 'bus' | 'taxi' | 'keke' | 'okada' | 'walk' {
+  if (!mode) return 'bus';
+
+  let cleanMode = mode;
+
+  // Handle object types
+  if (typeof mode === 'object' && mode !== null) {
+    cleanMode = mode.type || mode.mode || Object.values(mode)[0] || 'bus';
+  }
+
+  // Handle string types (may have JSON artifacts)
+  if (typeof cleanMode === 'string') {
+    cleanMode = cleanMode
+      .replace(/^\{?"?/g, '')  // Remove leading { or {"
+      .replace(/"?\}?$/g, '')  // Remove trailing "} or }
+      .replace(/^["'\[]*/g, '') // Remove leading quotes/brackets
+      .replace(/["'\]]*$/g, '') // Remove trailing quotes/brackets
+      .trim()
+      .toLowerCase();
+  }
+
+  // Map to valid transport modes
+  const validModes = ['bus', 'taxi', 'keke', 'okada', 'walk'];
+  if (validModes.includes(cleanMode)) {
+    return cleanMode as 'bus' | 'taxi' | 'keke' | 'okada' | 'walk';
+  }
+
+  // Handle common variations
+  if (cleanMode === 'walking') return 'walk';
+  if (cleanMode === 'car') return 'taxi';
+  if (cleanMode === 'tricycle') return 'keke';
+  if (cleanMode === 'motorcycle' || cleanMode === 'bike') return 'okada';
+
+  return 'bus'; // Default fallback
 }
 
 @Injectable()
@@ -78,8 +118,49 @@ export class RouteMatchingService {
       0.5,
     );
 
-    // Step 2: Try direct routes (BIDIRECTIONAL)
-    if (startLocation && endLocation) {
+    // Step 1.5: FIRST check if user is ON a segment path (mid-segment boarding)
+    // This prevents routing users backwards when they're already on the highway
+    // Example: User on Rumuji-Mpakirche Rd should board there, not walk back to Choba Junction
+    const bestBoardingPoint = await this.locationFinderService.findBestBoardingPoint(
+      startLat,
+      startLng,
+      endLat,
+      endLng,
+      endLocationName,
+    );
+
+    // If user is on a segment going the right direction AND not already at a junction
+    const userIsOnSegmentPath = bestBoardingPoint?.isCorrectDirection &&
+      bestBoardingPoint.distanceFromUser < 2000; // Within 2km of main road
+
+    // User is "at a junction" only if they're very close (within 300m) to a known stop
+    const distToNearestLocation = startLocation
+      ? this.haversineDistance(startLat, startLng, Number(startLocation.latitude), Number(startLocation.longitude))
+      : Infinity;
+    const userIsAtJunction = distToNearestLocation < 300;
+
+    logger.info('Route decision check', {
+      userIsOnSegmentPath,
+      userIsAtJunction,
+      distToNearestLocation,
+      bestBoardingPoint: bestBoardingPoint ? {
+        name: bestBoardingPoint.name,
+        isCorrectDirection: bestBoardingPoint.isCorrectDirection,
+        distanceFromUser: bestBoardingPoint.distanceFromUser,
+      } : null,
+    });
+
+    // Step 2: If user is on a segment path (not at a junction), use mid-segment boarding
+    if (userIsOnSegmentPath && !userIsAtJunction) {
+      logger.info('User is on segment path - using mid-segment boarding', {
+        boardingPoint: bestBoardingPoint.name,
+        segment: bestBoardingPoint.segment.name,
+        distanceToRoad: bestBoardingPoint.distanceFromUser,
+      });
+      // Continue to the boarding point logic below (Step 2.5)
+    }
+    // Step 2a: If user IS at a junction, try direct routes
+    else if (startLocation && endLocation) {
       const directRoutes = await this.bidirectionalRouteService.findBidirectionalRoutes(
         startLocation.id,
         endLocation.id,
@@ -90,7 +171,80 @@ export class RouteMatchingService {
       if (directRoutes.length > 0) {
         result.hasDirectRoute = true;
         result.routes.push(...directRoutes);
-        return result; // Have direct routes, return early
+        await this.addWalkingStepIfNeeded(startLat, startLng, result.routes);
+        return result;
+      }
+    }
+
+    // Step 2.5: Use mid-segment boarding if user is on segment path
+    if (userIsOnSegmentPath && !userIsAtJunction && bestBoardingPoint) {
+      logger.info('Using mid-segment boarding - user is on highway', {
+        boardingPoint: bestBoardingPoint.name,
+        segment: bestBoardingPoint.segment.name,
+        distance: bestBoardingPoint.distanceFromUser,
+      });
+
+      const segment = bestBoardingPoint.segment;
+
+      // Calculate walking distance to boarding point
+      const walkingDistanceMeters = bestBoardingPoint.distanceFromUser;
+      const walkingDurationSeconds = Math.round(walkingDistanceMeters / 1.4); // ~1.4 m/s walking speed
+
+      // Calculate segment distance and duration
+      const segmentDistanceMeters = Number(segment.distance || 0) * 1000;
+      const segmentDurationSeconds = Number(segment.estimatedDuration || 0) * 60;
+
+      // Round fares to nearest 50 naira
+      const roundedMinFare = floorToNearest50(Number(segment.minFare || 0));
+      const roundedMaxFare = ceilToNearest50(Number(segment.maxFare || 0));
+
+      const steps: any[] = [];
+
+      const destName = endLocationName || segment.endLocation?.name || 'Destination';
+      const transportTypes = (segment.transportModes || ['taxi']).join(' or ');
+
+      // Add walking step if needed (>100m from boarding point)
+      if (walkingDistanceMeters > 100) {
+        steps.push({
+          order: 1,
+          transportMode: 'walk',
+          transportModes: ['walk'],
+          fromLocation: 'Your Location',
+          toLocation: bestBoardingPoint.name,
+          instructions: `Walk to the main road (${Math.round(walkingDistanceMeters)}m). You can wave down any ${transportTypes} going to ${destName} from here.`,
+          distance: Math.round(walkingDistanceMeters),
+          duration: walkingDurationSeconds,
+        });
+      }
+
+      // Add vehicle step
+      steps.push({
+        order: steps.length + 1,
+        transportMode: cleanTransportMode(segment.transportModes?.[0]),
+        transportModes: (segment.transportModes || []).map(cleanTransportMode),
+        fromLocation: bestBoardingPoint.name,
+        toLocation: destName,
+        instructions: `Wave down a ${transportTypes} going to ${destName}. Tell the driver: "I dey go ${destName}". The vehicle will take you directly there.`,
+        distance: segmentDistanceMeters,
+        duration: segmentDurationSeconds,
+        estimatedFare: roundedMaxFare,
+      });
+
+      result.routes.push({
+        id: segment.id,
+        routeName: `Direct to ${endLocationName || segment.endLocation?.name}`,
+        source: 'database',
+        distance: Math.round(walkingDistanceMeters) + segmentDistanceMeters,
+        duration: walkingDurationSeconds + segmentDurationSeconds,
+        minFare: roundedMinFare,
+        maxFare: roundedMaxFare,
+        steps,
+        confidence: 90,
+      });
+
+      if (result.routes.length > 0) {
+        result.hasDirectRoute = true;
+        return result;
       }
     }
 
@@ -104,9 +258,68 @@ export class RouteMatchingService {
 
     if (intermediateResult?.isOnRoute) {
       result.hasIntermediateStop = true;
-      // Handle intermediate stop logic (existing code can be moved to intermediate-stop-handler)
       logger.info('Found intermediate stop route');
-      // You can expand this section based on your intermediate stop handling needs
+
+      // Add the intermediate stop route to results
+      const segment = intermediateResult.segment;
+      const stopInfo = intermediateResult.stopInfo;
+
+      // Calculate distance and duration
+      const distanceKm = stopInfo.distanceFromStart || Number(segment.distance || 0);
+      const totalDurationMin = Number(segment.estimatedDuration || 0);
+      const segmentDistanceKm = Number(segment.distance || 0);
+
+      // Estimate duration proportionally if we have total duration
+      let durationMin = 0;
+      if (totalDurationMin > 0 && segmentDistanceKm > 0 && distanceKm > 0) {
+        durationMin = (distanceKm / segmentDistanceKm) * totalDurationMin;
+      }
+
+      // Convert to units expected by frontend: meters and seconds
+      const distanceMeters = distanceKm * 1000;
+      const durationSeconds = durationMin * 60;
+
+      // Round fares to nearest 50 naira (Nigerian standard)
+      const roundedMinFare = floorToNearest50(Number(segment.minFare || 0));
+      const roundedMaxFare = ceilToNearest50(stopInfo.estimatedFare);
+      const roundedEstimatedFare = roundToNearest50(stopInfo.estimatedFare);
+
+      result.routes.push({
+        id: segment.id, // Frontend expects 'id', not 'routeId'
+        routeName: `${segment.startLocation?.name} to ${segment.endLocation?.name} (via ${stopInfo.name})`,
+        source: 'intermediate_stop',
+        distance: distanceMeters, // Frontend expects meters
+        duration: durationSeconds, // Frontend expects seconds
+        minFare: roundedMinFare,
+        maxFare: roundedMaxFare,
+        steps: [
+          {
+            order: 1,
+            transportMode: cleanTransportMode(segment.transportModes?.[0]),
+            transportModes: (segment.transportModes || []).map(cleanTransportMode), // All available modes
+            fromLocation: segment.startLocation?.name || 'Start',
+            toLocation: stopInfo.name,
+            instructions: intermediateResult.instructions,
+            distance: distanceMeters,
+            duration: durationSeconds,
+            estimatedFare: roundedEstimatedFare,
+          },
+        ],
+        confidence: 85,
+        intermediateStopInfo: {
+          stopName: stopInfo.name,
+          order: stopInfo.order,
+          isOptional: stopInfo.isOptional,
+          distanceFromStart: stopInfo.distanceFromStart,
+          estimatedFare: roundedEstimatedFare,
+        },
+      });
+
+      logger.info(
+        `Intermediate stop route added: ${distanceKm}km, ${durationMin}min, fare: ₦${stopInfo.estimatedFare}`,
+      );
+      await this.addWalkingStepIfNeeded(startLat, startLng, result.routes);
+      return result;
     }
 
     // Step 4: Check if destination requires walking from main road
@@ -129,6 +342,11 @@ export class RouteMatchingService {
       }
     }
 
+    // Step 4b: Prepend walking step if user is far from route start
+    if (result.routes.length > 0) {
+      await this.addWalkingStepIfNeeded(startLat, startLng, result.routes);
+    }
+
     // Step 5: Fallback to Google Maps
     if (result.routes.length === 0) {
       logger.info('Using Google Maps fallback');
@@ -142,18 +360,30 @@ export class RouteMatchingService {
         result.routes.push({
           routeName: 'Google Maps Route',
           source: 'google_maps',
-          distance: googleRoute.distance,
-          duration: googleRoute.duration,
+          distance: googleRoute.distance * 1000, // Convert km to meters
+          duration: googleRoute.duration * 60, // Convert minutes to seconds
           steps: googleRoute.steps.map((step, index) => ({
             order: index + 1,
             instructions: step.instruction,
-            distance: step.distance,
-            duration: step.duration,
+            distance: step.distance * 1000, // Convert km to meters
+            duration: step.duration * 60, // Convert minutes to seconds
           })),
           confidence: 70,
         });
       } catch (error) {
-        logger.error('Google Maps fallback failed:', error);
+        const errorMessage = error?.message || String(error);
+        // Only log as warning for expected errors
+        if (
+          errorMessage.includes('ZERO_RESULTS') ||
+          errorMessage.includes('SAME_LOCATION') ||
+          errorMessage.includes('Invalid coordinates')
+        ) {
+          logger.warn(
+            `Google Maps fallback not available: ${errorMessage.split(':')[1]?.trim() || errorMessage}`,
+          );
+        } else {
+          logger.error('Google Maps fallback failed:', error);
+        }
       }
     }
 
@@ -188,6 +418,63 @@ export class RouteMatchingService {
 
   async reverseGeocode(lat: number, lng: number): Promise<string | null> {
     return this.googleMapsService.reverseGeocode(lat, lng);
+  }
+
+  /**
+   * Prepend a walking step if the user is >200m from the route's first fromLocation.
+   * Finds the nearest boarding point on the route corridor to minimize backtracking.
+   */
+  private async addWalkingStepIfNeeded(
+    userLat: number,
+    userLng: number,
+    routes: EnhancedRouteResult['routes'],
+  ): Promise<void> {
+    for (const route of routes) {
+      const firstStep = route.steps?.[0];
+      if (!firstStep?.fromLocation) continue;
+
+      // Find the start location coordinates
+      const startLoc = await this.locationFinderService.findNearestMainRoadStop(userLat, userLng);
+      if (!startLoc) continue;
+
+      const distToRouteStart = this.haversineDistance(userLat, userLng, startLoc.lat, startLoc.lng);
+
+      // Only add walking step if user is >200m but <2km from the boarding point
+      if (distToRouteStart > 200 && distToRouteStart < 2000) {
+        const walkingDuration = Math.round((distToRouteStart / 1.4)); // ~1.4 m/s walking speed, in seconds
+
+        const walkingStep = {
+          order: 0,
+          transportMode: 'walk',
+          fromLocation: 'Your Location',
+          toLocation: startLoc.name,
+          instructions: `Walk to ${startLoc.name} (${Math.round(distToRouteStart)}m)`,
+          distance: Math.round(distToRouteStart),
+          duration: walkingDuration,
+        };
+
+        // Prepend walking step and re-number
+        route.steps.unshift(walkingStep);
+        route.steps.forEach((step, i) => { step.order = i + 1; });
+
+        // Update total distance/duration
+        route.distance += Math.round(distToRouteStart);
+        route.duration += walkingDuration;
+
+        logger.info(`Prepended walking step: ${Math.round(distToRouteStart)}m to ${startLoc.name}`);
+      }
+    }
+  }
+
+  private haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371000; // Earth radius in meters
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   /**

@@ -11,6 +11,42 @@ import { LocationFinderService } from './location-finder.service';
 import { InstructionGeneratorService } from './instruction-generator.service';
 import { RouteDataAnalyzerService } from './route-data-analyzer.service';
 import { logger } from '@/utils/logger.util';
+import { floorToNearest50, ceilToNearest50, roundToNearest50 } from '@/utils/fare.util';
+
+/**
+ * Helper to extract clean transport mode from potentially malformed data
+ */
+function cleanTransportMode(mode: any): 'bus' | 'taxi' | 'keke' | 'okada' | 'walk' {
+  if (!mode) return 'bus';
+
+  let cleanMode = mode;
+
+  if (typeof mode === 'object' && mode !== null) {
+    cleanMode = mode.type || mode.mode || Object.values(mode)[0] || 'bus';
+  }
+
+  if (typeof cleanMode === 'string') {
+    cleanMode = cleanMode
+      .replace(/^\{?"?/g, '')
+      .replace(/"?\}?$/g, '')
+      .replace(/^["'\[]*/g, '')
+      .replace(/["'\]]*$/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  const validModes = ['bus', 'taxi', 'keke', 'okada', 'walk'];
+  if (validModes.includes(cleanMode)) {
+    return cleanMode as 'bus' | 'taxi' | 'keke' | 'okada' | 'walk';
+  }
+
+  if (cleanMode === 'walking') return 'walk';
+  if (cleanMode === 'car') return 'taxi';
+  if (cleanMode === 'tricycle') return 'keke';
+  if (cleanMode === 'motorcycle' || cleanMode === 'bike') return 'okada';
+
+  return 'bus';
+}
 
 export interface WalkingRouteResult {
   routeName: string;
@@ -164,6 +200,15 @@ export class WalkingRouteService {
           reason: vehicleDataCheck.reason,
         };
 
+        // Calculate and round fares to nearest 50 naira
+        const totalMinFare = floorToNearest50(
+          (segment.minFare ? Number(segment.minFare) : 0) + (routeToSegmentStart?.minFare || 0)
+        );
+        const totalMaxFare = ceilToNearest50(
+          (segment.maxFare ? Number(segment.maxFare) : 0) + (routeToSegmentStart?.maxFare || 0)
+        );
+        const stepEstimatedFare = segment.maxFare ? roundToNearest50(Number(segment.maxFare)) : undefined;
+
         bestRoute = {
           routeName: `${startLocation?.name || 'Your Location'} to ${endLocationName || 'Destination'}`,
           source: 'with_walking',
@@ -175,10 +220,8 @@ export class WalkingRouteService {
             Number(segment.estimatedDuration) +
             (routeToSegmentStart?.duration || 0) +
             (finalDestInfo.walkingDirections?.duration || 0),
-          minFare:
-            (segment.minFare ? Number(segment.minFare) : 0) + (routeToSegmentStart?.minFare || 0),
-          maxFare:
-            (segment.maxFare ? Number(segment.maxFare) : 0) + (routeToSegmentStart?.maxFare || 0),
+          minFare: totalMinFare,
+          maxFare: totalMaxFare,
           steps: [
             ...(routeToSegmentStart?.steps.map(s => ({
               ...s,
@@ -192,14 +235,15 @@ export class WalkingRouteService {
               order: (routeToSegmentStart?.steps.length || 0) + 1,
               fromLocation: segment.startLocation?.name,
               toLocation: dropOffPoint.dropOffName,
-              transportMode: segment.transportModes[0],
+              transportMode: cleanTransportMode(segment.transportModes[0]),
+              transportModes: (segment.transportModes || []).map(cleanTransportMode), // All available modes
               instructions: this.instructionGeneratorService.enhanceInstructionsWithDropOff(
                 segment.instructions,
                 dropOffPoint.dropOffName,
               ),
               duration: Number(segment.estimatedDuration),
               distance: Number(segment.distance),
-              estimatedFare: segment.maxFare ? Number(segment.maxFare) : undefined,
+              estimatedFare: stepEstimatedFare,
               dataAvailability: {
                 hasVehicleData: true,
                 confidence: 'high' as const,

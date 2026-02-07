@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { RouteSegment, VehicleServiceInfo } from '../entities/route-segment.entity';
 import { GeofencingService } from './geofencing.service';
 import { LocationFinderService } from './location-finder.service';
+import { roundToNearest50 } from '@/utils/fare.util';
 
 export interface EnhancedRouteStep {
   order: number;
@@ -207,16 +208,19 @@ export class RouteDataAnalyzerService {
 
   /**
    * Calculate fare based on vehicle service availability
+   * Nigerian fares are always in multiples of 50 naira
    */
   calculateFareForStep(distanceMeters: number, vehicleService?: VehicleServiceInfo): number {
     if (distanceMeters <= 200) return 0;
 
     if (vehicleService?.hasRegularService) {
       if (vehicleService.vehicleTypes.includes('keke')) {
-        return Math.min(300, Math.max(100, Math.round(distanceMeters / 10)));
+        // Round to nearest 50 for keke fares
+        return roundToNearest50(Math.min(300, Math.max(100, distanceMeters / 10)));
       }
       if (vehicleService.vehicleTypes.includes('okada')) {
-        return Math.min(250, Math.max(100, Math.round(distanceMeters / 12)));
+        // Round to nearest 50 for okada fares
+        return roundToNearest50(Math.min(250, Math.max(100, distanceMeters / 12)));
       }
     }
 
@@ -225,12 +229,13 @@ export class RouteDataAnalyzerService {
 
   /**
    * Calculate last mile fare
+   * Nigerian fares are always in multiples of 50 naira
    */
   calculateLastMileFare(distanceMeters: number): number {
     const baseFare = 100;
     const perMeterRate = 0.1;
     const calculatedFare = baseFare + distanceMeters * perMeterRate;
-    return Math.min(500, Math.max(100, Math.round(calculatedFare / 50) * 50));
+    return roundToNearest50(Math.min(500, Math.max(100, calculatedFare)));
   }
 
   /**
