@@ -48,7 +48,7 @@ export class JourneyService {
 
     // Get route composition (segments)
     const composition = await this.intelligentRouteService.composeRouteById(
-      bestRoute.routeId!,
+      bestRoute.id!,
     );
 
     if (!composition) {
@@ -64,7 +64,7 @@ export class JourneyService {
     // Create journey
     const journey = this.journeyRepository.create({
       userId,
-      routeId: bestRoute.routeId,
+      routeId: bestRoute.id,
       startLocation: dto.startLocation,
       startLatitude: dto.startLatitude,
       startLongitude: dto.startLongitude,
