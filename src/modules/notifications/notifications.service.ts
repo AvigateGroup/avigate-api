@@ -12,7 +12,7 @@ import { GetNotificationsDto } from './dto/get-notifications.dto';
 export interface NotificationPayload {
   title: string;
   body: string;
-  type: NotificationType;
+  type?: NotificationType;
   data?: Record<string, any>;
   imageUrl?: string;
   actionUrl?: string;
@@ -56,10 +56,15 @@ export class NotificationsService implements OnModuleInit {
   }
 
   async sendToUser(userId: string, notification: NotificationPayload): Promise<Notification> {
+    // Resolve type from top-level or from data.type
+    const notificationType = notification.type
+      || (notification.data?.type as NotificationType)
+      || NotificationType.SYSTEM_ALERT;
+
     // Save notification to database
     const savedNotification = await this.notificationRepository.save({
       userId,
-      type: notification.type,
+      type: notificationType,
       title: notification.title,
       body: notification.body,
       data: notification.data || {},
