@@ -7,6 +7,7 @@ import { Location } from '../../location/entities/location.entity';
 import { GeofencingService } from './geofencing.service';
 import { GoogleMapsService } from './google-maps.service';
 import { logger } from '@/utils/logger.util';
+import { roundToNearest50 } from '@/utils/fare.util';
 
 interface IntermediateStopResult {
   isOnRoute: boolean;
@@ -113,6 +114,19 @@ export class IntermediateStopHandlerService {
     const endLat = Number(segment.endLocation?.latitude);
     const endLng = Number(segment.endLocation?.longitude);
 
+    // Validate segment coordinates before processing
+    if (
+      isNaN(startLat) ||
+      isNaN(startLng) ||
+      isNaN(endLat) ||
+      isNaN(endLng) ||
+      !segment.startLocation ||
+      !segment.endLocation
+    ) {
+      logger.warn(`Invalid segment coordinates for segment ${segment.id}`);
+      return false;
+    }
+
     // Check if destination is geographically between start and end
     const isGeographicallyBetween = this.isPointNearLine(
       { lat, lng },
@@ -140,6 +154,17 @@ export class IntermediateStopHandlerService {
         return true;
       }
     } catch (error) {
+      // Only log as debug for expected errors like ZERO_RESULTS
+      const errorMessage = error?.message || String(error);
+      if (
+        errorMessage.includes('ZERO_RESULTS') ||
+        errorMessage.includes('SAME_LOCATION') ||
+        errorMessage.includes('Invalid coordinates')
+      ) {
+        // These are expected cases, just use geographic method
+        return false;
+      }
+      // Log unexpected errors
       logger.warn('Google Maps route check failed, using geographic method', error);
     }
 
@@ -352,6 +377,7 @@ export class IntermediateStopHandlerService {
 
   /**
    * Estimate fare for partial journey
+   * Nigerian fares are always in multiples of 50 naira
    */
   private estimatePartialFare(segment: RouteSegment, distanceFromStart: number): number {
     const totalDistance = Number(segment.distance);
@@ -366,7 +392,8 @@ export class IntermediateStopHandlerService {
     const minFare = maxFare * 0.4;
     const variableFare = (maxFare - minFare) * proportion;
 
-    return Math.round(minFare + variableFare);
+    // Round to nearest 50 naira (Nigerian fare standard)
+    return roundToNearest50(minFare + variableFare);
   }
 
   /**

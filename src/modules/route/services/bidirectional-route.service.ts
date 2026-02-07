@@ -5,13 +5,69 @@ import { Repository } from 'typeorm';
 import { Route } from '../entities/route.entity';
 import { RouteSegment } from '../entities/route-segment.entity';
 import { logger } from '@/utils/logger.util';
+import { floorToNearest50, ceilToNearest50, roundToNearest50 } from '@/utils/fare.util';
+
+/**
+ * Helper to extract clean transport mode from potentially malformed data
+ */
+function cleanTransportMode(mode: any): 'bus' | 'taxi' | 'keke' | 'okada' | 'walk' {
+  if (!mode) return 'bus';
+
+  let cleanMode = mode;
+
+  if (typeof mode === 'object' && mode !== null) {
+    cleanMode = mode.type || mode.mode || Object.values(mode)[0] || 'bus';
+  }
+
+  if (typeof cleanMode === 'string') {
+    cleanMode = cleanMode
+      .replace(/^\{?"?/g, '')
+      .replace(/"?\}?$/g, '')
+      .replace(/^["'\[]*/g, '')
+      .replace(/["'\]]*$/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  const validModes = ['bus', 'taxi', 'keke', 'okada', 'walk'];
+  if (validModes.includes(cleanMode)) {
+    return cleanMode as 'bus' | 'taxi' | 'keke' | 'okada' | 'walk';
+  }
+
+  if (cleanMode === 'walking') return 'walk';
+  if (cleanMode === 'car') return 'taxi';
+  if (cleanMode === 'tricycle') return 'keke';
+  if (cleanMode === 'motorcycle' || cleanMode === 'bike') return 'okada';
+
+  return 'bus';
+}
+
+/**
+ * Transform database steps to frontend format
+ */
+function transformSteps(steps: any[], routeTransportModes?: string[]): any[] {
+  // Clean the route's transport modes if provided
+  const allModes = routeTransportModes?.map(cleanTransportMode) || [];
+
+  return steps.map((step, index) => ({
+    order: step.stepOrder || step.order || index + 1,
+    fromLocation: step.fromLocation?.name || step.fromLocation || 'Start',
+    toLocation: step.toLocation?.name || step.toLocation || 'End',
+    transportMode: cleanTransportMode(step.transportMode),
+    transportModes: allModes.length > 0 ? allModes : [cleanTransportMode(step.transportMode)], // All available modes
+    instructions: step.instructions || '',
+    duration: Number(step.duration || step.estimatedDuration || 0) * 60, // Convert to seconds
+    distance: Number(step.distance || 0) * 1000, // Convert km to meters
+    estimatedFare: step.estimatedFare ? Number(step.estimatedFare) : undefined,
+  }));
+}
 
 export interface BidirectionalRouteResult {
-  routeId?: string;
+  id?: string; // Frontend expects 'id'
   routeName: string;
   source: 'database';
-  distance: number;
-  duration: number;
+  distance: number; // in meters
+  duration: number; // in seconds
   minFare?: number;
   maxFare?: number;
   steps: any[];
@@ -58,14 +114,14 @@ export class BidirectionalRouteService {
 
     for (const route of forwardRoutes) {
       routes.push({
-        routeId: route.id,
+        id: route.id, // Frontend expects 'id'
         routeName: route.name,
         source: 'database',
-        distance: Number(route.distance),
-        duration: Number(route.estimatedDuration),
-        minFare: route.minFare ? Number(route.minFare) : undefined,
-        maxFare: route.maxFare ? Number(route.maxFare) : undefined,
-        steps: route.steps,
+        distance: Number(route.distance) * 1000, // Convert km to meters
+        duration: Number(route.estimatedDuration) * 60, // Convert minutes to seconds
+        minFare: route.minFare ? floorToNearest50(Number(route.minFare)) : undefined,
+        maxFare: route.maxFare ? ceilToNearest50(Number(route.maxFare)) : undefined,
+        steps: transformSteps(route.steps, route.transportModes),
         confidence: 95,
         isReversed: false,
       });
@@ -152,27 +208,38 @@ export class BidirectionalRouteService {
     // Reverse the route name
     const reversedName = `${newStartName} to ${newEndName}`;
 
-    // Reverse steps
+    // Clean the route's transport modes
+    const allModes = (route.transportModes || []).map(cleanTransportMode);
+
+    // Reverse and transform steps
     const reversedSteps = [...route.steps]
       .reverse()
-      .map((step, index) => ({
-        ...step,
-        order: index + 1,
-        // Swap from/to locations
-        fromLocation: step.toLocation,
-        toLocation: step.fromLocation,
-        // Reverse instructions if possible
-        instructions: this.reverseInstructions(step.instructions),
-      }));
+      .map((step, index) => {
+        // Extract location names (handle both string and Location object)
+        const fromLoc = step.toLocation?.name || step.toLocation || 'Start';
+        const toLoc = step.fromLocation?.name || step.fromLocation || 'End';
+
+        return {
+          order: index + 1,
+          fromLocation: fromLoc,
+          toLocation: toLoc,
+          transportMode: cleanTransportMode(step.transportMode),
+          transportModes: allModes.length > 0 ? allModes : [cleanTransportMode(step.transportMode)],
+          instructions: this.reverseInstructions(step.instructions),
+          duration: Number(step.duration || step.estimatedDuration || 0) * 60,
+          distance: Number(step.distance || 0) * 1000,
+          estimatedFare: step.estimatedFare ? Number(step.estimatedFare) : undefined,
+        };
+      });
 
     return {
-      routeId: route.id,
+      id: route.id, // Frontend expects 'id'
       routeName: reversedName,
       source: 'database',
-      distance: Number(route.distance),
-      duration: Number(route.estimatedDuration),
-      minFare: route.minFare ? Number(route.minFare) : undefined,
-      maxFare: route.maxFare ? Number(route.maxFare) : undefined,
+      distance: Number(route.distance) * 1000, // Convert km to meters
+      duration: Number(route.estimatedDuration) * 60, // Convert minutes to seconds
+      minFare: route.minFare ? floorToNearest50(Number(route.minFare)) : undefined,
+      maxFare: route.maxFare ? ceilToNearest50(Number(route.maxFare)) : undefined,
       steps: reversedSteps,
       confidence: 92, // Slightly lower confidence for reversed routes
       isReversed: true,
