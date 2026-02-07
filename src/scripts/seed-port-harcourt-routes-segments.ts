@@ -1414,8 +1414,6 @@ export async function seedPortHarcourtWithSegments(dataSource: DataSource) {
     { name: 'Port Harcourt Railway Station', lat: 4.787951, lng: 7.002709 },
   ];
 
-  module.exports = rumuokoroToMile1Landmarks;
-
   // Merge all landmarks
   for (const landmark of chobaToRumuokoroLandmarks) {
     allLandmarks.set(landmark.name, landmark);
