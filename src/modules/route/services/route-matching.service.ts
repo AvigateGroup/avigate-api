@@ -115,7 +115,7 @@ export class RouteMatchingService {
     const endLocation = await this.locationFinderService.findNearestLocation(
       endLat,
       endLng,
-      0.5,
+      2,
     );
 
     // Step 1.5: FIRST check if user is ON a segment path (mid-segment boarding)
