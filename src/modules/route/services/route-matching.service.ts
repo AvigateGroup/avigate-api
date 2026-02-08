@@ -422,7 +422,8 @@ export class RouteMatchingService {
 
   /**
    * Prepend a walking step if the user is >200m from the route's first fromLocation.
-   * Finds the nearest boarding point on the route corridor to minimize backtracking.
+   * Uses corridor-aware projection (via segment landmarks) to find the nearest point
+   * on the actual road, instead of always walking to named junctions.
    */
   private async addWalkingStepIfNeeded(
     userLat: number,
@@ -433,23 +434,48 @@ export class RouteMatchingService {
       const firstStep = route.steps?.[0];
       if (!firstStep?.fromLocation) continue;
 
-      // Find the start location coordinates
-      const startLoc = await this.locationFinderService.findNearestMainRoadStop(userLat, userLng);
-      if (!startLoc) continue;
+      // Skip if the first step is already a walking step (mid-segment boarding handled it)
+      if (firstStep.transportMode === 'walk') continue;
 
-      const distToRouteStart = this.haversineDistance(userLat, userLng, startLoc.lat, startLoc.lng);
+      // Try corridor-aware projection first using the route's segment
+      let boardingName: string | null = null;
+      let boardingDist = Infinity;
+
+      if (route.id) {
+        const corridorPoint = await this.locationFinderService.findCorridorBoardingPoint(
+          userLat,
+          userLng,
+          route.id,
+        );
+
+        if (corridorPoint && corridorPoint.distance < 2000) {
+          boardingName = corridorPoint.name;
+          boardingDist = corridorPoint.distance;
+        }
+      }
+
+      // Fall back to nearest junction if corridor projection didn't work
+      if (!boardingName) {
+        const junctionStop = await this.locationFinderService.findNearestMainRoadStop(userLat, userLng);
+        if (junctionStop) {
+          boardingDist = this.haversineDistance(userLat, userLng, junctionStop.lat, junctionStop.lng);
+          boardingName = junctionStop.name;
+        }
+      }
+
+      if (!boardingName) continue;
 
       // Only add walking step if user is >200m but <2km from the boarding point
-      if (distToRouteStart > 200 && distToRouteStart < 2000) {
-        const walkingDuration = Math.round((distToRouteStart / 1.4)); // ~1.4 m/s walking speed, in seconds
+      if (boardingDist > 200 && boardingDist < 2000) {
+        const walkingDuration = Math.round(boardingDist / 1.4); // ~1.4 m/s walking speed, in seconds
 
         const walkingStep = {
           order: 0,
           transportMode: 'walk',
           fromLocation: 'Your Location',
-          toLocation: startLoc.name,
-          instructions: `Walk to ${startLoc.name} (${Math.round(distToRouteStart)}m)`,
-          distance: Math.round(distToRouteStart),
+          toLocation: boardingName,
+          instructions: `Walk to ${boardingName} (${Math.round(boardingDist)}m). Board any vehicle heading to your destination from here.`,
+          distance: Math.round(boardingDist),
           duration: walkingDuration,
         };
 
@@ -458,10 +484,10 @@ export class RouteMatchingService {
         route.steps.forEach((step, i) => { step.order = i + 1; });
 
         // Update total distance/duration
-        route.distance += Math.round(distToRouteStart);
+        route.distance += Math.round(boardingDist);
         route.duration += walkingDuration;
 
-        logger.info(`Prepended walking step: ${Math.round(distToRouteStart)}m to ${startLoc.name}`);
+        logger.info(`Prepended walking step: ${Math.round(boardingDist)}m to ${boardingName}`);
       }
     }
   }

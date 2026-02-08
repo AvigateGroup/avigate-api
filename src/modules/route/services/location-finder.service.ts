@@ -327,13 +327,12 @@ export class LocationFinderService {
       );
 
       // User should be within reasonable distance of the segment
-      // Use a more lenient check: within 3km of either endpoint OR within 2km of the line
+      // Use polyline-aware check for better accuracy on curved roads
       const nearSegment = distToSegStart < 3000 || distToSegEnd < 3000 ||
-        this.isPointNearLine(
+        this.isPointNearPolyline(
           { lat: userLat, lng: userLng },
-          { lat: segStartLat, lng: segStartLng },
-          { lat: segEndLat, lng: segEndLng },
-          2.0, // 2km tolerance for curved roads
+          segment,
+          2.0, // 2km tolerance
         );
 
       if (!nearSegment) continue;
@@ -390,41 +389,34 @@ export class LocationFinderService {
           ? { name: segment.startLocation?.name || 'Main Road', lat: segStartLat, lng: segStartLng, locationId: segment.startLocationId }
           : { name: segment.endLocation?.name || 'Main Road', lat: segEndLat, lng: segEndLng, locationId: segment.endLocationId };
 
-        // If user is between start and end, estimate a highway boarding point
-        // Use 1km tolerance since roads aren't perfectly straight
-        const userOnMainRoad = this.isPointNearLine(
+        // Project user onto the road polyline (using landmarks for accurate road geometry)
+        const polylineResult = this.getNearestPointOnPolyline(
           { lat: userLat, lng: userLng },
-          { lat: segStartLat, lng: segStartLng },
-          { lat: segEndLat, lng: segEndLng },
-          1.0, // 1km tolerance for curved roads
+          segment,
         );
 
         let finalBoardingPoint: { name: string; lat: number; lng: number; locationId?: string } = boardingPoint;
         let distanceFromUser = Math.min(distToSegStart, distToSegEnd);
 
-        // If user is near the main road itself, use a point on the road
-        if (userOnMainRoad) {
-          // Project user position onto segment line (simplified)
-          const nearestPointOnRoad = this.getNearestPointOnLine(
-            { lat: userLat, lng: userLng },
-            { lat: segStartLat, lng: segStartLng },
-            { lat: segEndLat, lng: segEndLng },
-          );
-
-          // Generate a more descriptive name based on the segment
-          const roadName = segment.name?.includes(' to ')
-            ? segment.name.split(' to ')[0] + ' Road'
-            : 'Main Road';
+        // If polyline projection is closer than endpoint, use the corridor point
+        if (polylineResult.distance < distanceFromUser) {
+          // Generate a descriptive name from nearest landmark
+          let pointName: string;
+          if (polylineResult.nearestLandmarkName) {
+            pointName = `Near ${polylineResult.nearestLandmarkName}`;
+          } else {
+            const roadName = segment.name?.includes(' to ')
+              ? segment.name.split(' to ')[0] + ' Road'
+              : 'Main Road';
+            pointName = `${roadName} (near your location)`;
+          }
 
           finalBoardingPoint = {
-            name: `${roadName} (near your location)`,
-            lat: nearestPointOnRoad.lat,
-            lng: nearestPointOnRoad.lng,
+            name: pointName,
+            lat: polylineResult.lat,
+            lng: polylineResult.lng,
           };
-          distanceFromUser = this.geofencingService.calculateDistance(
-            { lat: userLat, lng: userLng },
-            nearestPointOnRoad,
-          );
+          distanceFromUser = polylineResult.distance;
         }
 
         candidates.push({
@@ -471,6 +463,142 @@ export class LocationFinderService {
     return {
       lat: lineStart.lat + param * C,
       lng: lineStart.lng + param * D,
+    };
+  }
+
+  /**
+   * Get nearest point on a polyline (segment landmarks) to a given point.
+   * Uses segment.landmarks as ordered road geometry. Falls back to straight line if no landmarks.
+   * Returns the projected point, its distance from the user, and the nearest landmark name.
+   */
+  getNearestPointOnPolyline(
+    point: { lat: number; lng: number },
+    segment: RouteSegment,
+  ): { lat: number; lng: number; distance: number; nearestLandmarkName: string | null } {
+    const segStartLat = Number(segment.startLocation?.latitude);
+    const segStartLng = Number(segment.startLocation?.longitude);
+    const segEndLat = Number(segment.endLocation?.latitude);
+    const segEndLng = Number(segment.endLocation?.longitude);
+
+    // Build polyline from: startLocation → landmarks → endLocation
+    const polyline: Array<{ lat: number; lng: number }> = [];
+
+    if (!isNaN(segStartLat) && !isNaN(segStartLng)) {
+      polyline.push({ lat: segStartLat, lng: segStartLng });
+    }
+
+    if (segment.landmarks && segment.landmarks.length > 0) {
+      for (const lm of segment.landmarks) {
+        if (lm.lat && lm.lng) {
+          polyline.push({ lat: lm.lat, lng: lm.lng });
+        }
+      }
+    }
+
+    if (!isNaN(segEndLat) && !isNaN(segEndLng)) {
+      polyline.push({ lat: segEndLat, lng: segEndLng });
+    }
+
+    // If fewer than 2 points, fall back to straight-line
+    if (polyline.length < 2) {
+      const projected = this.getNearestPointOnLine(
+        point,
+        { lat: segStartLat, lng: segStartLng },
+        { lat: segEndLat, lng: segEndLng },
+      );
+      const distance = this.geofencingService.calculateDistance(point, projected);
+      return { ...projected, distance, nearestLandmarkName: null };
+    }
+
+    // Iterate over consecutive pairs and find closest projection
+    let bestPoint = polyline[0];
+    let bestDistance = Infinity;
+
+    for (let i = 0; i < polyline.length - 1; i++) {
+      const projected = this.getNearestPointOnLine(point, polyline[i], polyline[i + 1]);
+      const dist = this.geofencingService.calculateDistance(point, projected);
+
+      if (dist < bestDistance) {
+        bestDistance = dist;
+        bestPoint = projected;
+      }
+    }
+
+    // Find nearest landmark to the projection point for a descriptive name
+    let nearestLandmarkName: string | null = null;
+    if (segment.landmarks && segment.landmarks.length > 0) {
+      let minLmDist = Infinity;
+      for (const lm of segment.landmarks) {
+        if (!lm.lat || !lm.lng) continue;
+        const lmDist = this.geofencingService.calculateDistance(
+          bestPoint,
+          { lat: lm.lat, lng: lm.lng },
+        );
+        if (lmDist < minLmDist) {
+          minLmDist = lmDist;
+          nearestLandmarkName = lm.name;
+        }
+      }
+    }
+
+    return {
+      lat: bestPoint.lat,
+      lng: bestPoint.lng,
+      distance: bestDistance,
+      nearestLandmarkName,
+    };
+  }
+
+  /**
+   * Check if a point is within tolerance of a polyline (segment landmarks).
+   * More accurate than straight-line check for curved roads.
+   */
+  isPointNearPolyline(
+    point: { lat: number; lng: number },
+    segment: RouteSegment,
+    toleranceKm: number,
+  ): boolean {
+    const result = this.getNearestPointOnPolyline(point, segment);
+    return result.distance / 1000 <= toleranceKm;
+  }
+
+  /**
+   * Find nearest corridor boarding point for a route segment.
+   * Projects user onto the road polyline and returns a named boarding point.
+   */
+  async findCorridorBoardingPoint(
+    userLat: number,
+    userLng: number,
+    segmentId: string,
+  ): Promise<{ name: string; lat: number; lng: number; distance: number } | null> {
+    const segment = await this.segmentRepository.findOne({
+      where: { id: segmentId, isActive: true },
+      relations: ['startLocation', 'endLocation'],
+    });
+
+    if (!segment) return null;
+
+    const result = this.getNearestPointOnPolyline(
+      { lat: userLat, lng: userLng },
+      segment,
+    );
+
+    // Generate descriptive name
+    let name: string;
+    if (result.nearestLandmarkName) {
+      name = `Near ${result.nearestLandmarkName}`;
+    } else {
+      const roadName = segment.name?.includes(' to ')
+        ? segment.name.split(' to ')[0] + ' Road'
+        : 'Main Road';
+      name = `${roadName} (near your location)`;
+    }
+
+    return {
+      name,
+      lat: result.lat,
+      lng: result.lng,
+      distance: result.distance,
     };
   }
 }
