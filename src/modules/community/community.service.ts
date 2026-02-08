@@ -44,14 +44,17 @@ export class CommunityService {
   }
 
   async getPosts(postType?: string, locationId?: string, page: number = 1, limit: number = 20) {
+    const pageNum = Number(page) || 1;
+    const limitNum = Number(limit) || 20;
+
     const queryBuilder = this.postRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
       .leftJoinAndSelect('post.location', 'location')
       .where('post.isActive = :isActive', { isActive: true })
       .orderBy('post.createdAt', 'DESC')
-      .take(limit)
-      .skip((page - 1) * limit);
+      .take(limitNum)
+      .skip((pageNum - 1) * limitNum);
 
     if (postType) {
       queryBuilder.andWhere('post.postType = :postType', { postType });
@@ -93,10 +96,10 @@ export class CommunityService {
       data: {
         posts: transformedPosts,
         pagination: {
-          page,
-          limit,
+          page: pageNum,
+          limit: limitNum,
           total,
-          pages: Math.ceil(total / limit),
+          pages: Math.ceil(total / limitNum),
         },
       },
     };
