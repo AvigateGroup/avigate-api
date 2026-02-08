@@ -72,17 +72,6 @@ export class NotificationsController {
     };
   }
 
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete notification' })
-  async deleteNotification(@Param('id') notificationId: string, @CurrentUser() user: User) {
-    await this.notificationsService.deleteNotification(notificationId, user.id);
-
-    return {
-      success: true,
-      message: 'Notification deleted',
-    };
-  }
-
   @Delete('read/all')
   @ApiOperation({ summary: 'Delete all read notifications' })
   async deleteReadNotifications(@CurrentUser() user: User) {
@@ -91,6 +80,17 @@ export class NotificationsController {
     return {
       success: true,
       message: 'Read notifications deleted',
+    };
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete notification' })
+  async deleteNotification(@Param('id') notificationId: string, @CurrentUser() user: User) {
+    await this.notificationsService.deleteNotification(notificationId, user.id);
+
+    return {
+      success: true,
+      message: 'Notification deleted',
     };
   }
 

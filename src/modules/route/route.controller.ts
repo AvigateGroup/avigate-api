@@ -79,6 +79,7 @@ export class RouteController {
       startLng,
       endLat,
       endLng,
+      dto.endAddress,
     );
 
     return {
