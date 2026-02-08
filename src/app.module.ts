@@ -16,20 +16,6 @@ import { EmailModule } from './modules/email/email.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import databaseConfig from './config/database.config';
 
-// Import all entities explicitly
-import { Admin } from './modules/admin/entities/admin.entity';
-import { AdminSession } from './modules/admin/entities/admin-session.entity';
-import { User } from './modules/user/entities/user.entity';
-import { UserDevice } from './modules/user/entities/user-device.entity';
-import { UserOTP } from './modules/user/entities/user-otp.entity';
-import { Location } from './modules/location/entities/location.entity';
-import { Landmark } from './modules/location/entities/landmark.entity';
-import { Route } from './modules/route/entities/route.entity';
-import { RouteStep } from './modules/route/entities/route-step.entity';
-import { RouteSegment } from './modules/route/entities/route-segment.entity';
-import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
-import { Journey } from './modules/journey/entities/journey.entity';
-import { JourneyLeg } from './modules/journey/entities/journey-leg.entity';
 
 @Module({
   imports: [
@@ -46,21 +32,7 @@ import { JourneyLeg } from './modules/journey/entities/journey-leg.entity';
     username: configService.get('DATABASE_USERNAME'), 
     password: configService.get('DATABASE_PASSWORD'), 
     database: configService.get('DATABASE_NAME'), 
-    entities: [
-      Admin,
-      AdminSession,
-      User,
-      UserDevice,
-      UserOTP,
-      Location,
-      Landmark,
-      Route,
-      RouteStep,
-      RouteSegment,
-      FareFeedback,
-      Journey,    
-      JourneyLeg,
-    ],
+    autoLoadEntities: true,
     synchronize: false,
     logging: configService.get('NODE_ENV') === 'development',
     ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false, 
