@@ -508,7 +508,7 @@ export class TripService {
     const cancelled = trips.filter(t => t.status === TripStatus.CANCELLED);
 
     const totalDistance = completed.reduce(
-      (sum, trip) => sum + Number(trip.route.distance || 0),
+      (sum, trip) => sum + Number(trip.route?.distance || 0),
       0,
     );
 

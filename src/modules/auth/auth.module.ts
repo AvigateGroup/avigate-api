@@ -61,6 +61,7 @@ import { UserModule } from '../user/user.module';
     VerificationService,
     TokenService,
     OtpService,
+    DeviceService,
   ],
 })
 export class AuthModule {}

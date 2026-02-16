@@ -7,14 +7,17 @@ import {
   Delete,
   Post,
   Body,
+  Req,
   UseGuards,
   Param,
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { UserService } from './user.service';
+import { DeviceService } from '../auth/services/device.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { AcceptLegalUpdateDto } from './dto/accept-legal-update.dto';
@@ -28,7 +31,10 @@ import { UploadFileDto } from '../user/dto/upload-file.dto';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class UserController {
-  constructor(private userService: UserService) {}
+  constructor(
+    private userService: UserService,
+    private deviceService: DeviceService,
+  ) {}
 
   @Get('profile')
   @ApiOperation({ summary: 'Get user profile' })
@@ -55,6 +61,20 @@ export class UserController {
   @ApiOperation({ summary: 'Get user devices' })
   async getDevices(@CurrentUser() user: User) {
     return this.userService.getUserDevices(user);
+  }
+
+  @Post('devices/register-token')
+  @ApiOperation({ summary: 'Register or update FCM token for push notifications' })
+  async registerDeviceToken(
+    @CurrentUser() user: User,
+    @Body('fcmToken') fcmToken: string,
+    @Req() req: Request,
+  ) {
+    await this.deviceService.updateOrCreateDevice(user.id, fcmToken, req);
+    return {
+      success: true,
+      message: 'Device token registered successfully',
+    };
   }
 
   @Delete('devices/:deviceId')
