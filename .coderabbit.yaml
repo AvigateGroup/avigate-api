@@ -1,0 +1,20 @@
+language: "en"
+reviews:
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_instructions:
+    - path: "src/modules/*/entities/*.entity.ts"
+      instructions: "Check for proper TypeORM decorators, nullable fields, and index definitions."
+    - path: "src/modules/*/services/*.service.ts"
+      instructions: "Check for null safety on relation fields, proper error handling, and no leaked sensitive data in logs."
+    - path: "src/modules/*/controllers/*.controller.ts"
+      instructions: "Ensure all endpoints have proper guards, decorators, and input validation."
+    - path: "src/modules/**/*.controller.ts"
+      instructions: "Ensure all endpoints have proper guards, decorators, and input validation."
+chat:
+  auto_reply: true
