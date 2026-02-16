@@ -12,6 +12,7 @@ import { RouteStep } from '../../route/entities/route-step.entity';
 import { Location } from '../../location/entities/location.entity';
 import { ReputationService } from '../../reputation/reputation.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 import { logger } from '@/utils/logger.util';
 
 @Injectable()
@@ -67,8 +68,8 @@ export class ContributionManagementService {
       await this.notificationsService.sendToUser(contribution.contributorId, {
         title: 'Contribution Approved! 🎉',
         body: `Your route contribution has been approved and will be implemented soon. You earned bonus reputation points!`,
+        type: NotificationType.CONTRIBUTION_APPROVED,
         data: {
-          type: 'contribution_approved',
           contributionId: contribution.id,
         },
       });
@@ -78,8 +79,8 @@ export class ContributionManagementService {
       await this.notificationsService.sendToUser(contribution.contributorId, {
         title: 'Contribution Not Approved',
         body: `Your route contribution was not approved. Reason: ${reviewNotes}`,
+        type: NotificationType.CONTRIBUTION_REJECTED,
         data: {
-          type: 'contribution_rejected',
           contributionId: contribution.id,
         },
       });
@@ -89,8 +90,8 @@ export class ContributionManagementService {
       await this.notificationsService.sendToUser(contribution.contributorId, {
         title: 'Changes Requested',
         body: `Changes requested on your contribution: ${reviewNotes}`,
+        type: NotificationType.CONTRIBUTION_CHANGES_REQUESTED,
         data: {
-          type: 'contribution_changes_requested',
           contributionId: contribution.id,
         },
       });
@@ -175,8 +176,8 @@ export class ContributionManagementService {
       await this.notificationsService.sendToUser(contribution.contributorId, {
         title: 'Contribution Implemented! 🚀',
         body: `Your contribution has been implemented and is now live in Avigate. Thanks for making navigation better!`,
+        type: NotificationType.CONTRIBUTION_IMPLEMENTED,
         data: {
-          type: 'contribution_implemented',
           contributionId: contribution.id,
           resultId: result.id,
         },

@@ -6,6 +6,7 @@ import { CommunityPost, PostType } from '../entities/community-post.entity';
 import { User } from '../../user/entities/user.entity';
 import { WebsocketService } from '../../websocket/websocket.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 
 interface FeedPreferences {
   userId: string;
@@ -230,8 +231,8 @@ export class FeedService {
         return this.notificationsService.sendToUser(user.id, {
           title: post.postType === PostType.TRAFFIC_UPDATE ? 'Traffic Update' : 'Route Alert',
           body: post.title,
+          type: NotificationType.COMMUNITY_POST,
           data: {
-            type: 'community_post',
             postId: post.id,
             postType: post.postType,
           },

@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationsService } from '@/modules/notifications/notifications.service';
+import { NotificationType } from '@/modules/notifications/entities/notification.entity';
 import { GeofencingService } from '@/modules/route/services/geofencing.service';
 import { CacheService } from '@/modules/cache/cache.service';
 import { WebsocketService } from '@/modules/websocket/websocket.service';
@@ -114,8 +115,8 @@ export class JourneyNotificationService {
       body: `${journey.startLocation} → ${journey.endLocation}
 Vehicle: ${this.getVehicleEmoji(firstLeg.transportMode)} ${this.formatVehicleType(firstLeg.transportMode)}
 Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
+      type: NotificationType.JOURNEY_START,
       data: {
-        type: 'journey_start',
         journeyId: journey.id,
         hasTransfers: hasTransfers.toString(),
         totalLegs: journey.legs.length.toString(),
@@ -265,8 +266,8 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
     await this.notificationsService.sendToUser(userId, {
       title: '📍 Approaching Stop',
       body: `${nextStop.name}\nArriving in ${nextStop.eta} minute${nextStop.eta > 1 ? 's' : ''}`,
+      type: NotificationType.APPROACHING_STOP,
       data: {
-        type: 'approaching_stop',
         journeyId: journey.id,
         stopName: nextStop.name,
         eta: nextStop.eta.toString(),
@@ -296,8 +297,8 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
       body: `Drop at ${transfer.location} in ${transfer.eta} minutes
 Next vehicle: ${this.formatVehicleType(nextLeg.transportMode)}
 Fare: ₦${nextLeg.minFare}-${nextLeg.maxFare}`,
+      type: NotificationType.TRANSFER_ALERT,
       data: {
-        type: 'transfer_alert',
         journeyId: journey.id,
         transferLocation: transfer.location,
         eta: transfer.eta.toString(),
@@ -343,8 +344,8 @@ Fare: ₦${nextLeg.minFare}-${nextLeg.maxFare}`,
       title: '🔄 TRANSFER POINT AHEAD',
       body: `Prepare to drop at ${transfer.location}
 Look for: ${this.formatVehicleType(nextLeg.transportMode)} to ${nextLeg.segment.endLocation.name}`,
+      type: NotificationType.TRANSFER_IMMINENT,
       data: {
-        type: 'transfer_imminent',
         journeyId: journey.id,
         transferLocation: transfer.location,
         priority: 'high',
@@ -388,8 +389,8 @@ Look for: ${this.formatVehicleType(nextLeg.transportMode)} to ${nextLeg.segment.
 Now board: ${this.formatVehicleType(nextLeg.transportMode)} to ${nextLeg.segment.endLocation.name}
 Fare: ₦${nextLeg.minFare}-${nextLeg.maxFare}
 Remaining: ${this.calculateRemainingTime(journey, currentLeg)} mins`,
+      type: NotificationType.TRANSFER_COMPLETE,
       data: {
-        type: 'transfer_complete',
         journeyId: journey.id,
         currentLegId: currentLeg.id,
         nextLegId: nextLeg.id,
@@ -418,8 +419,8 @@ Remaining: ${this.calculateRemainingTime(journey, currentLeg)} mins`,
       title: '🎯 DESTINATION ALERT',
       body: `Drop at ${journey.endLocation} in ${eta} minute${eta > 1 ? 's' : ''}
 Look for: ${journey.endLandmark || 'Major landmarks'}`,
+      type: NotificationType.DESTINATION_ALERT,
       data: {
-        type: 'destination_alert',
         journeyId: journey.id,
         destination: journey.endLocation,
         eta: eta.toString(),
@@ -482,8 +483,8 @@ Look for: ${journey.endLandmark || 'Major landmarks'}`,
 Total Fare: ₦${Math.round(totalFare)}
 Journey Time: ${actualDuration} minutes
 ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct route'}`,
+      type: NotificationType.JOURNEY_COMPLETE,
       data: {
-        type: 'journey_complete',
         journeyId: journey.id,
         totalFare: totalFare.toString(),
         actualDuration: actualDuration.toString(),
@@ -529,8 +530,8 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
     await this.notificationsService.sendToUser(userId, {
       title: '⭐ Rate Your Journey',
       body: 'How was your experience? Help us improve Avigate!',
+      type: NotificationType.RATING_REQUEST,
       data: {
-        type: 'rating_request',
         journeyId: journey.id,
         action: 'open_rating',
       },
@@ -733,8 +734,8 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
     await this.notificationsService.sendToUser(userId, {
       title: 'Journey Stopped',
       body: 'Your journey tracking has been stopped.',
+      type: NotificationType.JOURNEY_STOPPED,
       data: {
-        type: 'journey_stopped',
         journeyId,
       },
     });
