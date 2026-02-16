@@ -8,6 +8,7 @@ import { RouteStep } from '../entities/route-step.entity';
 import { User } from '../../user/entities/user.entity';
 import { GeofencingService } from './geofencing.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationType } from '../../notifications/entities/notification.entity';
 import { UserTripEmailService } from '../../email/user-trip-email.service';
 import { logger } from '@/utils/logger.util';
 
@@ -121,8 +122,8 @@ export class TripService {
     await this.notificationsService.sendToUser(userId, {
       title: 'Trip Started',
       body: `Your journey to ${route.endLocation.name} has begun. Safe travels!`,
+      type: NotificationType.TRIP_STARTED,
       data: {
-        type: 'trip_started',
         tripId: trip.id,
         routeId: route.id,
       },
@@ -220,8 +221,8 @@ export class TripService {
             await this.notificationsService.sendToUser(userId, {
               title: 'Next Step',
               body: `Step ${currentStepIndex + 1} completed. Now: ${nextStep.instructions.substring(0, 100)}...`,
+              type: NotificationType.STEP_COMPLETED,
               data: {
-                type: 'step_completed',
                 tripId: trip.id,
                 stepId: nextStep.id,
               },
@@ -247,8 +248,8 @@ export class TripService {
         await this.notificationsService.sendToUser(userId, {
           title: 'Approaching Stop',
           body: `You are approaching ${locationName}. Get ready to alight.`,
+          type: NotificationType.APPROACHING,
           data: {
-            type: 'approaching',
             tripId: trip.id,
             stepId: currentStep.id,
           },
@@ -327,8 +328,8 @@ export class TripService {
     await this.notificationsService.sendToUser(userId, {
       title: 'Trip Completed',
       body: `You have arrived at ${trip.route.endLocation.name}. We hope you had a safe journey!`,
+      type: NotificationType.TRIP_COMPLETED,
       data: {
-        type: 'trip_completed',
         tripId: trip.id,
       },
     });
@@ -420,8 +421,8 @@ export class TripService {
     await this.notificationsService.sendToUser(userId, {
       title: 'Trip Cancelled',
       body: reason ? `Trip cancelled: ${reason}` : 'Your trip has been cancelled.',
+      type: NotificationType.TRIP_CANCELLED,
       data: {
-        type: 'trip_cancelled',
         tripId: trip.id,
       },
     });

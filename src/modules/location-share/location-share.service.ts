@@ -11,6 +11,7 @@ import {
 } from '../route/services/route-matching.service';
 import { IntelligentRouteService } from '../route/services/intelligent-route.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/entities/notification.entity';
 import { QRCodeService } from './services/qr-code.service';
 import { UploadService } from '../upload/upload.service';
 import { logger } from '@/utils/logger.util';
@@ -485,8 +486,8 @@ export class LocationShareService {
       await this.notificationsService.sendToUser(user.id, {
         title: 'Location Shared',
         body: `${owner?.firstName} shared a location with you: ${share.locationName}`,
+        type: NotificationType.LOCATION_SHARE,
         data: {
-          type: 'location_share',
           shareToken: share.shareToken,
           shareUrl: share.shareUrl,
         },
