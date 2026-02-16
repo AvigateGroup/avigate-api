@@ -28,8 +28,23 @@ import { Route } from './modules/route/entities/route.entity';
 import { RouteStep } from './modules/route/entities/route-step.entity';
 import { RouteSegment } from './modules/route/entities/route-segment.entity';
 import { FareFeedback } from './modules/fare/entities/fare-feedback.entity';
+import { FareHistory } from './modules/fare/entities/fare-history.entity';
+import { FareRule } from './modules/fare/entities/fare-rule.entity';
 import { Journey } from './modules/journey/entities/journey.entity';
 import { JourneyLeg } from './modules/journey/entities/journey-leg.entity';
+import { Notification } from './modules/notifications/entities/notification.entity';
+import { CommunityPost } from './modules/community/entities/community-post.entity';
+import { DirectionShare } from './modules/community/entities/direction-share.entity';
+import { RouteContribution } from './modules/community/entities/route-contribution.entity';
+import { SafetyReport } from './modules/community/entities/safety-report.entity';
+import { ActiveTrip } from './modules/route/entities/active-trip.entity';
+import { SearchLog } from './modules/analytics/entities/search-log.entity';
+import { TripLog } from './modules/analytics/entities/trip-log.entity';
+import { UserInteraction } from './modules/analytics/entities/user-interaction.entity';
+import { LocationShare } from './modules/location-share/entities/location-share.entity';
+import { Badge } from './modules/reputation/entities/badge.entity';
+import { ReputationTransaction } from './modules/reputation/entities/reputation-transaction.entity';
+import { UserBadge } from './modules/reputation/entities/user-badge.entity';
 
 @Module({
   imports: [
@@ -57,9 +72,24 @@ import { JourneyLeg } from './modules/journey/entities/journey-leg.entity';
       Route,
       RouteStep,
       RouteSegment,
+      ActiveTrip,
       FareFeedback,
-      Journey,    
+      FareHistory,
+      FareRule,
+      Journey,
       JourneyLeg,
+      Notification,
+      CommunityPost,
+      DirectionShare,
+      RouteContribution,
+      SafetyReport,
+      SearchLog,
+      TripLog,
+      UserInteraction,
+      LocationShare,
+      Badge,
+      ReputationTransaction,
+      UserBadge,
     ],
     synchronize: false,
     logging: configService.get('NODE_ENV') === 'development',
