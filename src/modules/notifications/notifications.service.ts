@@ -57,9 +57,10 @@ export class NotificationsService implements OnModuleInit {
 
   async sendToUser(userId: string, notification: NotificationPayload): Promise<Notification> {
     // Resolve type from top-level or from data.type
-    const notificationType = notification.type
-      || (notification.data?.type as NotificationType)
-      || NotificationType.SYSTEM_ALERT;
+    const notificationType =
+      notification.type ||
+      (notification.data?.type as NotificationType) ||
+      NotificationType.SYSTEM_ALERT;
 
     // Save notification to database
     const savedNotification = await this.notificationRepository.save({

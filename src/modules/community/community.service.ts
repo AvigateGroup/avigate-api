@@ -79,10 +79,12 @@ export class CommunityService {
         profilePicture: post.author?.profilePicture,
         reputationScore: post.author?.reputationScore,
       },
-      location: post.location ? {
-        id: post.location.id,
-        name: post.location.name,
-      } : null,
+      location: post.location
+        ? {
+            id: post.location.id,
+            name: post.location.name,
+          }
+        : null,
       images: post.images,
       upvotes: post.upvotes,
       downvotes: post.downvotes,

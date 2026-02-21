@@ -1793,7 +1793,7 @@ If you stayed on the Airforce vehicle from Rumuokoro:
       }
     }
 
-    const routeResult = await dataSource.query(
+    await dataSource.query(
       `INSERT INTO routes (
         name, "startLocationId", "endLocationId", description,
         "transportModes", "estimatedDuration", distance, "minFare", "maxFare",

@@ -60,7 +60,7 @@ import { EmailModule } from '../email/email.module';
     SmartStopMatchingService,
     FinalDestinationHandlerService,
     TripGateway,
-    
+
     // Refactored modular services
     BidirectionalRouteService,
     LocationFinderService,
@@ -79,7 +79,7 @@ import { EmailModule } from '../email/email.module';
     IntermediateStopHandlerService,
     SmartStopMatchingService,
     FinalDestinationHandlerService,
-    
+
     //Export refactored services (available for other modules)
     BidirectionalRouteService,
     LocationFinderService,

@@ -10,7 +10,7 @@ import { AuthGuard } from '@nestjs/passport';
  */
 @Injectable()
 export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
-  handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
+  handleRequest(err: any, user: any, _info: any, _context: ExecutionContext) {
     // If there's an error or no user, just return undefined
     // Don't throw an error like the regular JwtAuthGuard
     if (err || !user) {

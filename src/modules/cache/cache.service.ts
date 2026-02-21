@@ -72,7 +72,7 @@ export class CacheService {
   async getUserLocation(userId: string): Promise<UserLocation | null> {
     const key = `${this.LOCATION_PREFIX}${userId}`;
     const location = await this.get<UserLocation>(key);
-    
+
     if (!location) {
       logger.debug('User location not found in cache', { userId, key });
       return null;
@@ -103,7 +103,7 @@ export class CacheService {
    */
   async getActiveJourney(userId: string): Promise<string | null> {
     const key = `user:journey:${userId}`;
-    return await this.get<string>(key) || null;
+    return (await this.get<string>(key)) || null;
   }
 
   /**
@@ -127,7 +127,7 @@ export class CacheService {
    */
   async getTrackingInterval(journeyId: string): Promise<string | null> {
     const key = `journey:tracking:${journeyId}`;
-    return await this.get<string>(key) || null;
+    return (await this.get<string>(key)) || null;
   }
 
   /**

@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Route } from '../entities/route.entity';
 import { RouteSegment } from '../entities/route-segment.entity';
 import { logger } from '@/utils/logger.util';
-import { floorToNearest50, ceilToNearest50, roundToNearest50 } from '@/utils/fare.util';
+import { floorToNearest50, ceilToNearest50 } from '@/utils/fare.util';
 
 /**
  * Helper to extract clean transport mode from potentially malformed data
@@ -195,11 +195,7 @@ export class BidirectionalRouteService {
   /**
    * Reverse a route for bidirectional support
    */
-  reverseRoute(
-    route: Route,
-    newStartName: string,
-    newEndName: string,
-  ): BidirectionalRouteResult {
+  reverseRoute(route: Route, newStartName: string, newEndName: string): BidirectionalRouteResult {
     logger.info('Reversing route', {
       originalRoute: route.name,
       newDirection: `${newStartName} → ${newEndName}`,
@@ -212,25 +208,23 @@ export class BidirectionalRouteService {
     const allModes = (route.transportModes || []).map(cleanTransportMode);
 
     // Reverse and transform steps
-    const reversedSteps = [...route.steps]
-      .reverse()
-      .map((step, index) => {
-        // Extract location names (handle both string and Location object)
-        const fromLoc = step.toLocation?.name || step.toLocation || 'Start';
-        const toLoc = step.fromLocation?.name || step.fromLocation || 'End';
+    const reversedSteps = [...route.steps].reverse().map((step, index) => {
+      // Extract location names (handle both string and Location object)
+      const fromLoc = step.toLocation?.name || step.toLocation || 'Start';
+      const toLoc = step.fromLocation?.name || step.fromLocation || 'End';
 
-        return {
-          order: index + 1,
-          fromLocation: fromLoc,
-          toLocation: toLoc,
-          transportMode: cleanTransportMode(step.transportMode),
-          transportModes: allModes.length > 0 ? allModes : [cleanTransportMode(step.transportMode)],
-          instructions: this.reverseInstructions(step.instructions),
-          duration: Number(step.duration || step.estimatedDuration || 0) * 60,
-          distance: Number(step.distance || 0) * 1000,
-          estimatedFare: step.estimatedFare ? Number(step.estimatedFare) : undefined,
-        };
-      });
+      return {
+        order: index + 1,
+        fromLocation: fromLoc,
+        toLocation: toLoc,
+        transportMode: cleanTransportMode(step.transportMode),
+        transportModes: allModes.length > 0 ? allModes : [cleanTransportMode(step.transportMode)],
+        instructions: this.reverseInstructions(step.instructions),
+        duration: Number(step.duration || step.estimatedDuration || 0) * 60,
+        distance: Number(step.distance || 0) * 1000,
+        estimatedFare: step.estimatedFare ? Number(step.estimatedFare) : undefined,
+      };
+    });
 
     return {
       id: route.id, // Frontend expects 'id'
@@ -288,7 +282,7 @@ export class BidirectionalRouteService {
       .replace(/At (.+?) \(start\)/gi, 'At $1 (destination)')
 
       // Swap boarding/alighting
-      .replace(/board (at|any vehicle going to) "(.+?)"/gi, (match, prep, location) => {
+      .replace(/board (at|any vehicle going to) "(.+?)"/gi, (match, _prep, _location) => {
         // Keep original if it's a through-location
         return match;
       })
@@ -297,7 +291,7 @@ export class BidirectionalRouteService {
       .replace(/after passing (.+?) and (.+?),/gi, 'after passing $2 and $1,')
 
       // Update direction indicators
-      .replace(/heading towards (.+?)$/gim, (match, dest) => {
+      .replace(/heading towards (.+?)$/gim, (match, _dest) => {
         // Try to infer reverse destination
         return match; // Keep as is for now
       });

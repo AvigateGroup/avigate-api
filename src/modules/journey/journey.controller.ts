@@ -10,12 +10,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { User } from '../user/entities/user.entity';
@@ -36,10 +31,7 @@ export class JourneyController {
   @Post()
   @ApiOperation({ summary: 'Create a new journey plan' })
   @ApiResponse({ status: 201, description: 'Journey created successfully' })
-  async createJourney(
-    @CurrentUser() user: User,
-    @Body() dto: CreateJourneyDto,
-  ) {
+  async createJourney(@CurrentUser() user: User, @Body() dto: CreateJourneyDto) {
     const journey = await this.journeyService.createJourney(user.id, dto);
 
     return {
@@ -61,10 +53,7 @@ export class JourneyController {
     const journey = await this.journeyService.startJourney(journeyId, dto);
 
     // Start real-time tracking and notifications
-    await this.journeyNotificationService.startJourneyTracking(
-      journeyId,
-      user.id,
-    );
+    await this.journeyNotificationService.startJourneyTracking(journeyId, user.id);
 
     return {
       success: true,
@@ -82,12 +71,7 @@ export class JourneyController {
     @Param('id') journeyId: string,
     @Body() dto: UpdateJourneyLocationDto,
   ) {
-    await this.journeyService.updateUserLocation(
-      user.id,
-      journeyId,
-      dto.latitude,
-      dto.longitude,
-    );
+    await this.journeyService.updateUserLocation(user.id, journeyId, dto.latitude, dto.longitude);
 
     return {
       success: true,
@@ -98,14 +82,8 @@ export class JourneyController {
   @Put(':id/stop')
   @ApiOperation({ summary: 'Stop journey tracking' })
   @ApiResponse({ status: 200, description: 'Journey tracking stopped' })
-  async stopJourney(
-    @CurrentUser() user: User,
-    @Param('id') journeyId: string,
-  ) {
-    await this.journeyNotificationService.stopJourneyTracking(
-      journeyId,
-      user.id,
-    );
+  async stopJourney(@CurrentUser() user: User, @Param('id') journeyId: string) {
+    await this.journeyNotificationService.stopJourneyTracking(journeyId, user.id);
 
     return {
       success: true,
@@ -116,10 +94,7 @@ export class JourneyController {
   @Get(':id')
   @ApiOperation({ summary: 'Get journey details' })
   @ApiResponse({ status: 200, description: 'Journey details retrieved' })
-  async getJourney(
-    @CurrentUser() user: User,
-    @Param('id') journeyId: string,
-  ) {
+  async getJourney(@CurrentUser() user: User, @Param('id') journeyId: string) {
     const journey = await this.journeyService.getJourney(journeyId, user.id);
 
     return {
@@ -160,12 +135,7 @@ export class JourneyController {
     @Param('id') journeyId: string,
     @Body() dto: { rating: number; feedback?: string },
   ) {
-    await this.journeyService.rateJourney(
-      journeyId,
-      user.id,
-      dto.rating,
-      dto.feedback,
-    );
+    await this.journeyService.rateJourney(journeyId, user.id, dto.rating, dto.feedback);
 
     return {
       success: true,

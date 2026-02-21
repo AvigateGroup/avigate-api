@@ -113,8 +113,8 @@ export class UserManagementController {
     @Param('userId') userId: string,
     @Body('isVerified') isVerified?: boolean,
     @Body('isActive') isActive?: boolean,
-    @Body('reason') reason?: string,
-    @CurrentAdmin() admin?: Admin,
+    @Body('reason') _reason?: string,
+    @CurrentAdmin() _admin?: Admin,
   ) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
@@ -137,7 +137,7 @@ export class UserManagementController {
   @Delete(':userId')
   @RequirePermissions('users.delete')
   @ApiOperation({ summary: 'Delete user account' })
-  async deleteUserAccount(@Param('userId') userId: string, @Body('reason') reason: string) {
+  async deleteUserAccount(@Param('userId') userId: string, @Body('reason') _reason: string) {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
     if (!user) {

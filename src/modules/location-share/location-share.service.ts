@@ -334,7 +334,7 @@ export class LocationShareService {
     // Generate new QR code if not available
     const owner = await this.userRepository.findOne({ where: { id: share.ownerId } });
 
-    const { qrCodeDataUrl, qrCodeBuffer } = await this.qrCodeService.generateLocationShareQR({
+    const { qrCodeDataUrl } = await this.qrCodeService.generateLocationShareQR({
       shareUrl: share.shareUrl,
       locationName: share.locationName,
       ownerName: owner ? `${owner.firstName} ${owner.lastName}` : 'Unknown',

@@ -1,4 +1,4 @@
-// src/modules/route/services/route-matching.service.ts 
+// src/modules/route/services/route-matching.service.ts
 import { Injectable } from '@nestjs/common';
 import { GoogleMapsService } from './google-maps.service';
 import { IntermediateStopHandlerService } from './intermediate-stop-handler.service';
@@ -49,8 +49,8 @@ function cleanTransportMode(mode: any): 'bus' | 'taxi' | 'keke' | 'okada' | 'wal
   // Handle string types (may have JSON artifacts)
   if (typeof cleanMode === 'string') {
     cleanMode = cleanMode
-      .replace(/^\{?"?/g, '')  // Remove leading { or {"
-      .replace(/"?\}?$/g, '')  // Remove trailing "} or }
+      .replace(/^\{?"?/g, '') // Remove leading { or {"
+      .replace(/"?\}?$/g, '') // Remove trailing "} or }
       .replace(/^["'\[]*/g, '') // Remove leading quotes/brackets
       .replace(/["'\]]*$/g, '') // Remove trailing quotes/brackets
       .trim()
@@ -84,7 +84,7 @@ export class RouteMatchingService {
 
   /**
    * ENHANCED route finding with:
-   * 1. Direct routes (forward AND reverse) 
+   * 1. Direct routes (forward AND reverse)
    * 2. Intermediate stops
    * 3. Walking from main roads
    */
@@ -112,11 +112,7 @@ export class RouteMatchingService {
 
     // Step 1: Find nearest locations
     const startLocation = await this.locationFinderService.findNearestLocation(startLat, startLng);
-    const endLocation = await this.locationFinderService.findNearestLocation(
-      endLat,
-      endLng,
-      2,
-    );
+    const endLocation = await this.locationFinderService.findNearestLocation(endLat, endLng, 2);
 
     // Step 1.5: FIRST check if user is ON a segment path (mid-segment boarding)
     // This prevents routing users backwards when they're already on the highway
@@ -130,12 +126,17 @@ export class RouteMatchingService {
     );
 
     // If user is on a segment going the right direction AND not already at a junction
-    const userIsOnSegmentPath = bestBoardingPoint?.isCorrectDirection &&
-      bestBoardingPoint.distanceFromUser < 2000; // Within 2km of main road
+    const userIsOnSegmentPath =
+      bestBoardingPoint?.isCorrectDirection && bestBoardingPoint.distanceFromUser < 2000; // Within 2km of main road
 
     // User is "at a junction" only if they're very close (within 300m) to a known stop
     const distToNearestLocation = startLocation
-      ? this.haversineDistance(startLat, startLng, Number(startLocation.latitude), Number(startLocation.longitude))
+      ? this.haversineDistance(
+          startLat,
+          startLng,
+          Number(startLocation.latitude),
+          Number(startLocation.longitude),
+        )
       : Infinity;
     const userIsAtJunction = distToNearestLocation < 300;
 
@@ -143,11 +144,13 @@ export class RouteMatchingService {
       userIsOnSegmentPath,
       userIsAtJunction,
       distToNearestLocation,
-      bestBoardingPoint: bestBoardingPoint ? {
-        name: bestBoardingPoint.name,
-        isCorrectDirection: bestBoardingPoint.isCorrectDirection,
-        distanceFromUser: bestBoardingPoint.distanceFromUser,
-      } : null,
+      bestBoardingPoint: bestBoardingPoint
+        ? {
+            name: bestBoardingPoint.name,
+            isCorrectDirection: bestBoardingPoint.isCorrectDirection,
+            distanceFromUser: bestBoardingPoint.distanceFromUser,
+          }
+        : null,
     });
 
     // Step 2: If user is on a segment path (not at a junction), use mid-segment boarding
@@ -249,12 +252,11 @@ export class RouteMatchingService {
     }
 
     // Step 3: Check intermediate stops
-    const intermediateResult =
-      await this.intermediateStopHandler.findSegmentContainingDestination(
-        endLat,
-        endLng,
-        endLocationName,
-      );
+    const intermediateResult = await this.intermediateStopHandler.findSegmentContainingDestination(
+      endLat,
+      endLng,
+      endLocationName,
+    );
 
     if (intermediateResult?.isOnRoute) {
       result.hasIntermediateStop = true;
@@ -456,9 +458,17 @@ export class RouteMatchingService {
 
       // Fall back to nearest junction if corridor projection didn't work
       if (!boardingName) {
-        const junctionStop = await this.locationFinderService.findNearestMainRoadStop(userLat, userLng);
+        const junctionStop = await this.locationFinderService.findNearestMainRoadStop(
+          userLat,
+          userLng,
+        );
         if (junctionStop) {
-          boardingDist = this.haversineDistance(userLat, userLng, junctionStop.lat, junctionStop.lng);
+          boardingDist = this.haversineDistance(
+            userLat,
+            userLng,
+            junctionStop.lat,
+            junctionStop.lng,
+          );
           boardingName = junctionStop.name;
         }
       }
@@ -481,7 +491,9 @@ export class RouteMatchingService {
 
         // Prepend walking step and re-number
         route.steps.unshift(walkingStep);
-        route.steps.forEach((step, i) => { step.order = i + 1; });
+        route.steps.forEach((step, i) => {
+          step.order = i + 1;
+        });
 
         // Update total distance/duration
         route.distance += Math.round(boardingDist);

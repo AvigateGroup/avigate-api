@@ -18,7 +18,7 @@ async function seed() {
 
     const passwordHash = await bcrypt.hash('Pampersbaby@12345!', 12);
 
-    const adminResult = await dataSource.query(
+    await dataSource.query(
       `
       INSERT INTO admins (
         email, 

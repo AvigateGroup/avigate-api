@@ -251,7 +251,7 @@ If you prefer not to walk, you can ask locals at ${stop.name} for okada (motorcy
       });
 
       // Now find route from start to the intermediate stop
-      const stopCoordinates = stopMatch.closestStop.coordinates;
+      const _stopCoordinates = stopMatch.closestStop.coordinates;
 
       return {
         success: true,

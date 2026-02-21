@@ -30,7 +30,7 @@ export class VerificationService {
     private otpService: OtpService,
   ) {}
 
-  async verifyEmail(verifyEmailDto: VerifyEmailDto, req: Request) {
+  async verifyEmail(verifyEmailDto: VerifyEmailDto, _req: Request) {
     const { email, otpCode } = verifyEmailDto;
 
     const user = await this.userRepository.findOne({ where: { email } });

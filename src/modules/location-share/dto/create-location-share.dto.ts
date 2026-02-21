@@ -7,7 +7,6 @@ import {
   IsArray,
   IsDate,
   Min,
-  Max,
   IsLatitude,
   IsLongitude,
 } from 'class-validator';

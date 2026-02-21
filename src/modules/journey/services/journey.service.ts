@@ -47,9 +47,7 @@ export class JourneyService {
     const bestRoute = routeResult.routes[0];
 
     // Get route composition (segments)
-    const composition = await this.intelligentRouteService.composeRouteById(
-      bestRoute.id!,
-    );
+    const composition = await this.intelligentRouteService.composeRouteById(bestRoute.id!);
 
     if (!composition) {
       throw new BadRequestException('Could not compose route segments');
@@ -138,7 +136,7 @@ export class JourneyService {
   /**
    * Start journey tracking
    */
-  async startJourney(journeyId: string, dto: StartJourneyDto): Promise<Journey> {
+  async startJourney(journeyId: string, _dto: StartJourneyDto): Promise<Journey> {
     const journey = await this.journeyRepository.findOne({
       where: { id: journeyId },
       relations: ['legs'],
@@ -234,12 +232,7 @@ export class JourneyService {
   async getJourney(journeyId: string, userId: string): Promise<Journey> {
     const journey = await this.journeyRepository.findOne({
       where: { id: journeyId, userId },
-      relations: [
-        'legs',
-        'legs.segment',
-        'legs.segment.startLocation',
-        'legs.segment.endLocation',
-      ],
+      relations: ['legs', 'legs.segment', 'legs.segment.startLocation', 'legs.segment.endLocation'],
     });
 
     if (!journey) {
@@ -255,7 +248,7 @@ export class JourneyService {
   async getActiveJourney(userId: string): Promise<Journey | null> {
     // Try cache first
     const cachedJourneyId = await this.cacheService.getActiveJourney(userId);
-    
+
     if (cachedJourneyId) {
       const journey = await this.journeyRepository.findOne({
         where: { id: cachedJourneyId, userId, status: 'in_progress' },
@@ -275,12 +268,7 @@ export class JourneyService {
     // Fallback to database
     const journey = await this.journeyRepository.findOne({
       where: { userId, status: 'in_progress' },
-      relations: [
-        'legs',
-        'legs.segment',
-        'legs.segment.startLocation',
-        'legs.segment.endLocation',
-      ],
+      relations: ['legs', 'legs.segment', 'legs.segment.startLocation', 'legs.segment.endLocation'],
     });
 
     if (journey) {
@@ -416,23 +404,21 @@ export class JourneyService {
     });
 
     const completed = journeys.filter(j => j.status === 'completed');
-    const totalDistance = completed.reduce(
-      (sum, j) => sum + Number(j.estimatedDistance),
-      0,
-    );
+    const totalDistance = completed.reduce((sum, j) => sum + Number(j.estimatedDistance), 0);
     const totalFare = completed.reduce((sum, j) => {
-      return sum + j.legs.reduce((legSum, leg) => {
-        return legSum + (Number(leg.minFare) + Number(leg.maxFare)) / 2;
-      }, 0);
+      return (
+        sum +
+        j.legs.reduce((legSum, leg) => {
+          return legSum + (Number(leg.minFare) + Number(leg.maxFare)) / 2;
+        }, 0)
+      );
     }, 0);
 
     const ratings = completed
       .filter(j => j.metadata?.rating !== undefined)
       .map(j => j.metadata!.rating);
     const averageRating =
-      ratings.length > 0
-        ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
-        : 0;
+      ratings.length > 0 ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length : 0;
 
     // Find most used route
     const routeCounts: Record<string, number> = {};
@@ -440,12 +426,11 @@ export class JourneyService {
       const routeName = j.metadata?.routeName || 'Unknown';
       routeCounts[routeName] = (routeCounts[routeName] || 0) + 1;
     });
-    
-    const mostUsedRoute = Object.keys(routeCounts).length > 0
-      ? Object.keys(routeCounts).reduce((a, b) =>
-          routeCounts[a] > routeCounts[b] ? a : b
-        )
-      : 'None';
+
+    const mostUsedRoute =
+      Object.keys(routeCounts).length > 0
+        ? Object.keys(routeCounts).reduce((a, b) => (routeCounts[a] > routeCounts[b] ? a : b))
+        : 'None';
 
     return {
       totalJourneys: journeys.length,

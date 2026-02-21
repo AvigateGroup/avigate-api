@@ -461,7 +461,7 @@ Since you're not going all the way to ${endName}, your fare should be less than 
   async findSegmentsPassingThroughArea(
     lat: number,
     lng: number,
-    radiusKm: number = 2,
+    _radiusKm: number = 2,
   ): Promise<RouteSegment[]> {
     const segments = await this.segmentRepository.find({
       where: { isActive: true },

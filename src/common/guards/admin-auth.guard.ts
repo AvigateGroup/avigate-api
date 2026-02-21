@@ -84,7 +84,7 @@ export class AdminAuthGuard extends AuthGuard('admin-jwt') {
     return type === 'Bearer' ? token : undefined;
   }
 
-  handleRequest(err: any, admin: any, info: any) {
+  handleRequest(err: any, admin: any, _info: any) {
     if (err || !admin) {
       throw err || new UnauthorizedException('Unauthorized access');
     }

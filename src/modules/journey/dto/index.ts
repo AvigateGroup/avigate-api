@@ -1,14 +1,6 @@
 // src/modules/journey/dto/index.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsString,
-  IsNumber,
-  IsBoolean,
-  IsOptional,
-  IsUUID,
-  Min,
-  Max,
-} from 'class-validator';
+import { IsString, IsNumber, IsBoolean, IsOptional, IsUUID, Min, Max } from 'class-validator';
 
 export class CreateJourneyDto {
   @ApiProperty({ description: 'Route ID (if using pre-defined route)' })

@@ -38,7 +38,7 @@ export class IntelligentRouteService {
   ) {}
 
   /**
-   * Find optimal route by composing segments (BIDIRECTIONAL) 
+   * Find optimal route by composing segments (BIDIRECTIONAL)
    * Example: Choba to Mile1 might use segment "Choba-Rumuokoro" + "Rumuokoro-Mile1"
    * Now also searches reverse: "Mile1-Rumuokoro" + "Rumuokoro-Choba"
    */
@@ -128,7 +128,7 @@ export class IntelligentRouteService {
     });
 
     if (segment) {
-      logger.info('Found reverse segment, reversing it', { 
+      logger.info('Found reverse segment, reversing it', {
         originalSegment: segment.name,
         newDirection: `${segment.endLocation?.name} → ${segment.startLocation?.name}`,
       });
@@ -146,13 +146,13 @@ export class IntelligentRouteService {
       ...segment,
       // Swap name
       name: `${segment.endLocation?.name} to ${segment.startLocation?.name}`,
-      
+
       // Swap locations
       startLocation: segment.endLocation,
       endLocation: segment.startLocation,
       startLocationId: segment.endLocationId,
       endLocationId: segment.startLocationId,
-      
+
       // Reverse intermediate stops
       intermediateStops: segment.intermediateStops
         ? [...segment.intermediateStops].reverse().map((stop, index) => ({
@@ -160,10 +160,10 @@ export class IntelligentRouteService {
             order: index + 1,
           }))
         : [],
-      
+
       // Reverse landmarks
       landmarks: segment.landmarks ? ([...segment.landmarks].reverse() as any) : [],
-      
+
       // Reverse instructions
       instructions: this.reverseInstructions(segment.instructions),
     };
@@ -179,16 +179,16 @@ export class IntelligentRouteService {
       // Swap "From X to Y" → "From Y to X"
       .replace(/From (.+?) to (.+?):/gi, 'From $2 to $1:')
       .replace(/from (.+?) to (.+?):/gi, 'from $2 to $1:')
-      
+
       // Swap directional phrases
-      .replace(/board any vehicle going to "(.+?)"/gi, (match, dest) => {
+      .replace(/board any vehicle going to "(.+?)"/gi, (match, _dest) => {
         return match; // Keep as is - still valid in reverse
       })
-      
+
       // Swap "At Start" and "At End"
       .replace(/At the starting point/gi, 'At the destination')
       .replace(/At (.+?) \(start\)/gi, 'At $1 (destination)')
-      
+
       // Reverse landmark sequences
       .replace(/pass through (.+?) then (.+?)\./gi, 'pass through $2 then $1.')
       .replace(/after (.+?) and (.+?),/gi, 'after $2 and $1,');
@@ -200,7 +200,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * Find routes that share segments (BIDIRECTIONAL) 
+   * Find routes that share segments (BIDIRECTIONAL)
    */
   async findRoutesPassingThrough(
     startLocationId: string,
@@ -214,7 +214,7 @@ export class IntelligentRouteService {
     });
 
     // Find segments that pass through the location (both directions)
-    const forwardSegments = await this.segmentRepository
+    const _forwardSegments = await this.segmentRepository
       .createQueryBuilder('segment')
       .where(`segment.intermediateStops @> :stop`, {
         stop: JSON.stringify([{ locationId: throughLocationId }]),
@@ -223,7 +223,7 @@ export class IntelligentRouteService {
       .getMany();
 
     // Also check reverse direction
-    const reverseSegments = await this.segmentRepository
+    const _reverseSegments = await this.segmentRepository
       .createQueryBuilder('segment')
       .where(`segment.intermediateStops @> :stop`, {
         stop: JSON.stringify([{ locationId: throughLocationId }]),
@@ -237,8 +237,8 @@ export class IntelligentRouteService {
       .leftJoinAndSelect('route.steps', 'steps')
       .where(
         '(route.startLocationId = :startLocationId AND route.endLocationId = :endLocationId) OR ' +
-        '(route.startLocationId = :endLocationId AND route.endLocationId = :startLocationId)',
-        { startLocationId, endLocationId }
+          '(route.startLocationId = :endLocationId AND route.endLocationId = :startLocationId)',
+        { startLocationId, endLocationId },
       )
       .andWhere('route.isActive = :isActive', { isActive: true })
       .getMany();
@@ -247,7 +247,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * Suggest alternative stops on the same route (BIDIRECTIONAL) 
+   * Suggest alternative stops on the same route (BIDIRECTIONAL)
    */
   async suggestAlternativeStops(segmentId: string, isReversed: boolean = false) {
     const segment = await this.segmentRepository.findOne({
@@ -259,19 +259,13 @@ export class IntelligentRouteService {
     const alternatives: AlternativeStop[] = [];
 
     // Get intermediate stops (reversed if needed)
-    const stops = isReversed 
-      ? [...segment.intermediateStops].reverse()
-      : segment.intermediateStops;
+    const stops = isReversed ? [...segment.intermediateStops].reverse() : segment.intermediateStops;
 
     // Calculate alternatives
     for (const stop of stops) {
       if (!stop.locationId) continue;
 
-      const partialDistance = this.calculatePartialDistance(
-        segment, 
-        stop.locationId,
-        isReversed
-      );
+      const partialDistance = this.calculatePartialDistance(segment, stop.locationId, isReversed);
       const partialFare = this.estimateFare(partialDistance, segment);
 
       alternatives.push({
@@ -291,7 +285,7 @@ export class IntelligentRouteService {
    */
   async recordSegmentUsage(segmentId: string, isReversed: boolean = false) {
     await this.segmentRepository.increment({ id: segmentId }, 'usageCount', 1);
-    
+
     // Log reversal usage for analytics
     if (isReversed) {
       logger.info('Recorded reversed segment usage', { segmentId });
@@ -300,7 +294,7 @@ export class IntelligentRouteService {
   }
 
   /**
-   * Get popular segments for a city (BIDIRECTIONAL) 
+   * Get popular segments for a city (BIDIRECTIONAL)
    */
   async getPopularSegments(city: string, limit: number = 20) {
     const segments = await this.segmentRepository
@@ -348,7 +342,7 @@ export class IntelligentRouteService {
         // Check if we reached destination
         if (segment.endLocationId === endId) {
           const finalSegments = [...usedSegments, segment];
-          const finalReversedIndices = isReversed 
+          const finalReversedIndices = isReversed
             ? [...reversedIndices, usedSegments.length]
             : reversedIndices;
 
@@ -372,10 +366,10 @@ export class IntelligentRouteService {
           const newReversedIndices = isReversed
             ? [...reversedIndices, usedSegments.length]
             : reversedIndices;
-          
+
           queue.push([
-            segment.endLocationId, 
-            [...usedSegments, segment], 
+            segment.endLocationId,
+            [...usedSegments, segment],
             newVisited,
             newReversedIndices,
           ]);
@@ -418,9 +412,9 @@ export class IntelligentRouteService {
     });
 
     for (const segment of reverseSegments) {
-      results.push({ 
-        segment: this.reverseSegment(segment), 
-        isReversed: true 
+      results.push({
+        segment: this.reverseSegment(segment),
+        isReversed: true,
       });
     }
 
@@ -445,13 +439,11 @@ export class IntelligentRouteService {
    * UPDATED: Calculate partial distance with reversal support
    */
   private calculatePartialDistance(
-    segment: RouteSegment, 
+    segment: RouteSegment,
     stopLocationId: string,
     isReversed: boolean = false,
   ): number {
-    const stops = isReversed 
-      ? [...segment.intermediateStops].reverse()
-      : segment.intermediateStops;
+    const stops = isReversed ? [...segment.intermediateStops].reverse() : segment.intermediateStops;
 
     const stopIndex = stops.findIndex(s => s.locationId === stopLocationId);
     if (stopIndex === -1) return Number(segment.distance);
@@ -562,8 +554,8 @@ export class IntelligentRouteService {
 
     // Check transport modes - some might be one-way only
     const oneWayModes = ['express_bus', 'shuttle'];
-    const hasOneWayMode = segment.transportModes.some(mode => 
-      oneWayModes.includes(mode.toLowerCase())
+    const hasOneWayMode = segment.transportModes.some(mode =>
+      oneWayModes.includes(mode.toLowerCase()),
     );
 
     if (hasOneWayMode) {
