@@ -47,7 +47,10 @@ export class JourneyService {
     const bestRoute = routeResult.routes[0];
 
     // Get route composition (segments)
-    const composition = await this.intelligentRouteService.composeRouteById(bestRoute.id!);
+    if (!bestRoute.id) {
+      throw new BadRequestException('Route does not have a valid ID for composition');
+    }
+    const composition = await this.intelligentRouteService.composeRouteById(bestRoute.id);
 
     if (!composition) {
       throw new BadRequestException('Could not compose route segments');
