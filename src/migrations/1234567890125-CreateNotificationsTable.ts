@@ -29,17 +29,25 @@ export class CreateNotificationsTable1234567890125 implements MigrationInterface
     } else {
       // Enum exists — add any missing values
       const newValues = [
-        'step_completed', 'approaching', 'location_share',
-        'contribution_changes_requested', 'contribution_implemented',
-        'journey_start', 'journey_complete', 'journey_stopped',
-        'transfer_alert', 'transfer_imminent', 'transfer_complete',
-        'destination_alert', 'rating_request',
+        'step_completed',
+        'approaching',
+        'location_share',
+        'contribution_changes_requested',
+        'contribution_implemented',
+        'journey_start',
+        'journey_complete',
+        'journey_stopped',
+        'transfer_alert',
+        'transfer_imminent',
+        'transfer_complete',
+        'destination_alert',
+        'rating_request',
       ];
 
       for (const value of newValues) {
         // ADD VALUE IF NOT EXISTS requires PostgreSQL 9.3+
         await queryRunner.query(
-          `ALTER TYPE "public"."notifications_type_enum" ADD VALUE IF NOT EXISTS '${value}'`
+          `ALTER TYPE "public"."notifications_type_enum" ADD VALUE IF NOT EXISTS '${value}'`,
         );
       }
     }

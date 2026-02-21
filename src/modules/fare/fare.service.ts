@@ -1,7 +1,7 @@
 // src/modules/fare/fare.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, LessThanOrEqual, Between } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { FareFeedback } from './entities/fare-feedback.entity';
 import { FareHistory } from './entities/fare-history.entity';
 import { FareRule } from './entities/fare-rule.entity';

@@ -32,7 +32,7 @@ export interface VehicleServiceInfo {
 @Entity('route_segments')
 @Index(['startLocationId', 'endLocationId'])
 @Index(['isActive', 'isVerified'])
-@Index(['isBidirectional', 'isActive']) 
+@Index(['isBidirectional', 'isActive'])
 export class RouteSegment {
   @PrimaryGeneratedColumn('uuid')
   id: string;

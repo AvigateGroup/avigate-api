@@ -1,7 +1,7 @@
 // src/modules/community/services/feed.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CommunityPost, PostType } from '../entities/community-post.entity';
 import { User } from '../../user/entities/user.entity';
 import { WebsocketService } from '../../websocket/websocket.service';

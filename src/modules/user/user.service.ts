@@ -13,7 +13,6 @@ import { UserDevice } from './entities/user-device.entity';
 import { UserOTP } from './entities/user-otp.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserEmailService } from '../email/user-email.service';
-import { UserUpdatesEmailService } from '../email/user-updates-email.service';
 import { UploadService } from '../upload/upload.service';
 import { VerificationService } from '../auth/services/verification.service';
 import { TEST_ACCOUNTS } from '@/config/test-accounts.config';

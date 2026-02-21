@@ -91,7 +91,7 @@ async function seedCommunityPosts() {
         postType: 'tip',
         title: 'Best Time to Travel to Rumuokoro',
         content:
-          'If you\'re heading to Rumuokoro during weekdays, avoid 7-9 AM and 5-7 PM. The best time is between 10 AM - 3 PM. You\'ll save at least 20 minutes on your journey!',
+          "If you're heading to Rumuokoro during weekdays, avoid 7-9 AM and 5-7 PM. The best time is between 10 AM - 3 PM. You'll save at least 20 minutes on your journey!",
         authorIndex: 2,
         upvotes: 67,
         downvotes: 3,
@@ -113,7 +113,7 @@ async function seedCommunityPosts() {
         postType: 'traffic_update',
         title: 'Traffic Smooth on East-West Road',
         content:
-          'Good news! The East-West road is flowing smoothly this morning. No traffic jams reported. Great time to travel if you\'re heading towards Eleme or Onne.',
+          "Good news! The East-West road is flowing smoothly this morning. No traffic jams reported. Great time to travel if you're heading towards Eleme or Onne.",
         authorIndex: 3,
         upvotes: 23,
         downvotes: 1,
@@ -146,7 +146,7 @@ async function seedCommunityPosts() {
         postType: 'tip',
         title: 'Cheaper Fare: Share a Keke Instead of Okada',
         content:
-          'Pro tip: If you\'re traveling from Choba to Alakahia, sharing a keke with 3 other people costs ₦100 per person, while okada charges ₦200-250. Save your money!',
+          "Pro tip: If you're traveling from Choba to Alakahia, sharing a keke with 3 other people costs ₦100 per person, while okada charges ₦200-250. Save your money!",
         authorIndex: 1,
         upvotes: 95,
         downvotes: 2,
@@ -179,7 +179,7 @@ async function seedCommunityPosts() {
         postType: 'tip',
         title: 'Save Money on Regular Routes',
         content:
-          'If you use the same route daily (like Eliozu to Town), consider getting the driver\'s number. Many drivers give discounts to regular customers. I save about ₦500 weekly this way!',
+          "If you use the same route daily (like Eliozu to Town), consider getting the driver's number. Many drivers give discounts to regular customers. I save about ₦500 weekly this way!",
         authorIndex: 0,
         upvotes: 112,
         downvotes: 4,
@@ -201,7 +201,7 @@ async function seedCommunityPosts() {
         postType: 'route_alert',
         title: 'Police Checkpoint at Garrison',
         content:
-          'There\'s a police checkpoint at Garrison junction this morning. All vehicles are being stopped for routine checks. If you\'re in a hurry, use the Ikokwu bypass route.',
+          "There's a police checkpoint at Garrison junction this morning. All vehicles are being stopped for routine checks. If you're in a hurry, use the Ikokwu bypass route.",
         authorIndex: 3,
         upvotes: 18,
         downvotes: 2,
@@ -212,7 +212,7 @@ async function seedCommunityPosts() {
         postType: 'general',
         title: 'Thank You to All Avigate Users!',
         content:
-          'I just want to say thank you to everyone contributing route information and helping others. This app has made my daily commute so much easier. Let\'s keep helping each other!',
+          "I just want to say thank you to everyone contributing route information and helping others. This app has made my daily commute so much easier. Let's keep helping each other!",
         authorIndex: 2,
         upvotes: 156,
         downvotes: 1,
@@ -227,14 +227,15 @@ async function seedCommunityPosts() {
 
     for (const post of communityPosts) {
       const author = users[post.authorIndex % users.length];
-      const location = locations.length > 0 ? locations[Math.floor(Math.random() * locations.length)] : null;
+      const location =
+        locations.length > 0 ? locations[Math.floor(Math.random() * locations.length)] : null;
 
       // Calculate created date
       const createdAt = new Date();
       createdAt.setDate(createdAt.getDate() - post.createdDaysAgo);
       createdAt.setHours(createdAt.getHours() - Math.floor(Math.random() * 12));
 
-      const result = await dataSource.query(
+      await dataSource.query(
         `
         INSERT INTO community_posts (
           "authorId",
@@ -276,7 +277,7 @@ async function seedCommunityPosts() {
 
       // Add some random comments to highly upvoted posts
       if (post.upvotes > 50 && users.length > 2) {
-        const commentsCount = Math.floor(Math.random() * 5) + 2; // 2-6 comments
+        const _commentsCount = Math.floor(Math.random() * 5) + 2; // 2-6 comments
 
         // Note: You would need to create a comments table and add comments here
         // For now, we'll skip this as the comments table structure wasn't provided

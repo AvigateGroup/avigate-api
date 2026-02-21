@@ -171,7 +171,7 @@ export class WebsocketGateway implements OnGatewayConnection, OnGatewayDisconnec
   }
 
   @SubscribeMessage('ping')
-  handlePing(@ConnectedSocket() client: Socket) {
+  handlePing(@ConnectedSocket() _client: Socket) {
     return { success: true, timestamp: new Date() };
   }
 

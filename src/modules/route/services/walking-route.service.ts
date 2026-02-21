@@ -202,12 +202,14 @@ export class WalkingRouteService {
 
         // Calculate and round fares to nearest 50 naira
         const totalMinFare = floorToNearest50(
-          (segment.minFare ? Number(segment.minFare) : 0) + (routeToSegmentStart?.minFare || 0)
+          (segment.minFare ? Number(segment.minFare) : 0) + (routeToSegmentStart?.minFare || 0),
         );
         const totalMaxFare = ceilToNearest50(
-          (segment.maxFare ? Number(segment.maxFare) : 0) + (routeToSegmentStart?.maxFare || 0)
+          (segment.maxFare ? Number(segment.maxFare) : 0) + (routeToSegmentStart?.maxFare || 0),
         );
-        const stepEstimatedFare = segment.maxFare ? roundToNearest50(Number(segment.maxFare)) : undefined;
+        const stepEstimatedFare = segment.maxFare
+          ? roundToNearest50(Number(segment.maxFare))
+          : undefined;
 
         bestRoute = {
           routeName: `${startLocation?.name || 'Your Location'} to ${endLocationName || 'Destination'}`,
@@ -342,10 +344,7 @@ export class WalkingRouteService {
         distanceToDestination > 200
           ? {
               type: 'okada' as const,
-              estimatedFare: Math.min(
-                200,
-                Math.max(100, Math.round(distanceToDestination / 10)),
-              ),
+              estimatedFare: Math.min(200, Math.max(100, Math.round(distanceToDestination / 10))),
               instructions: `At ${nearestMainRoadStop.name}, look for okada or keke riders. Tell them: "Take me go ${endLocationName} for ${streetInfo.street}"`,
             }
           : undefined,

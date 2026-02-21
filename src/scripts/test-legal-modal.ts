@@ -49,7 +49,7 @@ async function main() {
       // Restore all users to current version
       console.log('🔄 Restoring users to current legal versions...');
 
-      const result = await dataSource.query(
+      await dataSource.query(
         `UPDATE "users" SET "termsVersion" = $1, "privacyVersion" = $2, "termsAcceptedAt" = NOW(), "privacyAcceptedAt" = NOW()`,
         [CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION],
       );
@@ -63,10 +63,10 @@ async function main() {
       // Set users to old version to trigger modal
       console.log('⚙️  Setting users to old legal versions to trigger modal...');
 
-      const result = await dataSource.query(
-        `UPDATE "users" SET "termsVersion" = $1, "privacyVersion" = $2`,
-        [TEST_VERSION, TEST_VERSION],
-      );
+      await dataSource.query(`UPDATE "users" SET "termsVersion" = $1, "privacyVersion" = $2`, [
+        TEST_VERSION,
+        TEST_VERSION,
+      ]);
 
       const count = await dataSource.query(`SELECT COUNT(*) FROM "users"`);
 

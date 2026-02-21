@@ -16,7 +16,6 @@ import { EmailModule } from './modules/email/email.module';
 import { WebsocketModule } from './modules/websocket/websocket.module';
 import databaseConfig from './config/database.config';
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -24,25 +23,25 @@ import databaseConfig from './config/database.config';
       load: [databaseConfig],
     }),
     TypeOrmModule.forRootAsync({
-  imports: [ConfigModule],
-  useFactory: (configService: ConfigService) => ({
-    type: 'postgres',
-    host: configService.get('DATABASE_HOST'), 
-    port: configService.get('DATABASE_PORT'), 
-    username: configService.get('DATABASE_USERNAME'), 
-    password: configService.get('DATABASE_PASSWORD'), 
-    database: configService.get('DATABASE_NAME'), 
-    autoLoadEntities: true,
-    synchronize: false,
-    logging: configService.get('NODE_ENV') === 'development',
-    ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false, 
-    retryAttempts: 10,
-    retryDelay: 3000,
-    connectTimeoutMS: 10000,
-    maxQueryExecutionTime: 5000,
-  }),
-  inject: [ConfigService],
-}),
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get('DATABASE_HOST'),
+        port: configService.get('DATABASE_PORT'),
+        username: configService.get('DATABASE_USERNAME'),
+        password: configService.get('DATABASE_PASSWORD'),
+        database: configService.get('DATABASE_NAME'),
+        autoLoadEntities: true,
+        synchronize: false,
+        logging: configService.get('NODE_ENV') === 'development',
+        ssl: configService.get('DATABASE_SSL') === 'true' ? { rejectUnauthorized: false } : false,
+        retryAttempts: 10,
+        retryDelay: 3000,
+        connectTimeoutMS: 10000,
+        maxQueryExecutionTime: 5000,
+      }),
+      inject: [ConfigService],
+    }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => [

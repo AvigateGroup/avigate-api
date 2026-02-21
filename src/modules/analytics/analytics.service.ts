@@ -1,7 +1,7 @@
 // src/modules/analytics/analytics.service.ts
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { SearchLog } from './entities/search-log.entity';
 import { TripLog } from './entities/trip-log.entity';
 import { UserInteraction } from './entities/user-interaction.entity';

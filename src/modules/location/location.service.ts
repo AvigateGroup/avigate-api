@@ -15,7 +15,7 @@ export class LocationService {
     private landmarkRepository: Repository<Landmark>,
   ) {}
 
-  async createLocation(createLocationDto: CreateLocationDto, userId?: string) {
+  async createLocation(createLocationDto: CreateLocationDto, _userId?: string) {
     const location = this.locationRepository.create({
       ...createLocationDto,
       isVerified: false,

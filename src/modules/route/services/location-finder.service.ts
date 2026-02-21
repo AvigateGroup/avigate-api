@@ -90,10 +90,7 @@ export class LocationFinderService {
   /**
    * Find nearest major stop on main road
    */
-  async findNearestMainRoadStop(
-    lat: number,
-    lng: number,
-  ): Promise<NearestMainRoadStop | null> {
+  async findNearestMainRoadStop(lat: number, lng: number): Promise<NearestMainRoadStop | null> {
     const majorStops = await this.locationRepository
       .createQueryBuilder('location')
       .where('location.isActive = :isActive', { isActive: true })
@@ -328,7 +325,9 @@ export class LocationFinderService {
 
       // User should be within reasonable distance of the segment
       // Use polyline-aware check for better accuracy on curved roads
-      const nearSegment = distToSegStart < 3000 || distToSegEnd < 3000 ||
+      const nearSegment =
+        distToSegStart < 3000 ||
+        distToSegEnd < 3000 ||
         this.isPointNearPolyline(
           { lat: userLat, lng: userLng },
           segment,
@@ -351,10 +350,13 @@ export class LocationFinderService {
       // Check if destination is on this segment's path or at its end
       const destNearSegEnd = destToSegEnd < 2000;
       const destNearSegStart = destToSegStart < 2000;
-      const destOnSegment = destName && segment.intermediateStops?.some(
-        stop => stop.name.toLowerCase().includes(destName.toLowerCase()) ||
-          destName.toLowerCase().includes(stop.name.toLowerCase())
-      );
+      const destOnSegment =
+        destName &&
+        segment.intermediateStops?.some(
+          stop =>
+            stop.name.toLowerCase().includes(destName.toLowerCase()) ||
+            destName.toLowerCase().includes(stop.name.toLowerCase()),
+        );
 
       // Determine if this is the correct direction
       // Key insight: User should travel TOWARD the destination, not away from it
@@ -385,9 +387,20 @@ export class LocationFinderService {
       if (destNearSegEnd || destNearSegStart || destOnSegment) {
         // Find nearest point on main road to user
         // For now, use the closer of segment start/end as boarding point
-        const boardingPoint: { name: string; lat: number; lng: number; locationId?: string } = distToSegStart < distToSegEnd
-          ? { name: segment.startLocation?.name || 'Main Road', lat: segStartLat, lng: segStartLng, locationId: segment.startLocationId }
-          : { name: segment.endLocation?.name || 'Main Road', lat: segEndLat, lng: segEndLng, locationId: segment.endLocationId };
+        const boardingPoint: { name: string; lat: number; lng: number; locationId?: string } =
+          distToSegStart < distToSegEnd
+            ? {
+                name: segment.startLocation?.name || 'Main Road',
+                lat: segStartLat,
+                lng: segStartLng,
+                locationId: segment.startLocationId,
+              }
+            : {
+                name: segment.endLocation?.name || 'Main Road',
+                lat: segEndLat,
+                lng: segEndLng,
+                locationId: segment.endLocationId,
+              };
 
         // Project user onto the road polyline (using landmarks for accurate road geometry)
         const polylineResult = this.getNearestPointOnPolyline(
@@ -395,7 +408,8 @@ export class LocationFinderService {
           segment,
         );
 
-        let finalBoardingPoint: { name: string; lat: number; lng: number; locationId?: string } = boardingPoint;
+        let finalBoardingPoint: { name: string; lat: number; lng: number; locationId?: string } =
+          boardingPoint;
         let distanceFromUser = Math.min(distToSegStart, distToSegEnd);
 
         // If polyline projection is closer than endpoint, use the corridor point
@@ -530,10 +544,10 @@ export class LocationFinderService {
       let minLmDist = Infinity;
       for (const lm of segment.landmarks) {
         if (!lm.lat || !lm.lng) continue;
-        const lmDist = this.geofencingService.calculateDistance(
-          bestPoint,
-          { lat: lm.lat, lng: lm.lng },
-        );
+        const lmDist = this.geofencingService.calculateDistance(bestPoint, {
+          lat: lm.lat,
+          lng: lm.lng,
+        });
         if (lmDist < minLmDist) {
           minLmDist = lmDist;
           nearestLandmarkName = lm.name;
@@ -578,10 +592,7 @@ export class LocationFinderService {
 
     if (!segment) return null;
 
-    const result = this.getNearestPointOnPolyline(
-      { lat: userLat, lng: userLng },
-      segment,
-    );
+    const result = this.getNearestPointOnPolyline({ lat: userLat, lng: userLng }, segment);
 
     // Generate descriptive name
     let name: string;

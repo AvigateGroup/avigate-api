@@ -74,10 +74,7 @@ export class JourneyNotificationService {
   /**
    * Start real-time journey tracking with notifications
    */
-  async startJourneyTracking(
-    journeyId: string,
-    userId: string,
-  ): Promise<void> {
+  async startJourneyTracking(journeyId: string, userId: string): Promise<void> {
     logger.info('Starting journey tracking', { journeyId, userId });
 
     const journey = await this.journeyRepository.findOne({
@@ -99,10 +96,7 @@ export class JourneyNotificationService {
   /**
    * Send journey start notification
    */
-  private async sendJourneyStartNotification(
-    userId: string,
-    journey: Journey,
-  ): Promise<void> {
+  private async sendJourneyStartNotification(userId: string, journey: Journey): Promise<void> {
     const firstLeg = journey.legs[0];
     const hasTransfers = journey.legs.length > 1;
 
@@ -129,10 +123,7 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
   /**
    * Track journey progress with periodic location updates
    */
-  private async trackJourneyProgress(
-    journeyId: string,
-    userId: string,
-  ): Promise<void> {
+  private async trackJourneyProgress(journeyId: string, userId: string): Promise<void> {
     // Clear existing interval if any
     if (this.trackingIntervals.has(journeyId)) {
       clearInterval(this.trackingIntervals.get(journeyId)!);
@@ -142,7 +133,12 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
       try {
         const journey = await this.journeyRepository.findOne({
           where: { id: journeyId, status: 'in_progress' },
-          relations: ['legs', 'legs.segment', 'legs.segment.startLocation', 'legs.segment.endLocation'],
+          relations: [
+            'legs',
+            'legs.segment',
+            'legs.segment.startLocation',
+            'legs.segment.endLocation',
+          ],
         });
 
         if (!journey) {
@@ -159,7 +155,6 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
 
         // Calculate progress and send notifications
         await this.processJourneyProgress(journey, userId, userLocation);
-
       } catch (error) {
         logger.error('Error in journey tracking', { error, journeyId });
       }
@@ -210,10 +205,7 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
       }
 
       // Send imminent transfer alert (500m before)
-      if (
-        transferDistance <= this.TRANSFER_IMMINENT_DISTANCE &&
-        !currentLeg.transferImminentSent
-      ) {
+      if (transferDistance <= this.TRANSFER_IMMINENT_DISTANCE && !currentLeg.transferImminentSent) {
         await this.sendTransferImminentNotification(userId, journey, progress.upcomingTransfer);
         await this.journeyLegRepository.update(currentLeg.id, { transferImminentSent: true });
       }
@@ -227,7 +219,7 @@ Fare: ₦${firstLeg.minFare}-${firstLeg.maxFare}${transferInfo}`,
     // Check for destination approach
     const destinationDistance = this.geofencingService.calculateDistance(
       { lat: userLocation.latitude, lng: userLocation.longitude },
-      { lat: journey.endLatitude, lng: journey.endLongitude }
+      { lat: journey.endLatitude, lng: journey.endLongitude },
     );
 
     if (
@@ -449,10 +441,7 @@ Look for: ${journey.endLandmark || 'Major landmarks'}`,
   /**
    * Handle arrival at final destination
    */
-  private async handleDestinationArrival(
-    userId: string,
-    journey: Journey,
-  ): Promise<void> {
+  private async handleDestinationArrival(userId: string, journey: Journey): Promise<void> {
     // Mark journey as completed
     await this.journeyRepository.update(journey.id, {
       status: 'completed',
@@ -473,7 +462,7 @@ Look for: ${journey.endLandmark || 'Major landmarks'}`,
 
     // Calculate total fare paid
     const totalFare = journey.legs.reduce((sum, leg) => {
-      return sum + ((leg.minFare + leg.maxFare) / 2); // Average fare
+      return sum + (leg.minFare + leg.maxFare) / 2; // Average fare
     }, 0);
 
     // Send journey complete notification
@@ -573,7 +562,7 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
 
       const distance = this.geofencingService.calculateDistance(
         { lat: userLocation.latitude, lng: userLocation.longitude },
-        { lat: stopLocation.latitude, lng: stopLocation.longitude }
+        { lat: stopLocation.latitude, lng: stopLocation.longitude },
       );
 
       if (distance <= this.STOP_APPROACHING_DISTANCE * 2) {
@@ -594,7 +583,7 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
       if (transferLocation) {
         const transferDistance = this.geofencingService.calculateDistance(
           { lat: userLocation.latitude, lng: userLocation.longitude },
-          { lat: transferLocation.latitude, lng: transferLocation.longitude }
+          { lat: transferLocation.latitude, lng: transferLocation.longitude },
         );
 
         if (transferDistance <= this.TRANSFER_ALERT_DISTANCE) {
@@ -639,9 +628,7 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
    * Calculate remaining time for journey
    */
   private calculateRemainingTime(journey: Journey, currentLeg: JourneyLeg): number {
-    const remainingLegs = journey.legs.slice(
-      journey.legs.indexOf(currentLeg) + 1,
-    );
+    const remainingLegs = journey.legs.slice(journey.legs.indexOf(currentLeg) + 1);
 
     return remainingLegs.reduce((sum, leg) => {
       return sum + leg.estimatedDuration;
@@ -655,7 +642,7 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
     userId: string,
   ): Promise<{ latitude: number; longitude: number } | null> {
     const location = await this.cacheService.getUserLocation(userId);
-    
+
     if (!location) {
       return null;
     }
@@ -696,11 +683,11 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
    */
   private formatVehicleType(transportMode: string): string {
     const types: Record<string, string> = {
-      'taxi': 'Taxi',
-      'bus': 'Bus',
-      'keke': 'Keke NAPEP',
-      'okada': 'Okada',
-      'car': 'Car',
+      taxi: 'Taxi',
+      bus: 'Bus',
+      keke: 'Keke NAPEP',
+      okada: 'Okada',
+      car: 'Car',
     };
     return types[transportMode.toLowerCase()] || transportMode;
   }
@@ -710,10 +697,10 @@ ${journey.legs.length > 1 ? `Transfers: ${journey.legs.length - 1}` : 'Direct ro
    */
   private getVehicleEmoji(transportMode: string): string {
     const emojis: Record<string, string> = {
-      'taxi': '🚕',
-      'bus': '🚌',
-      'keke': '🛺',
-      'okada': '🏍️',
+      taxi: '🚕',
+      bus: '🚌',
+      keke: '🛺',
+      okada: '🏍️',
     };
     return emojis[transportMode.toLowerCase()] || '🚗';
   }

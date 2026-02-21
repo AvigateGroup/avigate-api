@@ -12,7 +12,7 @@ import { CacheService } from './cache.service';
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
         const redisUrl = configService.get('REDIS_URL');
-        
+
         // If REDIS_URL exists, use it (Railway format)
         if (redisUrl) {
           return {
@@ -22,8 +22,8 @@ import { CacheService } from './cache.service';
             max: 1000,
           };
         }
-        
-        // Fallback to individual params 
+
+        // Fallback to individual params
         return {
           store: redisStore,
           host: configService.get('REDIS_HOST'),

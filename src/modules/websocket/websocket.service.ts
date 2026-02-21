@@ -67,9 +67,9 @@ export class WebsocketService {
    */
   sendLocationUpdate(update: LocationUpdate) {
     this.websocketGateway.emitLocationUpdate(update);
-    logger.debug('Location update sent', { 
-      userId: update.userId, 
-      journeyId: update.journeyId 
+    logger.debug('Location update sent', {
+      userId: update.userId,
+      journeyId: update.journeyId,
     });
   }
 
@@ -84,11 +84,14 @@ export class WebsocketService {
   /**
    * Broadcast journey event to user
    */
-  sendJourneyEvent(userId: string, event: {
-    type: 'start' | 'stop' | 'transfer' | 'destination' | 'complete';
-    journeyId: string;
-    data?: any;
-  }) {
+  sendJourneyEvent(
+    userId: string,
+    event: {
+      type: 'start' | 'stop' | 'transfer' | 'destination' | 'complete';
+      journeyId: string;
+      data?: any;
+    },
+  ) {
     this.websocketGateway.emitJourneyEvent(userId, event);
     logger.debug('Journey event sent', { userId, type: event.type });
   }

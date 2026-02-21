@@ -61,7 +61,7 @@ export class AdminManagementController {
     @Query('role') role?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,
-    @CurrentAdmin() currentAdmin?: Admin,
+    @CurrentAdmin() _currentAdmin?: Admin,
   ) {
     return this.adminCrudService.getAdmins(Number(page), Number(limit), role, status, search);
   }
