@@ -259,7 +259,9 @@ export class IntelligentRouteService {
     const alternatives: AlternativeStop[] = [];
 
     // Get intermediate stops (reversed if needed)
-    const stops = isReversed ? [...segment.intermediateStops].reverse() : segment.intermediateStops;
+    const stops = isReversed
+      ? [...(segment.intermediateStops ?? [])].reverse()
+      : (segment.intermediateStops ?? []);
 
     // Calculate alternatives
     for (const stop of stops) {
@@ -443,7 +445,9 @@ export class IntelligentRouteService {
     stopLocationId: string,
     isReversed: boolean = false,
   ): number {
-    const stops = isReversed ? [...segment.intermediateStops].reverse() : segment.intermediateStops;
+    const stops = isReversed
+      ? [...(segment.intermediateStops ?? [])].reverse()
+      : (segment.intermediateStops ?? []);
 
     const stopIndex = stops.findIndex(s => s.locationId === stopLocationId);
     if (stopIndex === -1) return Number(segment.distance);
@@ -554,7 +558,7 @@ export class IntelligentRouteService {
 
     // Check transport modes - some might be one-way only
     const oneWayModes = ['express_bus', 'shuttle'];
-    const hasOneWayMode = segment.transportModes.some(mode =>
+    const hasOneWayMode = (segment.transportModes ?? []).some(mode =>
       oneWayModes.includes(mode.toLowerCase()),
     );
 
