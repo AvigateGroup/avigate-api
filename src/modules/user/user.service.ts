@@ -13,6 +13,7 @@ import { UserDevice } from './entities/user-device.entity';
 import { UserOTP } from './entities/user-otp.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UserEmailService } from '../email/user-email.service';
+import { UserUpdatesEmailService } from '../email/user-updates-email.service';
 import { UploadService } from '../upload/upload.service';
 import { VerificationService } from '../auth/services/verification.service';
 import { TEST_ACCOUNTS } from '@/config/test-accounts.config';
@@ -36,7 +37,7 @@ export class UserService {
     @InjectRepository(UserOTP)
     private otpRepository: Repository<UserOTP>,
     private userEmailService: UserEmailService,
-    private UserUpdatesEmailService: UserUpdatesEmailService,
+    private userUpdatesEmailService: UserUpdatesEmailService,
     private uploadService: UploadService,
     private verificationService: VerificationService,
   ) {}
@@ -116,7 +117,7 @@ export class UserService {
       if (emailChanged && email) {
         try {
           // Send notification to old email
-          await this.UserUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
+          await this.userUpdatesEmailService.sendEmailChangeNotificationToOldEmail(
             oldEmail,
             email,
             firstName || user.firstName,
@@ -141,7 +142,7 @@ export class UserService {
       } else if (updatedFields.length > 0) {
         try {
           // Send general profile update notification
-          await this.UserUpdatesEmailService.sendProfileUpdateNotification(
+          await this.userUpdatesEmailService.sendProfileUpdateNotification(
             user.email,
             user.firstName,
             updatedFields,
@@ -188,7 +189,7 @@ export class UserService {
     await this.userRepository.save(user);
 
     // Send notification
-    await this.UserUpdatesEmailService.sendProfileUpdateNotification(user.email, user.firstName, [
+    await this.userUpdatesEmailService.sendProfileUpdateNotification(user.email, user.firstName, [
       'profilePicture',
     ]);
 
